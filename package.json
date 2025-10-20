@@ -1,0 +1,14 @@
+{
+  "name": "appiphany",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:EpiphanySoft/appiphany.git",
+  "author": "Don Griffin <don@thegriffins.org>",
+  "license": "MIT",
+
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "devDependencies": {
+      "assertly": "https://github.com/EpiphanySoft/assertly.git"
+  }
+}
