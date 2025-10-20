@@ -1,5 +1,4 @@
-import { applyTo, isClass, isObject } from "@/util/misc";
-import { Configurable } from '@/util/Configurable';
+import { Configurable, applyTo, isClass, isObject } from "@appiphany/appiphany";
 
 const
     { defineProperty } = Reflect;

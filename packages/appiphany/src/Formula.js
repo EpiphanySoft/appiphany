@@ -3,7 +3,7 @@ import { Signal, dag } from './Signal.js';
 const EMPTY = [];
 
 
-class Formula extends Signal {
+export class Formula extends Signal {
     #active = false;
     #dirty = true;
     #refs = EMPTY;  // Signals used by this formula
@@ -64,6 +64,11 @@ class Formula extends Signal {
 
             super.invalidate();
         }
+    }
+
+    toString () {
+        return `[${this.#refs.map(d => d.id).join(', ')}] => ${super.toString()}`;
+        // [1, 2, 3] => <10> => [20, 30, 40]
     }
 }
 

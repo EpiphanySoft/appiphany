@@ -1,4 +1,4 @@
-import { Destroyable } from "@/util/Destroyable";
+import { Destroyable } from "@appiphany/appiphany";
 
 
 class Subscription extends Destroyable {

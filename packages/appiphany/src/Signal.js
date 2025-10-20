@@ -31,6 +31,11 @@ export class Signal {
     unregister (formula) {
         this.#dependents.delete(formula.id);
     }
+
+    toString () {
+        return `<${this.id}> => [${this.dependents.map(d => d.id).join(', ')}]`;
+        // <1> => [2, 3, 4]
+    }
 }
 
 //---------------------------------------------------------------------------------------
