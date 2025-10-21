@@ -195,7 +195,7 @@ export class Configurable extends Declarable {
 
                     applyTo(proto, config);
                 }
-                else {
+                else if (!(config = classConfigs[name])) {
                     classConfigs[name] = config = Config.get(name);
                 }
 
