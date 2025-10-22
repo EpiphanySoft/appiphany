@@ -13,20 +13,20 @@ export class Signal {
     #id = ++Signal.#idSeed;
     #name;
 
-    static formula (name, fn) {
-        return new Formula(name, fn);
+    static formula (fn, options) {
+        return new Formula(fn, options);
     }
 
-    static value (name, v) {
-        return new Value(name, v);
+    static value (v, options) {
+        return new Value(v, options);
     }
 
     static watch (notify) {
         return new Watcher(notify);
     }
 
-    constructor (name) {
-        this.#name = name ?? '';
+    constructor (options) {
+        this.#name = options?.name ?? '';
     }
 
     get dependents () {
@@ -86,13 +86,8 @@ class Formula extends Signal {
 
     #fn;
 
-    constructor (name, fn) {
-        if (typeof fn !== 'function') {
-            fn = name;
-            name = null;
-        }
-
-        super(name);
+    constructor (fn, options) {
+        super(options);
 
         this.#fn = fn;
     }
@@ -173,13 +168,8 @@ class Formula extends Signal {
 class Value extends Signal {
     #value;
 
-    constructor (name, value) {
-        if (typeof name !== 'string' || value === undefined) {
-            value = name;
-            name = null;
-        }
-
-        super(name);
+    constructor (value, options) {
+        super(options);
 
         this.#value = value;
     }
