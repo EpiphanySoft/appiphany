@@ -253,10 +253,19 @@ class Watcher {
             throw new Error('Cannot unwatch a signal while it is notifying');
         }
 
-        for (const signal of signals) {
-            if (this.#watched.delete(signal.id)) {
+        if (signals.length) {
+            for (const signal of signals) {
+                if (this.#watched.delete(signal.id)) {
+                    signal.unwatch(this);
+                }
+            }
+        }
+        else {
+            for (const signal of this.#watched.values()) {
                 signal.unwatch(this);
             }
+
+            this.#watched.clear();
         }
     }
 }

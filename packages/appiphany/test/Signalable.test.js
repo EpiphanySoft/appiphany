@@ -201,6 +201,11 @@ describe('Signalable', () => {
 
         class Woot extends Derp {
             static configurable = {
+                bind: {
+                    'foo<': 'woot',
+                    'foo>': 'derp'
+                },
+
                 signals: {
                     woot () {
                         log.push('get woot');
@@ -221,5 +226,77 @@ describe('Signalable', () => {
         expect(inst.signals.derp).to.be(3);
         expect(inst.signals.bar).to.be(20);
         expect(logged()).to.equal([]);
+
+        inst0 = new Bar();
+        inst0.signals.foo = 21;
+        inst.parent = inst0;
+
+        expect(inst.signals.woot).to.be(21 * 10 * 3 * 5);
+        expect(logged()).to.equal([
+            'get woot',
+            'get bar'
+        ]);
+        expect(inst.signals.derp).to.be(3);
+        expect(inst.signals.bar).to.be(210);
+        expect(logged()).to.equal([]);
+    });
+
+    it('should support binding', () => {
+        let log = [];
+
+        const logged = () => {
+            let ret = log;
+            log = [];
+            return ret;
+        };
+
+        class Parent extends Configurable.mixin(Signalable) {
+            static configurable = {
+                signals: {
+                    foo: 3
+                }
+            }
+        }
+
+        class Foo extends Configurable.mixin(Signalable) {
+            static configurable = {
+                derp: class {
+                    value = null;
+
+                    update (value) {
+                         log.push(`set derp ${value}`);
+                     }
+                },
+
+                woot: class {
+                    value = null;
+
+                    update (value) {
+                         log.push(`set woot ${value}`);
+                     }
+                },
+
+                bind: {
+                    derp: 'bar',    // formula bind, can only be one-way (read)
+                    woot: '~foo'    // value bind, default is read ('~' makes it two-way)
+                },
+
+                signals: {
+                    bar () {
+                        log.push('get bar');
+                        return this.foo * 5;
+                    }
+                }
+            }
+        }
+
+        let parent = new Parent();
+        let inst = new Foo({ parent });
+
+        expect(inst.signals.woot).to.be(2 * 10 * 3 * 5);
+        expect(logged()).to.equal([
+            'get woot',
+            'get bar'
+        ]);
     });
 });

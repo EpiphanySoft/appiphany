@@ -2,6 +2,10 @@ import { Signal, keys } from '@appiphany/appiphany';
 
 
 export const Signalable = Base => class Signalable extends Base {
+    static proto = {
+        $signalDefs: null
+    };
+
     static configurable = {
         parent: class {
             value = undefined;
@@ -9,6 +13,14 @@ export const Signalable = Base => class Signalable extends Base {
             update(me, v) {
                 if (me._signals) {
                     Object.setPrototypeOf(me._signals, v?.signals ?? null);
+
+                    let signalDefs = me.$signalDefs;
+
+                    if (signalDefs) {
+                        for (let name in signalDefs) {
+                            signalDefs[name].invalidate();
+                        }
+                    }
                 }
             }
         },
