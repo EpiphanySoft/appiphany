@@ -1,11 +1,11 @@
 import { Configurable } from '@appiphany/appiphany';
-import { Signalable } from '@appiphany/appiphany/mixin';
+import { Bindable } from '@appiphany/appiphany/mixin';
 
 import assertly from 'assertly';
 
 const { expect } = assertly;
 
-describe('Signalable', () => {
+describe('Bindable', () => {
     it('should basically work', () => {
         let log = [];
 
@@ -15,9 +15,9 @@ describe('Signalable', () => {
             return ret;
         };
 
-        class Foo extends Configurable.mixin(Signalable) {
+        class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                signals: {
+                publish: {
                     foo: 21,
 
                     bar () {
@@ -30,19 +30,19 @@ describe('Signalable', () => {
 
         let inst = new Foo();
 
-        expect(inst.signals.foo).to.be(21);
-        expect(inst.signals.bar).to.be(210);
+        expect(inst.props.foo).to.be(21);
+        expect(inst.props.bar).to.be(210);
         expect(logged()).to.equal([
             'get bar'
         ]);
 
-        expect(inst.signals.foo).to.be(21);
-        expect(inst.signals.bar).to.be(210);
+        expect(inst.props.foo).to.be(21);
+        expect(inst.props.bar).to.be(210);
         expect(logged()).to.equal([]);
 
-        inst.signals.foo = 42;
-        expect(inst.signals.foo).to.be(42);
-        expect(inst.signals.bar).to.be(420);
+        inst.props.foo = 42;
+        expect(inst.props.foo).to.be(42);
+        expect(inst.props.bar).to.be(420);
         expect(logged()).to.equal([
             'get bar'
         ]);
@@ -57,9 +57,9 @@ describe('Signalable', () => {
             return ret;
         };
 
-        class Foo extends Configurable.mixin(Signalable) {
+        class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                signals: {
+                publish: {
                     foo: 21
                 }
             }
@@ -67,7 +67,7 @@ describe('Signalable', () => {
 
         class Bar extends Foo {
             static configurable = {
-                signals: {
+                publish: {
                     bar () {
                         log.push('get bar');
                         return this.foo * 10;
@@ -78,19 +78,19 @@ describe('Signalable', () => {
 
         let inst = new Bar();
 
-        expect(inst.signals.foo).to.be(21);
-        expect(inst.signals.bar).to.be(210);
+        expect(inst.props.foo).to.be(21);
+        expect(inst.props.bar).to.be(210);
         expect(logged()).to.equal([
             'get bar'
         ]);
 
-        expect(inst.signals.foo).to.be(21);
-        expect(inst.signals.bar).to.be(210);
+        expect(inst.props.foo).to.be(21);
+        expect(inst.props.bar).to.be(210);
         expect(logged()).to.equal([]);
 
-        inst.signals.foo = 42;
-        expect(inst.signals.foo).to.be(42);
-        expect(inst.signals.bar).to.be(420);
+        inst.props.foo = 42;
+        expect(inst.props.foo).to.be(42);
+        expect(inst.props.bar).to.be(420);
         expect(logged()).to.equal([
             'get bar'
         ]);
@@ -105,9 +105,9 @@ describe('Signalable', () => {
             return ret;
         };
 
-        class Foo extends Configurable.mixin(Signalable) {
+        class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                signals: {
+                publish: {
                     foo: 2
                 }
             }
@@ -115,7 +115,7 @@ describe('Signalable', () => {
 
         class Bar extends Foo {
             static configurable = {
-                signals: {
+                publish: {
                     bar () {
                         log.push('get bar');
                         return this.foo * 10;
@@ -126,7 +126,7 @@ describe('Signalable', () => {
 
         class Derp extends Bar {
             static configurable = {
-                signals: {
+                publish: {
                     derp () {
                         log.push('get derp');
                         return this.bar * 3;
@@ -137,7 +137,7 @@ describe('Signalable', () => {
 
         class Woot extends Derp {
             static configurable = {
-                signals: {
+                publish: {
                     woot () {
                         log.push('get woot');
                         return this.derp * 5;
@@ -148,17 +148,17 @@ describe('Signalable', () => {
 
         let inst = new Woot();
 
-        expect(inst.signals.foo).to.be(2);
-        expect(inst.signals.bar).to.be(20);
+        expect(inst.props.foo).to.be(2);
+        expect(inst.props.bar).to.be(20);
         expect(logged()).to.equal([
             'get bar'
         ]);
-        expect(inst.signals.woot).to.be(2 * 10 * 3 * 5);
+        expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
         expect(logged()).to.equal([
             'get woot',
             'get derp'
         ]);
-        expect(inst.signals.derp).to.be(2 * 10 * 3);
+        expect(inst.props.derp).to.be(2 * 10 * 3);
         expect(logged()).to.equal([]);
 
     });
@@ -172,9 +172,9 @@ describe('Signalable', () => {
             return ret;
         };
 
-        class Foo extends Configurable.mixin(Signalable) {
+        class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                signals: {
+                publish: {
                     foo: 2
                 }
             }
@@ -182,7 +182,7 @@ describe('Signalable', () => {
 
         class Bar extends Foo {
             static configurable = {
-                signals: {
+                publish: {
                     bar () {
                         log.push('get bar');
                         return this.foo * 10;
@@ -191,9 +191,9 @@ describe('Signalable', () => {
             }
         }
 
-        class Derp extends Configurable.mixin(Signalable) {
+        class Derp extends Configurable.mixin(Bindable) {
             static configurable = {
-                signals: {
+                publish: {
                     derp: 3
                 }
             }
@@ -206,7 +206,7 @@ describe('Signalable', () => {
                     'foo>': 'derp'
                 },
 
-                signals: {
+                publish: {
                     woot () {
                         log.push('get woot');
                         return this.bar * this.derp * 5;
@@ -218,26 +218,26 @@ describe('Signalable', () => {
         let inst0 = new Bar();
         let inst = new Woot({ parent: inst0 });
 
-        expect(inst.signals.woot).to.be(2 * 10 * 3 * 5);
+        expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
         expect(logged()).to.equal([
             'get woot',
             'get bar'
         ]);
-        expect(inst.signals.derp).to.be(3);
-        expect(inst.signals.bar).to.be(20);
+        expect(inst.props.derp).to.be(3);
+        expect(inst.props.bar).to.be(20);
         expect(logged()).to.equal([]);
 
         inst0 = new Bar();
-        inst0.signals.foo = 21;
+        inst0.props.foo = 21;
         inst.parent = inst0;
 
-        expect(inst.signals.woot).to.be(21 * 10 * 3 * 5);
+        expect(inst.props.woot).to.be(21 * 10 * 3 * 5);
         expect(logged()).to.equal([
             'get woot',
             'get bar'
         ]);
-        expect(inst.signals.derp).to.be(3);
-        expect(inst.signals.bar).to.be(210);
+        expect(inst.props.derp).to.be(3);
+        expect(inst.props.bar).to.be(210);
         expect(logged()).to.equal([]);
     });
 
@@ -250,15 +250,15 @@ describe('Signalable', () => {
             return ret;
         };
 
-        class Parent extends Configurable.mixin(Signalable) {
+        class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                signals: {
+                publish: {
                     foo: 3
                 }
             }
         }
 
-        class Foo extends Configurable.mixin(Signalable) {
+        class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
                 derp: class {
                     value = null;
@@ -281,7 +281,7 @@ describe('Signalable', () => {
                     woot: '~foo'    // value bind, default is read ('~' makes it two-way)
                 },
 
-                signals: {
+                publish: {
                     bar () {
                         log.push('get bar');
                         return this.foo * 5;
@@ -293,7 +293,7 @@ describe('Signalable', () => {
         let parent = new Parent();
         let inst = new Foo({ parent });
 
-        expect(inst.signals.woot).to.be(2 * 10 * 3 * 5);
+        expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
         expect(logged()).to.equal([
             'get woot',
             'get bar'
