@@ -212,7 +212,7 @@ export class Declarable extends Destroyable {
 
         for (mixin of mixins.reverse()) {
             if (!(mixinId = mixin[mixinIdSym])) {
-                mixin[mixinIdSym] = mixinId = Symbol(`mix-${mixin.name}-${++nextMixinId}`);
+                mixin[mixinIdSym] = mixinId = Symbol(`mixin-${mixin.name}-${++nextMixinId}`);
             }
 
             if (!cls[mixinId]) {

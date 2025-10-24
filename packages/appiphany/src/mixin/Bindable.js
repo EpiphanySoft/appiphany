@@ -1,4 +1,4 @@
-import { Signal, keys } from '@appiphany/appiphany';
+import { Scheduler, Signal, keys } from '@appiphany/appiphany';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
@@ -41,7 +41,7 @@ const
  */
 export const Bindable = Base => class Bindable extends Base {
     static proto = {
-        $signals: null
+        _signals: null
     };
 
     static configurable = {
@@ -54,7 +54,7 @@ export const Bindable = Base => class Bindable extends Base {
                 if (props) {
                     Object.setPrototypeOf(getProto(props), getProps(v));
 
-                    let signals = me.$signals;
+                    let signals = me._signals;
 
                     if (signals) {
                         for (let name in signals) {
@@ -119,20 +119,43 @@ export const Bindable = Base => class Bindable extends Base {
         return this._props ??= createProps(this.parent);
     }
 
+    get published () {
+        return getProto(this.props);
+    }
+
+    get scheduler () {
+        return this.published.$scheduler ?? Scheduler.instance;
+    }
+
+    set scheduler (v) {
+        let pub = this.published;
+
+        if (v) {
+            pub.$scheduler = v;
+        }
+        else {
+            delete pub.$scheduler;
+        }
+    }
+
     _onPropBind () {
         debugger;
     }
 
     propBind (bind) {
+        if (!bind) {
+            return;
+        }
+
         let bindings = this.$bindings ??= Object.create(null),
-            // ={
-            //      config: {
+            // = {
+            //      config: Signal.formula + {
             //          prop: 'foo',
-            //          sig: Signal.formula ...,
-            //          set (v) { ... }
+            //          twoWay: true,
+            //          update: v => { ... }
             //      }
             //  }
-            watcher = this.$watcher ??= Signal.watch(this._onPropBind.bind(this)),
+            watcher = this.$watcher ??= Signal.watch(() => this._onPropBind()),
             add, configName, remove;
 
         for (configName in bind) {
@@ -140,27 +163,28 @@ export const Bindable = Base => class Bindable extends Base {
             // config: '~prop'  two-way
             let prop = bind[configName], // in for-loop to avoid stale closure
                 was = bindings[configName],
-                same, sig, twoWay;
+                sig, twoWay;
 
             if (prop) {
                 twoWay = prop[0] === '~';
                 prop = twoWay ? prop.slice(1) : prop;
-                same = was?.prop === prop && was?.twoWay === twoWay;
 
-                if (!same) {
-                    sig = Signal.formula(() => this.props[prop], { name: prop });
-                    (add ??= []).push(sig);
-
-                    bindings[configName] = {
-                        prop, sig, twoWay,
-                        set: twoWay && (v => this.props[prop] = v)
-                    };
+                if (was && was.name === prop && was.twoWay === twoWay) {
+                    continue;
                 }
+
+                sig = Signal.formula(() => this.props[prop], { name: prop });
+                sig.twoWay = twoWay;
+                sig.update = twoWay && (v => this.props[prop] = v);
+
+                (add ??= []).push(sig);
+
+                bindings[configName] = sig;
             }
 
-            if (was && !same) {
+            if (was) {
                 delete bindings[configName];
-                (remove ??= []).push(was.sig);
+                (remove ??= []).push(was);
             }
         }
 
@@ -169,7 +193,7 @@ export const Bindable = Base => class Bindable extends Base {
     }
 
     propsAdd (add, internal) {
-        let signals = this.$signals ??= Object.create(null),
+        let signals = this._signals ??= Object.create(null),
             props = this.props,  // internal props
             target = internal ? props : getProto(props),
             options = {};
@@ -217,7 +241,7 @@ export const Bindable = Base => class Bindable extends Base {
     }
 
     propsRemove (...names) {
-        let signals = this.$signals,
+        let signals = this._signals,
             sig;
 
         for (const name of names) {
