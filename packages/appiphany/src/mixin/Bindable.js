@@ -2,8 +2,8 @@ import { Scheduler, Signal, keys, capitalize } from '@appiphany/appiphany';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
-    getProps = p => getProto(p?.props),
-    createProps = p => Object.create(Object.create(getProps(p)));
+    getParentProps = p => getProto(p?.props),
+    createProps = p => Object.create(Object.create(getParentProps(p)));
 
 /**
  * This mixin adds the ability to define props on a class. Signals exist as both
@@ -52,7 +52,7 @@ export const Bindable = Base => class Bindable extends Base {
                 let props = me._props;
 
                 if (props) {
-                    Object.setPrototypeOf(getProto(props), getProps(v));
+                    Object.setPrototypeOf(getProto(props), getParentProps(v));
 
                     let signals = me._signals;
 
@@ -86,40 +86,27 @@ export const Bindable = Base => class Bindable extends Base {
                     }
                 }
 
-                me.getConfig('publish');
-                me.getConfig('internal');
-                me.propBind(full);
+                me.getConfig('props');
+                me.bindProps(full);
 
                 // do not return anything... $bindings is populated by propsAdd
             }
         },
 
-        internal: class {
-            value = undefined;
+        props: class {
+            value = {};
 
             apply(me, props, was) {
-                props && me.propsAdd(props, true);
-                was && me.propsRemove(...keys(was).filter(k => !props || !(k in props)));
+                if (was) {
+                    throw new Error('props cannot be reconfigured');
+                }
 
-                // do not return anything... _props is populated by propsAdd
-            }
-        },
+                me._props = createProps(me.parent);
 
-        publish: class {
-            value = undefined;
-
-            apply(me, props, was) {
-                props && me.propsAdd(props, false);
-                was && me.propsRemove(...keys(was).filter(k => !props || !(k in props)));
-
-                // do not return anything... _props is populated by propsAdd
+                me.defineProps(props);
             }
         }
     };
-
-    get props () {
-        return this._props ??= createProps(this.parent);
-    }
 
     get published () {
         return getProto(this.props);
@@ -140,7 +127,7 @@ export const Bindable = Base => class Bindable extends Base {
         }
     }
 
-    _onPropBind () {
+    _onWatcherNotify () {
         let work = this.$onPropSync ??= this._onPropSync.bind(this);
 
         this.scheduler.add(work);
@@ -157,7 +144,7 @@ export const Bindable = Base => class Bindable extends Base {
         this.configure(changes);
     }
 
-    propBind (bind) {
+    bindProps (bind) {
         if (!bind) {
             return;
         }
@@ -170,7 +157,8 @@ export const Bindable = Base => class Bindable extends Base {
             //          update: v => { ... }
             //      }
             //  }
-            watcher = this.$watcher ??= Signal.watch(() => this._onPropBind()),
+            props = this.props,
+            watcher = this.$watcher ??= Signal.watch(() => this._onWatcherNotify()),
             add, configName, remove;
 
         for (configName in bind) {
@@ -186,8 +174,7 @@ export const Bindable = Base => class Bindable extends Base {
                         continue;
                     }
 
-                    sig = Signal.formula(
-                        () => prop.call(this.props), { name: `calc${capitalize(configName)}` });
+                    sig = Signal.formula(() => prop.call(props), { name: `calc${capitalize(configName)}` });
 
                     sig.calc = prop;
                 }
@@ -199,10 +186,10 @@ export const Bindable = Base => class Bindable extends Base {
                         continue;
                     }
 
-                    sig = Signal.formula(() => this.props[prop], { name: prop });
+                    sig = Signal.formula(() => props[prop], { name: prop });
 
                     sig.twoWay = twoWay;
-                    sig.update = twoWay && (v => this.props[prop] = v);
+                    sig.update = twoWay && (v => props[prop] = v);
                 }
 
                 sig.configName = configName;
@@ -223,67 +210,64 @@ export const Bindable = Base => class Bindable extends Base {
         remove && watcher.unwatch(...remove);
     }
 
-    propsAdd (add, internal) {
+    defineProps (add, internal) {
+        if (!add) {
+            return;
+        }
+
         let signals = this._signals ??= Object.create(null),
             props = this.props,  // internal props
             target = internal ? props : getProto(props),
             options = {};
 
         for (const name in add) {
-            let existing = signals[name],
-                sig = add[name],
-                formula = typeof sig === 'function',
-                property = {
-                    configurable: true,
+            if (name === 'internal') {
+                !internal && this.defineProps(add[name], true);
+            }
+            else if (name !== 'sealed') {
+                let existing = signals[name],
+                    sig = add[name],
+                    formula = typeof sig === 'function',
+                    property = {
+                        configurable: true,
 
-                    get () {
-                        return sig.get();
-                    },
+                        get () {
+                            return sig.get();
+                        },
 
-                    set (v) {
-                        sig.set(v);
+                        set (v) {
+                            sig.set(v);
+                        }
+                    };
+
+                options.name = name;
+                sig = formula ? Signal.formula(sig.bind(props), options) : Signal.value(sig, options);
+                signals[name] = sig;
+                sig.internal = internal;
+
+                if (formula) {
+                    delete property.set;
+                }
+
+                if (existing) {
+                    if (existing.internal) {
+                        delete props[name];
                     }
-                };
-
-            options.name = name;
-            sig = formula ? Signal.formula(sig.bind(props), options) : Signal.value(sig, options);
-            signals[name] = sig;
-            sig.internal = internal;
-
-            if (formula) {
-                delete property.set;
-            }
-
-            if (existing) {
-                if (existing.internal) {
-                    delete props[name];
+                    else {
+                        delete target[name];
+                    }
                 }
-                else {
-                    delete target[name];
+
+                Object.defineProperty(target, name, property)
+
+                if (existing) {
+                    existing.invalidate();
                 }
-            }
-
-            Object.defineProperty(target, name, property)
-
-            if (existing) {
-                existing.invalidate();
             }
         }
-    }
 
-    propsRemove (...names) {
-        let signals = this._signals,
-            sig;
-
-        for (const name of names) {
-            sig = signals?.[name];
-
-            if (sig) {
-                delete signals[name];
-                delete this._props?.[name];
-
-                sig.invalidate();
-            }
+        if (!internal && add.sealed !== false) {
+            Object.seal(props);
         }
     }
 }

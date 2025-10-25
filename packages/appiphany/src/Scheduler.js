@@ -49,10 +49,7 @@ export class Scheduler extends Configurable {
         count && queue.skip(count);
 
         this.#pending = false;
-
-        if (!queue.empty) {
-            this.#runSoon();
-        }
+        this.#runSoon();  // runSoon checks for queue.empty
     }
 
     #runSoon () {

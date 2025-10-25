@@ -24,7 +24,7 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     foo: 21,
 
                     bar () {
@@ -53,6 +53,10 @@ describe('Bindable', () => {
         expect(log.get()).to.equal([
             'get bar'
         ]);
+
+        expect(() => {
+            inst.props.derp = 0;
+        }).to.throw();
     });
 
     it('should work in a class hierarchy', () => {
@@ -60,7 +64,7 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     foo: 21
                 }
             }
@@ -68,7 +72,7 @@ describe('Bindable', () => {
 
         class Bar extends Foo {
             static configurable = {
-                publish: {
+                props: {
                     bar () {
                         log.out('get bar');
                         return this.foo * 10;
@@ -102,7 +106,7 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     foo: 2
                 }
             }
@@ -110,7 +114,7 @@ describe('Bindable', () => {
 
         class Bar extends Foo {
             static configurable = {
-                publish: {
+                props: {
                     bar () {
                         log.out('get bar');
                         return this.foo * 10;
@@ -121,7 +125,7 @@ describe('Bindable', () => {
 
         class Derp extends Bar {
             static configurable = {
-                publish: {
+                props: {
                     derp () {
                         log.out('get derp');
                         return this.bar * 3;
@@ -132,7 +136,7 @@ describe('Bindable', () => {
 
         class Woot extends Derp {
             static configurable = {
-                publish: {
+                props: {
                     woot () {
                         log.out('get woot');
                         return this.derp * 5;
@@ -163,7 +167,7 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     foo: 2
                 }
             }
@@ -171,7 +175,7 @@ describe('Bindable', () => {
 
         class Bar extends Foo {
             static configurable = {
-                publish: {
+                props: {
                     bar () {
                         log.out('get bar');
                         return this.foo * 10;
@@ -182,7 +186,7 @@ describe('Bindable', () => {
 
         class Derp extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     derp: 3
                 }
             }
@@ -195,7 +199,7 @@ describe('Bindable', () => {
                     'foo>': 'derp'
                 },
 
-                publish: {
+                props: {
                     woot () {
                         log.out('get woot');
                         return this.bar * this.derp * 5;
@@ -236,7 +240,7 @@ describe('Bindable', () => {
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     foo: 3,
                     wip: 42
                 }
@@ -275,7 +279,7 @@ describe('Bindable', () => {
                     wop: 'wip'      // value bind, default is read ('~' makes it two-way)
                 },
 
-                publish: {
+                props: {
                     bar () {
                         log.out('get bar');
                         return this.foo * 5;
@@ -349,7 +353,7 @@ describe('Bindable', () => {
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                publish: {
+                props: {
                     foo: 3
                 }
             }
@@ -386,7 +390,8 @@ describe('Bindable', () => {
 
         expect(inst.woot).to.be(15);
 
-        parent.props.foo = 10;
+        inst.props.foo = 10;
+        expect(parent.props.foo).to.be(10);
 
         expect(inst.scheduler.pending).to.be(true);
         expect(log.get()).to.equal([
@@ -404,5 +409,62 @@ describe('Bindable', () => {
         expect(inst.scheduler.cycles).to.be(1);
 
         expect(inst.woot).to.be(50);
+    });
+
+    it('should handle shadowed and internal props correctly', async() => {
+        const root = makeRoot();
+
+        class Parent extends Configurable.mixin(Bindable) {
+            static configurable = {
+                props: {
+                    internal: {
+                        dip: 3,
+                        dop: 2,
+
+                        wop () {
+                            return this.dop * 100;
+                        }
+                    },
+
+                    foo () {
+                        return this.wop * this.dip;
+                    }
+                }
+            }
+        }
+
+        class Foo extends Configurable.mixin(Bindable) {
+            static configurable = {
+                props: {
+                    internal: {
+                        dop: 9,
+                        wip: 10,
+
+                        wop () {
+                            return this.dop * this.wip;
+                        }
+                    },
+
+                    foo () {
+                        return this.wop * 5;
+                    }
+                }
+            }
+        }
+
+        let parent = new Parent({ parent: root });
+        let inst = new Foo({ parent });
+
+        expect(inst.props.dip).to.be(undefined);
+        expect(inst.props.dop).to.be(9);
+        expect(inst.props.wip).to.be(10);
+        expect(inst.props.wop).to.be(90);
+        expect(inst.props.foo).to.be(450);
+
+        expect(parent.props.dip).to.be(3);
+        expect(parent.props.dop).to.be(2);
+        expect(parent.props.wip).to.be(undefined);
+        expect(parent.props.wop).to.be(200);
+        expect(parent.props.foo).to.be(600);
     });
 });
