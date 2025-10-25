@@ -86,6 +86,8 @@ export const Bindable = Base => class Bindable extends Base {
                     }
                 }
 
+                me.getConfig('publish');
+                me.getConfig('internal');
                 me.propBind(full);
 
                 // do not return anything... $bindings is populated by propsAdd
@@ -139,7 +141,20 @@ export const Bindable = Base => class Bindable extends Base {
     }
 
     _onPropBind () {
-        debugger;
+        let work = this.$onPropSync ??= this._onPropSync.bind(this);
+
+        this.scheduler.add(work);
+    }
+
+    _onPropSync () {
+        let changes = {};
+
+        for (let sig of this.$watcher.getPending()) {
+            changes[sig.configName] = sig.get();
+        }
+
+        this.$watcher.watch();
+        this.configure(changes);
     }
 
     propBind (bind) {
@@ -174,12 +189,14 @@ export const Bindable = Base => class Bindable extends Base {
                 }
 
                 sig = Signal.formula(() => this.props[prop], { name: prop });
+                sig.configName = configName;
                 sig.twoWay = twoWay;
                 sig.update = twoWay && (v => this.props[prop] = v);
 
                 (add ??= []).push(sig);
 
                 bindings[configName] = sig;
+                this[configName] = sig.get();
             }
 
             if (was) {

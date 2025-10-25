@@ -373,6 +373,10 @@ export class Configurable extends Declarable {
         }
     }
 
+    getConfig (name) {
+        return this[name];
+    }
+
     toJSON() {
         return map(this.$meta.configs, (v, k) => {
             v = this[k];

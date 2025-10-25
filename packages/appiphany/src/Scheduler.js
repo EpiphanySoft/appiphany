@@ -5,39 +5,63 @@ const
     tock = () => performance.now();
 
 export class Scheduler extends Configurable {
-    static instance = new Scheduler();
+    static instance = null;
 
     static configurable = {
         maxTimesliceMillis: 10
     };
 
+    #cycles = 0;
     #pending = false;
     #queue = new PriorityQueue();
+
+    get cycles () {
+        return this.#cycles;
+    }
+
+    get pending () {
+        return this.#pending;
+    }
 
     add (work, priority) {
         this.#queue.enqueue(work, priority);
         this.#runSoon();
     }
 
-    #runSoon () {
-        if (!this.#pending && !this.#queue.empty) {
-            this.#pending = true;
-            queueMicrotask(() => this.#run());
-        }
-    }
-
-    #run () {
+    async #run () {
         let { maxTimesliceMillis } = this,
+            count = 0,
+            queue = this.#queue,
             tick = tock(),
-            w;
+            work;
 
-        while ((w = this.#queue.dequeue())) {
-            w();
+        ++this.#cycles;
+
+        for (work of queue) {
+            ++count;
+            await work();
 
             if (tock() - tick >= maxTimesliceMillis) {
-                this.#runSoon();
                 break;
             }
         }
+
+        count && queue.skip(count);
+
+        this.#pending = false;
+
+        if (!queue.empty) {
+            this.#runSoon();
+        }
+    }
+
+    #runSoon () {
+        if (!this.#pending && !this.#queue.empty) {
+            this.#pending = true;
+
+            queueMicrotask(() => this.#run());
+        }
     }
 }
+
+Scheduler.instance = new Scheduler();

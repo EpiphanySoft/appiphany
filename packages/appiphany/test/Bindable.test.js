@@ -2,6 +2,7 @@ import { Configurable } from '@appiphany/appiphany';
 import { Bindable } from '@appiphany/appiphany/mixin';
 
 import assertly from 'assertly';
+import { sleep, until } from './utils.js';
 
 const { expect } = assertly;
 
@@ -241,7 +242,7 @@ describe('Bindable', () => {
         expect(logged()).to.equal([]);
     });
 
-    it('should support binding', () => {
+    it('should support binding', async() => {
         let log = [];
 
         const logged = () => {
@@ -253,7 +254,8 @@ describe('Bindable', () => {
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
                 publish: {
-                    foo: 3
+                    foo: 3,
+                    wip: 42
                 }
             }
         }
@@ -263,7 +265,7 @@ describe('Bindable', () => {
                 derp: class {
                     value = null;
 
-                    update (value) {
+                    update (me, value) {
                          log.push(`set derp ${value}`);
                      }
                 },
@@ -271,14 +273,23 @@ describe('Bindable', () => {
                 woot: class {
                     value = null;
 
-                    update (value) {
+                    update (me, value) {
                          log.push(`set woot ${value}`);
+                     }
+                },
+
+                wop: class {
+                    value = null;
+
+                    update (me, value) {
+                         log.push(`set wop ${value}`);
                      }
                 },
 
                 bind: {
                     derp: 'bar',    // formula bind, can only be one-way (read)
-                    woot: '~foo'    // value bind, default is read ('~' makes it two-way)
+                    woot: '~foo',   // value bind, default is read ('~' makes it two-way)
+                    wop: 'wip'      // value bind, default is read ('~' makes it two-way)
                 },
 
                 publish: {
@@ -293,10 +304,51 @@ describe('Bindable', () => {
         let parent = new Parent();
         let inst = new Foo({ parent });
 
-        expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
         expect(logged()).to.equal([
-            'get woot',
-            'get bar'
+            'get bar',
+            'set derp 15',
+            'set woot 3',
+            'set wop 42'
         ]);
+
+        expect(inst.props.foo).to.be(3);
+        expect(inst.props.bar).to.be(3 * 5);
+        expect(inst.props.wip).to.be(42);
+
+        expect(inst.derp).to.be(3 * 5);
+        expect(inst.woot).to.be(3);
+        expect(inst.wop).to.be(42);
+
+        parent.props.foo = 10;
+
+        expect(inst.scheduler.pending).to.be(true);
+        expect(logged()).to.equal([
+        ]);
+
+        await until(() => log.length === 3);
+        await sleep(20);
+
+        expect(logged()).to.equal([
+            'get bar',
+            'set derp 50',
+            'set woot 10'
+        ]);
+        expect(inst.scheduler.pending).to.be(false);
+        expect(inst.scheduler.cycles).to.be(1);
+
+        parent.props.wip = 427;
+        expect(inst.scheduler.pending).to.be(true);
+
+        expect(logged()).to.equal([
+        ]);
+
+        await until(() => log.length === 1);
+        await sleep(20);
+
+        expect(logged()).to.equal([
+            'set wop 427'
+        ]);
+        expect(inst.scheduler.pending).to.be(false);
+        expect(inst.scheduler.cycles).to.be(2);
     });
 });
