@@ -1,5 +1,22 @@
 
 export const
+    logger = () => {
+        let log = [];
+
+        return {
+            get length () {
+                return log.length;
+            },
+            get () {
+                let ret = log;
+                log = [];
+                return ret;
+            },
+            out (s) {
+                log.push(s);
+            }
+        };
+    },
     sleep = ms => new Promise(resolve => setTimeout(() => resolve(), ms)),
     stall = () => Promise.resolve(),
     until = async fn => {

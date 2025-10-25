@@ -1,20 +1,26 @@
-import { Configurable } from '@appiphany/appiphany';
+import { Configurable, Scheduler } from '@appiphany/appiphany';
 import { Bindable } from '@appiphany/appiphany/mixin';
 
 import assertly from 'assertly';
-import { sleep, until } from './utils.js';
+import { logger, sleep, until } from './utils.js';
 
 const { expect } = assertly;
 
+const
+    makeRoot = () => {
+        class Root extends Configurable.mixin(Bindable) {
+            //
+        }
+
+        const root = new Root();
+        root.scheduler = new Scheduler();
+
+        return root;
+    }
+
 describe('Bindable', () => {
     it('should basically work', () => {
-        let log = [];
-
-        const logged = () => {
-            let ret = log;
-            log = [];
-            return ret;
-        };
+        const log = logger();
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
@@ -22,7 +28,7 @@ describe('Bindable', () => {
                     foo: 21,
 
                     bar () {
-                        log.push('get bar');
+                        log.out('get bar');
                         return this.foo * 10;
                     }
                 }
@@ -33,30 +39,24 @@ describe('Bindable', () => {
 
         expect(inst.props.foo).to.be(21);
         expect(inst.props.bar).to.be(210);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar'
         ]);
 
         expect(inst.props.foo).to.be(21);
         expect(inst.props.bar).to.be(210);
-        expect(logged()).to.equal([]);
+        expect(log.get()).to.equal([]);
 
         inst.props.foo = 42;
         expect(inst.props.foo).to.be(42);
         expect(inst.props.bar).to.be(420);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar'
         ]);
     });
 
     it('should work in a class hierarchy', () => {
-        let log = [];
-
-        const logged = () => {
-            let ret = log;
-            log = [];
-            return ret;
-        };
+        const log = logger();
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
@@ -70,7 +70,7 @@ describe('Bindable', () => {
             static configurable = {
                 publish: {
                     bar () {
-                        log.push('get bar');
+                        log.out('get bar');
                         return this.foo * 10;
                     }
                 }
@@ -81,30 +81,24 @@ describe('Bindable', () => {
 
         expect(inst.props.foo).to.be(21);
         expect(inst.props.bar).to.be(210);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar'
         ]);
 
         expect(inst.props.foo).to.be(21);
         expect(inst.props.bar).to.be(210);
-        expect(logged()).to.equal([]);
+        expect(log.get()).to.equal([]);
 
         inst.props.foo = 42;
         expect(inst.props.foo).to.be(42);
         expect(inst.props.bar).to.be(420);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar'
         ]);
     });
 
     it('should work in a deep class hierarchy', () => {
-        let log = [];
-
-        const logged = () => {
-            let ret = log;
-            log = [];
-            return ret;
-        };
+        const log = logger();
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
@@ -118,7 +112,7 @@ describe('Bindable', () => {
             static configurable = {
                 publish: {
                     bar () {
-                        log.push('get bar');
+                        log.out('get bar');
                         return this.foo * 10;
                     }
                 }
@@ -129,7 +123,7 @@ describe('Bindable', () => {
             static configurable = {
                 publish: {
                     derp () {
-                        log.push('get derp');
+                        log.out('get derp');
                         return this.bar * 3;
                     }
                 }
@@ -140,7 +134,7 @@ describe('Bindable', () => {
             static configurable = {
                 publish: {
                     woot () {
-                        log.push('get woot');
+                        log.out('get woot');
                         return this.derp * 5;
                     }
                 }
@@ -151,27 +145,21 @@ describe('Bindable', () => {
 
         expect(inst.props.foo).to.be(2);
         expect(inst.props.bar).to.be(20);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar'
         ]);
         expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get woot',
             'get derp'
         ]);
         expect(inst.props.derp).to.be(2 * 10 * 3);
-        expect(logged()).to.equal([]);
+        expect(log.get()).to.equal([]);
 
     });
 
     it('should work in a class and object hierarchy', () => {
-        let log = [];
-
-        const logged = () => {
-            let ret = log;
-            log = [];
-            return ret;
-        };
+        const log = logger();
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
@@ -185,7 +173,7 @@ describe('Bindable', () => {
             static configurable = {
                 publish: {
                     bar () {
-                        log.push('get bar');
+                        log.out('get bar');
                         return this.foo * 10;
                     }
                 }
@@ -209,7 +197,7 @@ describe('Bindable', () => {
 
                 publish: {
                     woot () {
-                        log.push('get woot');
+                        log.out('get woot');
                         return this.bar * this.derp * 5;
                     }
                 }
@@ -220,36 +208,31 @@ describe('Bindable', () => {
         let inst = new Woot({ parent: inst0 });
 
         expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get woot',
             'get bar'
         ]);
         expect(inst.props.derp).to.be(3);
         expect(inst.props.bar).to.be(20);
-        expect(logged()).to.equal([]);
+        expect(log.get()).to.equal([]);
 
         inst0 = new Bar();
         inst0.props.foo = 21;
         inst.parent = inst0;
 
         expect(inst.props.woot).to.be(21 * 10 * 3 * 5);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get woot',
             'get bar'
         ]);
         expect(inst.props.derp).to.be(3);
         expect(inst.props.bar).to.be(210);
-        expect(logged()).to.equal([]);
+        expect(log.get()).to.equal([]);
     });
 
     it('should support binding', async() => {
-        let log = [];
-
-        const logged = () => {
-            let ret = log;
-            log = [];
-            return ret;
-        };
+        const log = logger();
+        const root = makeRoot();
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
@@ -266,7 +249,7 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.push(`set derp ${value}`);
+                         log.out(`set derp ${value}`);
                      }
                 },
 
@@ -274,7 +257,7 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.push(`set woot ${value}`);
+                         log.out(`set woot ${value}`);
                      }
                 },
 
@@ -282,7 +265,7 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.push(`set wop ${value}`);
+                         log.out(`set wop ${value}`);
                      }
                 },
 
@@ -294,17 +277,17 @@ describe('Bindable', () => {
 
                 publish: {
                     bar () {
-                        log.push('get bar');
+                        log.out('get bar');
                         return this.foo * 5;
                     }
                 }
             }
         }
 
-        let parent = new Parent();
+        let parent = new Parent({ parent: root });
         let inst = new Foo({ parent });
 
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar',
             'set derp 15',
             'set woot 3',
@@ -322,13 +305,13 @@ describe('Bindable', () => {
         parent.props.foo = 10;
 
         expect(inst.scheduler.pending).to.be(true);
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
         ]);
 
         await until(() => log.length === 3);
         await sleep(20);
 
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'get bar',
             'set derp 50',
             'set woot 10'
@@ -336,19 +319,90 @@ describe('Bindable', () => {
         expect(inst.scheduler.pending).to.be(false);
         expect(inst.scheduler.cycles).to.be(1);
 
+        expect(inst.derp).to.be(50);
+        expect(inst.woot).to.be(10);
+        expect(inst.wop).to.be(42);
+
         parent.props.wip = 427;
         expect(inst.scheduler.pending).to.be(true);
 
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
         ]);
 
         await until(() => log.length === 1);
         await sleep(20);
 
-        expect(logged()).to.equal([
+        expect(log.get()).to.equal([
             'set wop 427'
         ]);
         expect(inst.scheduler.pending).to.be(false);
         expect(inst.scheduler.cycles).to.be(2);
+
+        expect(inst.derp).to.be(50);
+        expect(inst.woot).to.be(10);
+        expect(inst.wop).to.be(427);
+    });
+
+    it('should support binding functions', async() => {
+        const log = logger();
+        const root = makeRoot();
+
+        class Parent extends Configurable.mixin(Bindable) {
+            static configurable = {
+                publish: {
+                    foo: 3
+                }
+            }
+        }
+
+        class Foo extends Configurable.mixin(Bindable) {
+            static configurable = {
+                woot: class {
+                    value = null;
+
+                    update (me, value) {
+                         log.out(`set woot ${value}`);
+                     }
+                },
+
+                bind: {
+                    woot () {
+                        log.out('calc woot');
+                        return this.foo * 5;
+                    }
+                }
+            }
+        }
+
+        let parent = new Parent({ parent: root });
+        let inst = new Foo({ parent });
+
+        expect(log.get()).to.equal([
+            'calc woot',
+            'set woot 15'
+        ]);
+
+        expect(inst.props.foo).to.be(3);
+
+        expect(inst.woot).to.be(15);
+
+        parent.props.foo = 10;
+
+        expect(inst.scheduler.pending).to.be(true);
+        expect(log.get()).to.equal([
+        ]);
+
+        await until(() => log.length === 2);
+        await sleep(20);
+
+        expect(log.get()).to.equal([
+            'calc woot',
+            'set woot 50'
+        ]);
+
+        expect(inst.scheduler.pending).to.be(false);
+        expect(inst.scheduler.cycles).to.be(1);
+
+        expect(inst.woot).to.be(50);
     });
 });

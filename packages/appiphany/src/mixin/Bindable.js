@@ -1,4 +1,4 @@
-import { Scheduler, Signal, keys } from '@appiphany/appiphany';
+import { Scheduler, Signal, keys, capitalize } from '@appiphany/appiphany';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
@@ -181,17 +181,31 @@ export const Bindable = Base => class Bindable extends Base {
                 sig, twoWay;
 
             if (prop) {
-                twoWay = prop[0] === '~';
-                prop = twoWay ? prop.slice(1) : prop;
+                if (typeof prop === 'function') {
+                    if (was?.calc === prop) {
+                        continue;
+                    }
 
-                if (was && was.name === prop && was.twoWay === twoWay) {
-                    continue;
+                    sig = Signal.formula(
+                        () => prop.call(this.props), { name: `calc${capitalize(configName)}` });
+
+                    sig.calc = prop;
+                }
+                else {
+                    twoWay = prop[0] === '~';
+                    prop = twoWay ? prop.slice(1) : prop;
+
+                    if (was && was.name === prop && was.twoWay === twoWay) {
+                        continue;
+                    }
+
+                    sig = Signal.formula(() => this.props[prop], { name: prop });
+
+                    sig.twoWay = twoWay;
+                    sig.update = twoWay && (v => this.props[prop] = v);
                 }
 
-                sig = Signal.formula(() => this.props[prop], { name: prop });
                 sig.configName = configName;
-                sig.twoWay = twoWay;
-                sig.update = twoWay && (v => this.props[prop] = v);
 
                 (add ??= []).push(sig);
 
