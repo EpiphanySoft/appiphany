@@ -418,7 +418,7 @@ describe('Bindable', () => {
             static configurable = {
                 props: {
                     internal: {
-                        dip: 3,
+                        dip: 3, // unique to this instance
                         dop: 2,
 
                         wop () {
@@ -438,7 +438,7 @@ describe('Bindable', () => {
                 props: {
                     internal: {
                         dop: 9,
-                        wip: 10,
+                        wip: 10,  // unique to this instance
 
                         wop () {
                             return this.dop * this.wip;
@@ -454,17 +454,23 @@ describe('Bindable', () => {
 
         let parent = new Parent({ parent: root });
         let inst = new Foo({ parent });
+        let getProps = o => ['dip','dop','wip','wop','foo'].map(n => o.props[n]);
 
-        expect(inst.props.dip).to.be(undefined);
-        expect(inst.props.dop).to.be(9);
-        expect(inst.props.wip).to.be(10);
-        expect(inst.props.wop).to.be(90);
-        expect(inst.props.foo).to.be(450);
+        expect(getProps(parent)).to.equal([3, 2, undefined, 200, 600]);
+        expect(getProps(inst)).to.equal([undefined, 9, 10, 90, 450]);
 
-        expect(parent.props.dip).to.be(3);
-        expect(parent.props.dop).to.be(2);
-        expect(parent.props.wip).to.be(undefined);
-        expect(parent.props.wop).to.be(200);
-        expect(parent.props.foo).to.be(600);
+        expect(() => {
+            inst.props.dip = 0;  // parent internal prop (cannot set)
+        }).to.throw();
+
+        inst.props.dop = 7;
+
+        expect(getProps(parent)).to.equal([3, 2, undefined, 200, 600]);
+        expect(getProps(inst)).to.equal([undefined, 7, 10, 70, 350]);
+
+        parent.props.dop = 5;
+
+        expect(getProps(parent)).to.equal([3, 5, undefined, 500, 1500]);
+        expect(getProps(inst)).to.equal([undefined, 7, 10, 70, 350]);
     });
 });

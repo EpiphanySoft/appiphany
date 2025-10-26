@@ -6,12 +6,17 @@ const
     createProps = p => Object.create(Object.create(getParentProps(p)));
 
 /**
- * This mixin adds the ability to define props on a class. Signals exist as both
- * published and internal. Internal props are only available to the instance and
- * are accessed via the `props` property. Published props are available to child
- * instances (connected via their `parent` property).
+ * This mixin adds the ability to define props on a class. Props exist as both published
+ * and internal. Props (both internal and published) and are accessed via the `props`
+ * property.
  *
+ * Internal props are only available to the instance that declared them.
  *
+ * Published props are also available to child instances (connected via their `parent`
+ * config).
+ *
+ * Internally, props are defined using a prototype chain. The following diagram shows how
+ * this is implemented:
  *
  *           ╔══════════════╗                      ┌───────────────┐
  *           ║              ║                      │   published   │
@@ -38,6 +43,16 @@ const
  *                                          │    props     │
  *                                          └──────────────┘
  *
+ * Even though props are defined using a prototype chain, they behave like a scope chain.
+ * This means that settings a prop declared on a parent instance using a child instance's
+ * props will affect the parent instance (and all its children).
+ *
+ * A child instance can hide a parent instance's prop by defining its own prop by the same
+ * name. Similar to how an assignment is different than a `let` declaration in a nested
+ * scope.
+ *
+ * By default, props are sealed. This means that they cannot be extended to add new props
+ * dynamically. To disable this, set the `sealed` property to false on the `props` config.
  */
 export const Bindable = Base => class Bindable extends Base {
     static proto = {
@@ -226,7 +241,7 @@ export const Bindable = Base => class Bindable extends Base {
             }
             else if (name !== 'sealed') {
                 let existing = signals[name],
-                    sig = add[name],
+                    sig = add[name],  // <<< needs to be declared here to avoid a stale closure
                     formula = typeof sig === 'function',
                     property = {
                         configurable: true,
