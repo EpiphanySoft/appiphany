@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="server" type="NodeJSConfigurationType" node-parameters="app.js" working-dir="$PROJECT_DIR$/apps/server">
+  <configuration default="false" name="server" type="NodeJSConfigurationType" node-parameters="server.js" working-dir="$PROJECT_DIR$/apps/server">
     <method v="2" />
   </configuration>
 </component>
