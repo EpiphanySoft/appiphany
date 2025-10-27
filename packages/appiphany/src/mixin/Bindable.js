@@ -1,4 +1,4 @@
-import { Scheduler, Signal, keys, capitalize } from '@appiphany/appiphany';
+import { Scheduler, Signal, capitalize } from '@appiphany/appiphany';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,

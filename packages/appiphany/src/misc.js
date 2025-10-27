@@ -559,6 +559,8 @@ export const
         return ret;
     },
 
+    hasOwn = Object.hasOwn,
+
     isoNow = () => (new Date()).toISOString(),
 
     keys = obj => {

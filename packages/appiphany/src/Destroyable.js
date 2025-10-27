@@ -1,4 +1,4 @@
-import { applyTo, isAsync, isFunction, nop, SKIP, thenable } from "@appiphany/appiphany";
+import { applyTo, hasOwn, isAsync, isFunction, nop, SKIP, thenable } from "@appiphany/appiphany";
 
 const
     cascadeDestroySym = Symbol('cascadeDestroy'),
@@ -195,6 +195,8 @@ export class Destroyable {
 }
 
 applyTo(Destroyable.prototype, {
+    [Destroyable.sym]: true,
+
     destroyed: false,
     destructing: false,
     destructed: false,

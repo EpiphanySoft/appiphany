@@ -1,3 +1,3 @@
-import { Configurable } from '@appiphany/appiphany';
+import { Dom } from '@appiphany/appiphany/widget';
 
 debugger;
