@@ -1,4 +1,4 @@
-import { pop } from '@appiphany/appiphany';
+import { className, pop } from '@appiphany/appiphany';
 
 
 export class Event {
@@ -71,13 +71,33 @@ export class Dom {
     static key = '$dom';
 
     static specialProps = {
-        $: 1,  // the element type/tagName
+        tag   : 1,  // the tagName
         html  : 1,
         text  : 1,
         specs : 1
     };
 
-    static get (el) {
+    static get body () {
+        return Dom.get(Dom.getBody());
+    }
+
+    static get doc () {
+        return Dom.get(Dom.getDoc());
+    }
+
+    static get docRoot () {
+        return Dom.get(Dom.getDocRoot());
+    }
+
+    static get win () {
+        return Dom.get(Dom.getWin());
+    }
+
+    static get_ (el, fly) {
+        if (el instanceof Dom) {
+            return el;
+        }
+
         if (typeof el === 'string') {
             let t = document.getElementById(el);
 
@@ -102,23 +122,103 @@ export class Dom {
             }
         }
 
-        return el && (el[Dom.key] ??= new Dom(el));
+        if (!el) {
+            return null;
+        }
+
+        let ret = el[Dom.key];
+
+        if (!ret) {
+            ret = new Dom(el);
+
+            if (!fly) {
+                el[Dom.key] = ret;
+            }
+        }
+
+        return ret;
     }
 
-    static get doc () {
-        return Dom.get(document);
+    static fly (el) {
+        return Dom.get_(el, true);
     }
 
-    static get body () {
-        return Dom.get('body');
+    static get (el) {
+        return Dom.get_(el);
     }
 
-    static get html () {
-        return Dom.get('html');
+    static getBody (el) {
+        return Dom.getDoc(el)?.body;
+    }
+
+    static getDoc (el) {
+        if (Dom.isDoc(el)) {
+            return el;
+        }
+
+        if (Dom.isWin(el)) {
+            return el.document;
+        }
+
+        return el?.ownerDocument || document;
+    }
+
+    static getDocRoot (el) {
+        return Dom.getDoc(el)?.body.parentElement;
+    }
+
+    static getWin (el) {
+        if (Dom.isWin(el)) {
+            return el;
+        }
+
+        return Dom.getDoc(el)?.defaultView || window;
+    }
+
+    /**
+     * EventTarget (base for all)
+     * └── Node (base interface for DOM nodes)
+     *     ├── Document (nodeType: 9)
+     *     ├── DocumentFragment (nodeType: 11)
+     *     ├── DocumentType (nodeType: 10)
+     *     ├── CharacterData (abstract; nodeType: 3/4/8)
+     *     │   ├── Text (nodeType: 3)
+     *     │   ├── Comment (nodeType: 8)
+     *     │   └── ProcessingInstruction (nodeType: 7)
+     *     └── Element (nodeType: 1; inherits Node)
+     *         ├── HTMLElement (HTML-specific elements)
+     *         │   ├── HTMLBodyElement
+     *         │   ├── HTMLDivElement
+     *         │   ├── HTMLAnchorElement
+     *         │   ├── HTMLImageElement
+     *         │   └── ... (many more HTML*Element subclasses)
+     *         ├── SVGElement (SVG-specific elements)
+     *         │   ├── SVGCircleElement
+     *         │   ├── SVGPathElement
+     *         │   └── ... (SVG*Element subclasses)
+     *         └── MathMLElement (MathML-specific)
+     *             └── ... (MathML*Element subclasses)
+     */
+    static is (el) {
+        let w = Dom.getWin(el);  // Window instanceof Node === false
+
+        return el === w || (el instanceof w.Node);
+    }
+
+    static isDoc (el) {
+        return className(el) === 'Document';
+    }
+
+    static isElement (el) {
+        return el instanceof Dom.getWin(el).Element;
+    }
+
+    static isWin (el) {
+        return className(el) === 'Window';
     }
 
     constructor (el) {
-        this.el = el;
+        this.el = el || null;
     }
 
     get id () {
@@ -177,6 +277,25 @@ export class Dom {
      *  }
      */
     update (spec) {
-        //
+        spec = spec || {};
+
+        let el = this.el,
+            { tag = 'div' } = spec;
+
+        if (!el) {
+            this.el = el = Dom.getDoc().createElement(tag);
+        }
+        else if (el.tagName !== tag) {
+            el.replaceWith(this.el = el = Dom.getDoc().createElement(tag));
+        }
+
+        // TODO
+        //  - parent / before / after
+        //  - child specs
+        //  - text / html
+        //  - attributes
+        //  - classList
+        //  - dataset
+        //  - style
     }
 }

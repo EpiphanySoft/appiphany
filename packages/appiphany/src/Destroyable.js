@@ -1,4 +1,4 @@
-import { applyTo, hasOwn, isAsync, isFunction, nop, SKIP, thenable } from "@appiphany/appiphany";
+import { applyTo, isAsync, isFunction, nop, SKIP, thenable } from "@appiphany/appiphany";
 
 const
     cascadeDestroySym = Symbol('cascadeDestroy'),
@@ -75,7 +75,7 @@ export class Destroyable {
 
             me.destroyed = me.destructing = true;
             me.destruct();
-            me.destructed = !(me.destructing = false);
+            me.destructing = '>';
 
             if (cascadeDestroy) {
                 for (obj of cascadeDestroy) {
@@ -84,6 +84,8 @@ export class Destroyable {
                     obj?.destroy();
                 }
             }
+
+            me.destructed = !(me.destructing = false);
         }
     }
 

@@ -106,6 +106,8 @@ export const
         return ret;
     },
 
+    className = object => object?.constructor?.name || '',
+
     clone = object => {
         if (object) {
             let t = typeOf(object),
