@@ -1,4 +1,4 @@
-import { className, pop } from '@appiphany/appiphany';
+import { className, isEqual, pop } from '@appiphany/appiphany';
 
 
 export class Event {
@@ -74,7 +74,15 @@ export class Dom {
         tag   : 1,  // the tagName
         html  : 1,
         text  : 1,
-        specs : 1
+        specs : 1,
+
+        class : 1,
+        data  : 1,
+        style : 1,
+
+        after : 1,
+        before: 1,
+        parent: 1
     };
 
     static get body () {
@@ -93,7 +101,7 @@ export class Dom {
         return Dom.get(Dom.getWin());
     }
 
-    static get_ (el, fly) {
+    static get (el) {
         if (el instanceof Dom) {
             return el;
         }
@@ -126,25 +134,7 @@ export class Dom {
             return null;
         }
 
-        let ret = el[Dom.key];
-
-        if (!ret) {
-            ret = new Dom(el);
-
-            if (!fly) {
-                el[Dom.key] = ret;
-            }
-        }
-
-        return ret;
-    }
-
-    static fly (el) {
-        return Dom.get_(el, true);
-    }
-
-    static get (el) {
-        return Dom.get_(el);
+        return el[Dom.key] ??= new Dom(el);
     }
 
     static getBody (el) {
@@ -279,23 +269,110 @@ export class Dom {
     update (spec) {
         spec = spec || {};
 
-        let el = this.el,
-            { tag = 'div' } = spec;
+        let { el, spec: was } = this,
+            { after, before, parent, class: cls, tag = 'div', html, text, data, specs, style } = spec;
+
+        if (!was) {
+            was = {};
+        }
+        else if (isEqual(spec, was)) {
+            return;
+        }
 
         if (!el) {
             this.el = el = Dom.getDoc().createElement(tag);
         }
-        else if (el.tagName !== tag) {
+        else if (el.tagName !== tag.toUpperCase()) {
             el.replaceWith(this.el = el = Dom.getDoc().createElement(tag));
         }
 
+        if (before) {
+            if (el.nextElementSibling !== before) {
+                before.parentElement.insertBefore(el, before);
+            }
+        }
+        else if (after) {
+            before = after.nextElementSibling;
+
+            if (before !== el) {
+                after.parentElement.insertBefore(el, before);
+            }
+        }
+        else if (parent && parent !== el.parentElement) {
+            parent.appendChild(el);
+        }
+
+        this.#updateAttrs(spec, was);
+        this.#updateCls(cls, was.class);
+        this.#updateData(data, was.data);
+        this.#updateStyle(style, was.style);
+
+        if (text != null) {
+            if (text !== was.text) {
+                this.#updateText(text);
+            }
+        }
+        else if (html != null) {
+            if (html !== was.html) {
+                this.#updateHtml(html);
+            }
+        }
+        else {
+            this.#updateSubTree(spec, was.specs);
+        }
+
+        this.spec = spec;
+    }
+
+    #updateAttrs (attrs, was) {
+        let { el } = this,
+            name, val;
+
+        for (name in attrs) {
+            if (!Dom.specialProps[name]) {
+                val = attrs[name];
+
+                if (val !== was[name]) {
+                    if (val == null) {
+                       el.removeAttribute(name);
+                    }
+                    else {
+                        el.setAttribute(name, val);
+                    }
+                }
+            }
+        }
+
+        for (name in was) {
+            if (!Dom.specialProps[name]) {
+                if (!(name in attrs)) {
+                    el.removeAttribute(name);
+                }
+            }
+        }
+    }
+
+    #updateCls (attrs) {
         // TODO
-        //  - parent / before / after
-        //  - child specs
-        //  - text / html
-        //  - attributes
-        //  - classList
-        //  - dataset
-        //  - style
+    }
+
+    #updateHtml (html) {
+        this.el.innerHTML = html;
+    }
+
+    #updateText (text) {
+        this.el.textContent = text;
+    }
+
+    #updateData (attrs) {
+        // TODO
+    }
+
+    #updateStyle (attrs) {
+        // TODO
+    }
+
+    #updateSubTree (attrs) {
+        // TODO
     }
 }
