@@ -318,7 +318,7 @@ export class Dom {
             }
         }
         else {
-            this.#updateSubTree(spec, was.specs);
+            this.#updateSubTree(specs, was.specs);
         }
 
         this.spec = spec;
@@ -352,7 +352,7 @@ export class Dom {
         }
     }
 
-    #updateCls (attrs) {
+    #updateCls (cls, was) {
         // TODO
     }
 
@@ -364,15 +364,15 @@ export class Dom {
         this.el.textContent = text;
     }
 
-    #updateData (attrs) {
+    #updateData (data, was) {
         // TODO
     }
 
-    #updateStyle (attrs) {
+    #updateStyle (style, was) {
         // TODO
     }
 
-    #updateSubTree (attrs) {
+    #updateSubTree (specs, was) {
         // TODO
     }
 }
