@@ -276,7 +276,7 @@ describe('Bindable', () => {
                 bind: {
                     derp: 'bar',    // formula bind, can only be one-way (read)
                     woot: '~foo',   // value bind, default is read ('~' makes it two-way)
-                    wop: 'wip'      // value bind, default is read ('~' makes it two-way)
+                    wop: 'wip'      // value bind, default is read
                 },
 
                 props: {
@@ -417,7 +417,7 @@ describe('Bindable', () => {
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
                 props: {
-                    internal: {
+                    $: {
                         dip: 3, // unique to this instance
                         dop: 2,
 
@@ -436,7 +436,7 @@ describe('Bindable', () => {
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
                 props: {
-                    internal: {
+                    $: {
                         dop: 9,
                         wip: 10,  // unique to this instance
 

@@ -236,7 +236,7 @@ export const Bindable = Base => class Bindable extends Base {
             options = {};
 
         for (const name in add) {
-            if (name === 'internal') {
+            if (name === '$') {
                 !internal && this.defineProps(add[name], true);
             }
             else if (name !== 'sealed') {

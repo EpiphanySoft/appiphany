@@ -1,5 +1,7 @@
-import { className, isEqual, pop } from '@appiphany/appiphany';
+import { className, isEqual, pop, remove } from '@appiphany/appiphany';
 
+const
+    EMPTY_OBJECT = Object.create(null);
 
 export class Event {
     static nextListenerId = 0;
@@ -66,6 +68,8 @@ export class Event {
 
 export class Dom {
     #listeners;
+    static ELEMENT = 1;
+    static TEXT = 3;
 
     // static key = Symbol('dom');
     static key = '$dom';
@@ -73,7 +77,9 @@ export class Dom {
     static specialProps = {
         tag   : 1,  // the tagName
         html  : 1,
+        owner : 1,
         text  : 1,
+        ref   : 1,
         specs : 1,
 
         class : 1,
@@ -266,11 +272,17 @@ export class Dom {
      *      href: '',
      *  }
      */
-    update (spec) {
+    update (spec, refs, owner) {
         spec = spec || {};
 
+        if (refs === true) {
+            refs = {};
+            owner = this;
+        }
+
         let { el, spec: was } = this,
-            { after, before, parent, class: cls, tag = 'div', html, text, data, specs, style } = spec;
+            { after, before, parent, class: cls, tag = 'div', html, text, data, ref, specs, style }
+                = spec;
 
         if (!was) {
             was = {};
@@ -302,29 +314,34 @@ export class Dom {
             parent.appendChild(el);
         }
 
-        this.#updateAttrs(spec, was);
-        this.#updateCls(cls, was.class);
-        this.#updateData(data, was.data);
-        this.#updateStyle(style, was.style);
+        ref && refs && (refs[ref] = this);
+
+        this.#_updateAttrs(spec, was);
+        this.#_updateCls(cls || EMPTY_OBJECT, was.class || EMPTY_OBJECT);
+        this.#_updateData(data, was.data);
+        this.#_updateStyle(style, was.style);
 
         if (text != null) {
             if (text !== was.text) {
-                this.#updateText(text);
+                this.#_updateText(text);
             }
         }
         else if (html != null) {
             if (html !== was.html) {
-                this.#updateHtml(html);
+                this.#_updateHtml(html);
             }
         }
-        else {
-            this.#updateSubTree(specs, was.specs);
+        else if (specs !== undefined) {
+            this.#_updateSubTree(specs || [], was.specs || [], refs, owner);
         }
 
-        this.spec = spec;
+        this.owner = owner;
+        this.ref   = ref;
+        this.refs  = (owner === this) ? refs : null;
+        this.spec  = spec;
     }
 
-    #updateAttrs (attrs, was) {
+    #_updateAttrs (attrs, was) {
         let { el } = this,
             name, val;
 
@@ -352,27 +369,92 @@ export class Dom {
         }
     }
 
-    #updateCls (cls, was) {
-        // TODO
+    #_updateCls (classes, was) {
+        let classList = Array.from(this.el.classList),
+            cls;
+
+        for (cls in classes) {
+            if (!classes[cls]) {
+                remove(classList, cls);
+            }
+            else if (!classList.includes(cls)) {
+                classList.push(cls);
+            }
+        }
+
+        for (cls in was) {
+            if (!(cls in classes)) {
+                remove(classList, cls);
+            }
+        }
+
+        this.el.className = classList.join(' ');
     }
 
-    #updateHtml (html) {
+    #_updateHtml (html) {
         this.el.innerHTML = html;
     }
 
-    #updateText (text) {
+    #_updateText (text) {
         this.el.textContent = text;
     }
 
-    #updateData (data, was) {
+    #_updateData (data, was) {
         // TODO
     }
 
-    #updateStyle (style, was) {
+    #_updateStyle (style, was) {
         // TODO
     }
 
-    #updateSubTree (specs, was) {
-        // TODO
+    #_updateSubTree (specs, was, refs, owner) {
+        let doc = this.el.ownerDocument,
+            parent = this.el.parentElement,
+            children = Array.from(this.el.childNodes).reverse(),  // so pop goes left-to-right
+            add, child, dom, isText, old, ref, spec;
+
+        for (spec of specs) {
+            child = children.pop() || null;
+            isText = child?.nodeType === Dom.TEXT;
+            dom = Dom.get(child);
+
+            if (typeof spec === 'string') {
+                if (child && isText) {
+                    if (dom.spec !== spec) {
+                        child.nodeValue = dom.spec = spec;
+                    }
+                }
+                else {
+                    add = doc.createTextNode(spec);
+                    dom = Dom.get(add);
+                    dom.spec = spec;
+
+                    parent.insertBefore(add, child);
+                    child && children.push(child);
+                }
+            }
+            else {
+                if (isText) {
+                    child && children.push(child);
+                    child = dom = null;
+                }
+                else if ((ref = spec.ref) && (old = owner?.refs?.[ref]) && old !== dom) {
+                    child && children.push(child);
+
+                    child = old.el;
+                    dom = old;
+                    remove(children, child);
+                }
+
+                if (dom) {
+                    dom.update(spec, refs, owner);
+                }
+                else {
+                    dom = new Dom();
+                    dom.update(spec, refs, owner);
+                    parent.insertBefore(dom.el, child);
+                }
+            }
+        }
     }
 }

@@ -749,6 +749,19 @@ export const
 
     quoteWrap = (s, c = '"') => s ? `${c.slice(0, 1)}${s}${c.slice(-1)}` : '',
 
+    remove = (array, item) => {
+        if (isArray(item)) {
+            item.forEach(i => remove(array, i));
+        }
+        else {
+            let i = array.indexOf(item);
+
+            i > -1 && array.splice(i, 1);
+        }
+
+        return array;
+    },
+
     sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
 
     splitObject = (object, ...keySets) => {

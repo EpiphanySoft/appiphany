@@ -28,29 +28,29 @@ class Subscription extends Destroyable {
 /**
  * Hold objects via WeakRef that will be called with broadcast messages.
  */
-export const Observable = Base => class Observable extends Base {
+export const Broadcastable = Base => class Broadcastable extends Base {
     firing = null;
-    observers = new Map();
+    informants = new Map();
     nextId = 0;
 
     broadcast(inform) {
         let me = this,
-            { observers } = me,
-            entry, id, observer;
+            { informants } = me,
+            entry, id, informant;
 
         if (me.firing) {
             throw new Error('Reentrancy not allowed');
         }
 
         try {
-            me.firing = observers;
+            me.firing = informants;
 
-            for ([id, entry] of observers.entries()) {
-                if (!(observer = entry.deref()) || observer.destroyed) {
-                    observers.delete(id);
+            for ([id, entry] of informants.entries()) {
+                if (!(informant = entry.deref()) || informant.destroyed) {
+                    informants.delete(id);
                 }
                 else {
-                    observer.inform(inform);
+                    informant.inform(inform);
                 }
             }
         }
@@ -59,15 +59,15 @@ export const Observable = Base => class Observable extends Base {
         }
     }
 
-    mutableObservers() {
+    mutableInformants() {
         let me = this,
-            { observers } = me;
+            { informants } = me;
 
-        if (me.firing === observers) {
-            me.observers = observers = new Map(observers);
+        if (me.firing === informants) {
+            me.informants = informants = new Map(informants);
         }
 
-        return observers;
+        return informants;
     }
 
     /**
@@ -79,33 +79,33 @@ export const Observable = Base => class Observable extends Base {
         let me = this,
             id = observer.id || `__${++me.nextId}__`,
             sub = new Subscription(me, observer),
-            observers = me.mutableObservers();
+            informants = me.mutableInformants();
 
-        observers.set(id, new WeakRef(observer));
+        informants.set(id, new WeakRef(observer));
 
         return sub;
     }
 
     unobserve(observer) {
         let me = this,
-            observers = me.mutableObservers(),
+            informants = me.mutableInformants(),
             obj, id, entry;
 
-        for ([id, entry] of observers.entries()) {
+        for ([id, entry] of informants.entries()) {
             if (!(obj = entry.deref()) || obj === observer) {
-                observers.delete(id);
+                informants.delete(id);
             }
         }
     }
 }
 
 
-export const Observer = Base => class Observer extends Base {
+export const Informable = Base => class Informable extends Base {
     inform(inform) {
         let { type } = inform;
 
         if (typeof type === 'string') {
-            return this['on_' + type]?.(inform);
+            return this[`on_${type}`]?.(inform);
         }
     }
 };
