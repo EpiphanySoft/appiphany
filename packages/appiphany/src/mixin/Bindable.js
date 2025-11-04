@@ -120,6 +120,44 @@ export const Bindable = Base => class Bindable extends Base {
 
                 me.defineProps(props);
             }
+
+            addProp(proto, name, readonly) {
+                let desc = {
+                    configurable: true,
+
+                    get () {
+                        return this.props[name];
+                    },
+
+                    set (v) {
+                        this.props[name] = v;
+                    }
+                };
+
+                if (readonly) {
+                    delete desc.set;
+                }
+
+                Object.defineProperty(proto, name, desc);
+            }
+
+            extend(cls, props) {
+                props = props?.$;
+
+                if (props) {
+                    let meta = cls.$meta,
+                        { configs, expando } = meta,
+                        proto = cls.prototype,
+                        key;
+
+                   for (key in props) {
+                       if (!configs[key]) {
+                           expando[key] = true;
+                           this.addProp(proto, key, typeof props[key] === 'function');
+                       }
+                   }
+                }
+            }
         }
     };
 

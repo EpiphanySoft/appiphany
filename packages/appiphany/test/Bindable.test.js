@@ -468,7 +468,7 @@ describe('Bindable', () => {
         expect(getProps(parent)).to.equal([3, 2, undefined, 200, 600]);
         expect(getProps(inst)).to.equal([undefined, 7, 10, 70, 350]);
 
-        parent.props.dop = 5;
+        parent.dop = 5;  // internal props are exposed on object
 
         expect(getProps(parent)).to.equal([3, 5, undefined, 500, 1500]);
         expect(getProps(inst)).to.equal([undefined, 7, 10, 70, 350]);

@@ -6,7 +6,33 @@ import { Declarable } from '@appiphany/appiphany';
 const
     { hasOwn } = Object,
     { defineProperty } = Reflect,
-    configDataSym = Symbol('configuring');
+    configDataSym = Symbol('configuring'),
+    EXPANDO_ANY = applyTo(chain(), { '*': true }),
+    EXPANDO_NONE = chain(),
+    makeExpando = (expando, parentExpando) => {
+        let ret;
+
+        if (expando === true) {
+            ret = chain(EXPANDO_ANY);
+        }
+        else if (expando === false) {
+            ret = chain(EXPANDO_NONE);
+        }
+        else {
+            ret = chain(parentExpando);
+
+            if (expando) {
+                if (Array.isArray(expando)) {
+                    expando.forEach(k => ret[k] = true);
+                }
+                else {
+                    applyTo(ret, expando);
+                }
+            }
+        }
+
+        return ret;
+    };
 
 
 export class Config {
@@ -33,6 +59,10 @@ export class Config {
 
     equal(a, b) {
         return a === b;
+    }
+
+    extend(cls, val) {
+        // template
     }
 
     get(instance) {
@@ -198,6 +228,9 @@ export class Configurable extends Declarable {
                 else if (!(config = classConfigs[name])) {
                     classConfigs[name] = config = Config.get(name);
                 }
+                else {
+                    config.extend(cls, val);
+                }
 
                 if (name in configValues) {
                     val = config.merge(configValues[name], val);
@@ -214,9 +247,9 @@ export class Configurable extends Declarable {
     /**
      * Set to true on a class to allow instanceConfig to add properties that are not
      * declared as configurable.
-     * @type {boolean}
+     * @type {Object}
      */
-    static expando = false;
+    static expando = EXPANDO_NONE;
 
     static proto = {
         configuring: false,
@@ -230,7 +263,7 @@ export class Configurable extends Declarable {
 
         meta.configs = chain(zuper?.configs || null);
         meta.configValues = chain(zuper?.configValues || null);
-        meta.expando = hasOwn(cls, 'expando') ? cls.expando : (zuper?.expando ?? true);
+        meta.expando = makeExpando(hasOwn(cls, 'expando') ? cls.expando : EXPANDO_NONE, zuper?.expando);
         meta.nullify = chain(zuper?.nullify || null);
 
         super.classInit(meta);  // run declarables (like "configurable")
@@ -246,6 +279,7 @@ export class Configurable extends Declarable {
             config, k, v;
 
         target = target || {};
+        expando = expando || EXPANDO_NONE;
 
         for (config of configs) {
             if (config) {
@@ -255,7 +289,7 @@ export class Configurable extends Declarable {
                     if (cfgs[k]) {
                         target[k] = cfgs[k].merge(target[k], v);
                     }
-                    else if (expando) {
+                    else if (expando[k] || expando['*']) {
                         target[k] = (v && target[k]) ? mergeCfg(target[k], v) : v;
                     }
                     else {
