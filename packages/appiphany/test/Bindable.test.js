@@ -411,6 +411,64 @@ describe('Bindable', () => {
         expect(inst.woot).to.be(50);
     });
 
+    it('should make internal props configurable', async() => {
+        const root = makeRoot();
+
+        class Parent extends Configurable.mixin(Bindable) {
+            static configurable = {
+                props: {
+                    $: {
+                        dip: 3, // unique to this instance
+                        dop: 2,
+
+                        wop () {
+                            return this.dip * this.dop;
+                        }
+                    }
+                }
+            }
+        }
+
+        let inst = new Parent({ parent: root, dip: 42 });
+
+        expect(inst.props.dip).to.be(42);
+        expect(inst.props.dop).to.be(2);
+        expect(inst.props.wop).to.be(42 * 2);
+
+        expect(inst.dip).to.be(42);
+        expect(inst.dop).to.be(2);
+        expect(inst.wop).to.be(42 * 2);
+
+        inst = new Parent({ parent: root, dip: 42, dop: 100 });
+
+        expect(inst.props.dip).to.be(42);
+        expect(inst.props.dop).to.be(100);
+        expect(inst.props.wop).to.be(4200);
+
+        expect(inst.dip).to.be(42);
+        expect(inst.dop).to.be(100);
+        expect(inst.wop).to.be(4200);
+
+        inst.props.dip = 99;
+        inst.dop = 1000;
+
+        expect(inst.dip).to.be(99);
+        expect(inst.dop).to.be(1000);
+        expect(inst.wop).to.be(99000);
+
+        expect(() => {
+            inst.wop = 1;
+        }).to.throw('Cannot set property wop');
+
+        expect(() => {
+            inst = new Parent({ parent: root, dip: 42, dop: 100, wop: 10 });
+        }).to.throw('Cannot set property wop');
+
+        expect(() => {
+            inst = new Parent({ parent: root, dip: 42, derp: 10 });
+        }).to.throw('No such property "derp" in class Parent');
+    });
+
     it('should handle shadowed and internal props correctly', async() => {
         const root = makeRoot();
 

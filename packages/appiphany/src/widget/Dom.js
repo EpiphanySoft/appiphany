@@ -1,7 +1,7 @@
-import { className, isEqual, pop, remove } from '@appiphany/appiphany';
+import { chain, className, isEqual, pop, remove } from '@appiphany/appiphany';
 
 const
-    EMPTY_OBJECT = Object.create(null);
+    EMPTY_OBJECT = chain();
 
 export class Event {
     static nextListenerId = 0;
@@ -105,6 +105,29 @@ export class Dom {
 
     static get win () {
         return Dom.get(Dom.getWin());
+    }
+
+    static canonicalizeClasses (classes) {
+        let ret = classes;
+        let cls;
+
+        if (typeof classes === 'string') {
+            classes = classes.split(' ');
+        }
+
+        if (Array.isArray(classes)) {
+            ret = chain();
+
+            classes.forEach(cls => {
+                let s = cls.trim();
+
+                if (s) {
+                    ret[s] = true;
+                }
+            });
+        }
+
+        return ret || EMPTY_OBJECT;
     }
 
     static get (el) {
@@ -213,6 +236,8 @@ export class Dom {
         return className(el) === 'Window';
     }
 
+    //------------------------------------------------------------------------------------------
+
     constructor (el) {
         this.el = el || null;
     }
@@ -276,7 +301,7 @@ export class Dom {
         spec = spec || {};
 
         if (refs === true) {
-            refs = {};
+            refs = chain();
             owner = this;
         }
 
@@ -317,7 +342,7 @@ export class Dom {
         ref && refs && (refs[ref] = this);
 
         this.#_updateAttrs(spec, was);
-        this.#_updateCls(cls || EMPTY_OBJECT, was.class || EMPTY_OBJECT);
+        this.#_updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
         this.#_updateData(data, was.data);
         this.#_updateStyle(style, was.style);
 
@@ -410,13 +435,21 @@ export class Dom {
     #_updateSubTree (specs, was, refs, owner) {
         let doc = this.el.ownerDocument,
             parent = this.el.parentElement,
-            children = Array.from(this.el.childNodes).reverse(),  // so pop goes left-to-right
+            children = [],
             add, child, dom, isText, old, ref, spec;
 
+        for (child of this.el.childNodes) {
+            if ((dom = Dom.get(child))?.owner === owner) {
+                children.push(dom);
+            }
+        }
+
+        children.reverse();  // so pop goes left-to-right
+
         for (spec of specs) {
-            child = children.pop() || null;
+            dom = children.pop() || null;
+            child = dom.el;
             isText = child?.nodeType === Dom.TEXT;
-            dom = Dom.get(child);
 
             if (typeof spec === 'string') {
                 if (child && isText) {
@@ -427,6 +460,7 @@ export class Dom {
                 else {
                     add = doc.createTextNode(spec);
                     dom = Dom.get(add);
+                    dom.owner = owner;
                     dom.spec = spec;
 
                     parent.insertBefore(add, child);
@@ -455,6 +489,10 @@ export class Dom {
                     parent.insertBefore(dom.el, child);
                 }
             }
+        }
+
+        while ((dom = children.pop())) {
+            dom.el.remove();
         }
     }
 }

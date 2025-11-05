@@ -4,15 +4,6 @@ import { Bindable } from '@appiphany/appiphany/mixin';
 
 export class Widget extends Configurable.mixin(Bindable) {
     static configurable = {
-        adopt: null,
-        parent: null,
-
-        cls: null,
-
-        bind: {
-            cls: '~cls'
-        },
-
         props: {
             $: {
                 cls: null,
@@ -21,7 +12,8 @@ export class Widget extends Configurable.mixin(Bindable) {
         }
     };
 
-    render () {
+    render (options) {
+        // [adopt|after|before|parent]
         const { props } = this;
 
         return {

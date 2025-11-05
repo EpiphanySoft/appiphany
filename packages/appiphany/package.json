@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
       ".": "./import/index.js",
-      "./mixin": "./import/mixin/index.js"
+      "./mixin": "./import/mixin/index.js",
+      "./widget": "./import/widget/index.js"
   },
 
   "dependencies": {

@@ -97,30 +97,72 @@ describe('Configurable', () => {
         ]);
     });
 
-    it('expando', () => {
-        let log = [];
+    describe('expando', () => {
+        it('should throw when expando is disallowed', () => {
+            let log = [];
 
-        class Foo extends Configurable {
-            static configurable = {
-                foo: null
-            };
-        }
+            class Foo extends Configurable {
+                static configurable = {
+                    foo: null
+                };
+            }
 
-        class Bar extends Foo {
-            static expando = true;
-        }
-
-        expect(() => {
-            let foo = new Foo({
-                bar: 42
-            });
-        }).to.throw('No such property "bar" in class Foo');
-
-        let bar = new Bar({
-            bar: 42
+            expect(() => {
+                let foo = new Foo({
+                    bar: 42
+                });
+            }).to.throw('No such property "bar" in class Foo');
         });
 
-        expect(bar.bar).to.equal(42);
+        it('should not throw when expando is allowed', () => {
+            let log = [];
+
+            class Foo extends Configurable {
+                static configurable = {
+                    foo: null
+                };
+            }
+
+            class Bar extends Foo {
+                static expando = true;
+            }
+
+            let bar = new Bar({
+                bar: 42
+            });
+
+            expect(bar.bar).to.equal(42);
+        });
+
+        it('should handle explicit expandos', () => {
+            let log = [];
+
+            class Foo extends Configurable {
+                static configurable = {
+                    foo: null
+                };
+            }
+
+            class Bar extends Foo {
+                static expando = ['bar'];
+            }
+
+            let inst;
+
+            inst = new Bar({
+                foo: 427,
+                bar: 42
+            });
+
+            expect(inst.foo).to.equal(427);
+            expect(inst.bar).to.equal(42);
+
+            expect(() => {
+                inst = new Bar({
+                    derp: 42
+                });
+            }).to.throw('No such property "derp" in class Bar');
+        });
     });
 
     describe('configurable', () => {

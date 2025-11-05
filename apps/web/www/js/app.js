@@ -1,3 +1,6 @@
-import { Dom } from '@appiphany/appiphany/widget';
+import { Dom, Widget } from '@appiphany/appiphany/widget';
 
 debugger;
+
+window.Dom = Dom;
+window.Widget = Widget;
