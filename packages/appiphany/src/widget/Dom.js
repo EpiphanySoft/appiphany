@@ -109,7 +109,6 @@ export class Dom {
 
     static canonicalizeClasses (classes) {
         let ret = classes;
-        let cls;
 
         if (typeof classes === 'string') {
             classes = classes.split(' ');
@@ -238,8 +237,13 @@ export class Dom {
 
     //------------------------------------------------------------------------------------------
 
-    constructor (el) {
+    constructor (el, owner) {
+        owner = owner || null;
+
         this.el = el || null;
+        this.owner = owner;
+        this.refs = owner && chain();
+        this.root = owner && this;
     }
 
     get id () {
@@ -297,17 +301,19 @@ export class Dom {
      *      href: '',
      *  }
      */
-    update (spec, refs, owner) {
+    update (spec, context) {
+        context = context || {
+            listeners: [],
+            refs: {}
+        };
+
         spec = spec || {};
 
-        if (refs === true) {
-            refs = chain();
-            owner = this;
-        }
-
         let { el, spec: was } = this,
-            { after, before, parent, class: cls, tag = 'div', html, text, data, ref, specs, style }
+            { after, before, parent, listeners, class: cls, tag, html, text, data, ref, specs, style }
                 = spec;
+
+        tag = tag || 'div';
 
         if (!was) {
             was = {};
@@ -339,7 +345,7 @@ export class Dom {
             parent.appendChild(el);
         }
 
-        ref && refs && (refs[ref] = this);
+        ref && context?.refs && (context.refs[ref] = this);
 
         this.#_updateAttrs(spec, was);
         this.#_updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
@@ -356,14 +362,12 @@ export class Dom {
                 this.#_updateHtml(html);
             }
         }
-        else if (specs !== undefined) {
-            this.#_updateSubTree(specs || [], was.specs || [], refs, owner);
+        else if (specs != null) {
+            this.#_updateSubTree(specs, context);
         }
 
-        this.owner = owner;
-        this.ref   = ref;
-        this.refs  = (owner === this) ? refs : null;
-        this.spec  = spec;
+        this.ref  = ref;
+        this.spec = spec;
     }
 
     #_updateAttrs (attrs, was) {
@@ -432,10 +436,11 @@ export class Dom {
         // TODO
     }
 
-    #_updateSubTree (specs, was, refs, owner) {
+    #_updateSubTree (specs, context) {
         let doc = this.el.ownerDocument,
             parent = this.el.parentElement,
             children = [],
+            { owner, root } = this,
             add, child, dom, isText, old, ref, spec;
 
         for (child of this.el.childNodes) {
@@ -461,6 +466,7 @@ export class Dom {
                     add = doc.createTextNode(spec);
                     dom = Dom.get(add);
                     dom.owner = owner;
+                    dom.root = root;
                     dom.spec = spec;
 
                     parent.insertBefore(add, child);
@@ -472,6 +478,7 @@ export class Dom {
                     child && children.push(child);
                     child = dom = null;
                 }
+                // context.refs is the new refs, where owner.refs is the previous refs
                 else if ((ref = spec.ref) && (old = owner?.refs?.[ref]) && old !== dom) {
                     child && children.push(child);
 
@@ -481,11 +488,15 @@ export class Dom {
                 }
 
                 if (dom) {
-                    dom.update(spec, refs, owner);
+                    dom.update(spec, context);
                 }
                 else {
                     dom = new Dom();
-                    dom.update(spec, refs, owner);
+                    dom.owner = owner;
+                    dom.root = root;
+
+                    dom.update(spec, context);
+
                     parent.insertBefore(dom.el, child);
                 }
             }
