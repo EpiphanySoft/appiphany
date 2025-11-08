@@ -179,9 +179,9 @@ applyTo(Config.prototype, {
     prop: null,
 
     default: null,
-    lazy: false,
     nullable: true,
     nullify: false,
+    phase: 'ctor',  // in {'ctor', 'get', 'init'}
 
     apply: null,
     update: null
@@ -254,7 +254,8 @@ export class Configurable extends Declarable {
     static proto = {
         configuring: false,
 
-        instanceConfig: null
+        initialConfig: null,  // config object passed to constructor
+        instanceConfig: null  // fully populated config object
     };
 
     static classInit(meta) {
@@ -325,23 +326,21 @@ export class Configurable extends Declarable {
         let me = this,
             meta = me.$meta,
             config = meta.configValues,
-            missingConfigs;
+            missing;
 
         instanceConfig = (instanceConfig === true) ? {} : instanceConfig;
 
         if (instanceConfig) {
-            me.instanceConfig = instanceConfig;
             config = meta.class.mergeConfigs(chain(config), instanceConfig);
+            me.initialConfig = instanceConfig;
         }
 
         me.configure(config);
 
-        missingConfigs = meta.requiredConfigs.filter(c => me[c] == null);
+        missing = meta.requiredConfigs.filter(c => me[c] == null);
 
-        if (missingConfigs.length) {
-            throw new Error(`Missing required configs for ${me}: ${
-                missingConfigs.join(', ')
-            }`);
+        if (missing.length) {
+            throw new Error(`Missing required configs for ${me}: ${missing.join(', ')}`);
         }
     }
 
@@ -349,22 +348,27 @@ export class Configurable extends Declarable {
         let me = this,
             meta = me.$meta,
             classConfigs = meta.configs,
-            configData = me[configDataSym] || (me[configDataSym] = new Map()),
+            configData = me[configDataSym] ??= new Map(),
             { configuring } = me,
-            cfg, name, val;
+            firstTime = !me.instanceConfig,
+            cfg, name, phase, val;
+
+        if (firstTime) {
+            me.instanceConfig = config;
+        }
 
         try {
             if (!configuring) {
                 me.configuring = configuring = {
                     depth: 0,
-                    props: []
+                    stack: []
                 };
             }
 
             ++configuring.depth;
 
             for (name in config) {
-                if (config[name] !== null || hasOwn(config, name)) {
+                if (!firstTime || config[name] !== null) {
                     configData.set(name, config[name]);
 
                     cfg = classConfigs[name] || Config.get(name);
@@ -373,13 +377,19 @@ export class Configurable extends Declarable {
             }
 
             for (name in config) {
-                if (configData.has(name) && !classConfigs[name]?.lazy) {
-                    val = configData.get(name);
-                    configData.delete(name);
+                if (configData.has(name)) {
+                    // firstTime: skip over 'get' and 'init' phase configs
+                    // otherwise: process all configs
+                    phase = firstTime && classConfigs[name]?.phase;
 
-                    configuring.props.push(name);
-                    me[name] = val;
-                    configuring.props.pop();
+                    if (!(phase === 'get' || phase === 'init')) {
+                        val = configData.get(name);
+                        configData.delete(name);
+
+                        configuring.stack.push(name);
+                        me[name] = val;
+                        configuring.stack.pop();
+                    }
                 }
             }
 
@@ -403,6 +413,28 @@ export class Configurable extends Declarable {
         for (name in nullify) {
             if (nullify[name] && !configData?.has(name)) {
                 me[name] = null;
+            }
+        }
+    }
+
+    initialize () {
+        let me = this,
+            configData = me[configDataSym],  // left over from configure()
+            configs, classConfigs, name;
+
+        if (configData) {
+            classConfigs = me.$meta.configs;
+
+            for (name of configData.keys()) {
+                if (classConfigs[name]?.phase === 'init') {
+                    (configs ??= []).push(name);
+                }
+            }
+
+            if (configs) {
+                for (name of configs) {
+                    me.getConfig(name);
+                }
             }
         }
     }

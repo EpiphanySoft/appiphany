@@ -1,14 +1,17 @@
 export const Identifiable = Base => class Identifiable extends Base {
+    static idSep = '-';
+
     static configurable = {
         id: class {
             value = undefined;
 
-            apply(me, v) {
-                let meta = me.$meta,
-                    auto = me.autoGenId = v == null;
+            apply (me, v) {
+                let auto = me.autoGenId = v == null,
+                    cls, prefix;
 
                 if (auto) {
-                    v = meta.class.formatAutoId(meta.nextId = (meta.nextId || 0) + 1);
+                    prefix = (cls = me.$meta.class).generateAutoIdPrefix();
+                    v = `${prefix}${cls.generateAutoId(prefix)}`;
                 }
 
                 return v;
@@ -16,10 +19,19 @@ export const Identifiable = Base => class Identifiable extends Base {
         }
     };
 
-    static formatAutoId(nextId) {
-        return `${this.idPrefix(this.className)}${this.idSep}${nextId}`;
+    static generateAutoIdPrefix () {
+        let prefix = this.idPrefix();
+
+        return prefix ? prefix + this.idSep : '';
     }
 
-    static idPrefix = v => v;
-    static idSep = '-';
+    static generateAutoId (prefix) {
+        let { $meta: meta } = this;
+
+        return meta.nextId = (meta.nextId || 0) + 1;
+    }
+
+    static idPrefix () {
+        return this.className;
+    }
 }

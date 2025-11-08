@@ -1,4 +1,4 @@
-import { Configurable, clone, ignore } from '@appiphany/appiphany';
+import { Configurable, applyTo, clone, ignore } from '@appiphany/appiphany';
 import { Identifiable } from '@appiphany/appiphany/mixin';
 
 import assertly from 'assertly';
@@ -410,7 +410,7 @@ describe('Configurable', () => {
                     static configurable = {
                         foo: class {
                             value = 123;
-                            lazy = true;
+                            phase = 'get';
 
                             apply(instance, value, was, firstTime) {
                                 log.push(['A.foo.apply', was, value, firstTime]);
@@ -690,8 +690,8 @@ describe('Configurable', () => {
                     static configurable = {
                         foo: class {
                             value = 123;
-                            lazy = true;
                             nullify = true;
+                            phase = 'get';
 
                             apply(instance, value, was, firstTime) {
                                 log.push(['A.foo.apply', was, value, firstTime]);
@@ -875,7 +875,7 @@ describe('Configurable', () => {
                     '< A.destruct'
                 ]);
 
-                expect(A.$meta.nullify).to.equal({
+                expect(applyTo({}, A.$meta.nullify)).to.equal({
                     foo: true,
                     bar: true
                 });

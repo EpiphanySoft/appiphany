@@ -197,8 +197,6 @@ export class Destroyable {
 }
 
 applyTo(Destroyable.prototype, {
-    [Destroyable.sym]: true,
-
     destroyed: false,
     destructing: false,
     destructed: false,

@@ -18,22 +18,14 @@ export class Event {
         this : 1
     };
 
-    static canonicalizeListener (listener) {
-        let add = [],
+    static canonicalizeListener (listener, owner) {
+        let canon = [],
             defaults = {},
-            key;
-
-        for (key in Event.optionProps) {
-            if (key in listener) {
-                defaults[key] = listener[key];
-            }
-        }
-
-        for (key in listener) {
-            if (!(key in Event.directiveProps)) {
+            add = key => {
+                // a new scope to ensure no stale closures
                 let handler = listener[key],
                     options = defaults,
-                    that = listener.this,
+                    that = listener.this || owner,
                     t = typeof handler;
 
                 if (handler && t === 'object') {
@@ -55,14 +47,26 @@ export class Event {
                     handler = (...args) => that[name](...args);
                 }
 
-                add.push([key, handler, options]);
+                canon.push([key, handler, options]);
+            },
+            key;
+
+        for (key in Event.optionProps) {
+            if (key in listener) {
+                defaults[key] = listener[key];
+            }
+        }
+
+        for (key in listener) {
+            if (!(key in Event.directiveProps)) {
+                add(key);
             }
             // else if (!(key in Event.optionProps)) {
             //     directives[key] = listener[key];
             // }
         }
 
-        return { id: listener.id || `$${++this.nextListenerId}`, on: add };
+        return { id: listener.id || `$${++this.nextListenerId}`, on: canon };
     }
 }
 
@@ -237,6 +241,8 @@ export class Dom {
 
     //------------------------------------------------------------------------------------------
 
+    #ownerListeners = null;
+
     constructor (el, owner) {
         owner = owner || null;
 
@@ -254,8 +260,16 @@ export class Dom {
         return this.el?.childElementCount ?? 0;
     }
 
+    destroy () {
+        this.el?.remove();
+        this.el = null;
+
+        this.#ownerListeners?.();
+        this.#ownerListeners = null;
+    }
+
     on (listener) {
-        listener = Event.canonicalizeListener(listener);
+        listener = Event.canonicalizeListener(listener, this.owner);
 
         let { id } = listener,
             ret = () => this.un(id),
@@ -285,7 +299,6 @@ export class Dom {
                 this.el.removeEventListener(...entry);
             }
         }
-        //
     }
 
     /**
@@ -302,16 +315,15 @@ export class Dom {
      *  }
      */
     update (spec, context) {
-        context = context || {
-            listeners: [],
-            refs: {}
-        };
-
-        spec = spec || {};
-
         let { el, spec: was } = this,
             { after, before, parent, listeners, class: cls, tag, html, text, data, ref, specs, style }
-                = spec;
+                = (spec || (spec = {}));
+
+        context = context || {
+            owner: this.owner,
+            refs: chain(),
+            root: this
+        };
 
         tag = tag || 'div';
 
@@ -364,6 +376,11 @@ export class Dom {
         }
         else if (specs != null) {
             this.#_updateSubTree(specs, context);
+        }
+
+        if (!isEqual(listeners, was.listeners)) {
+            this.#ownerListeners?.();
+            this.#ownerListeners = listeners ? this.on(listeners) : null;
         }
 
         this.ref  = ref;
@@ -440,11 +457,11 @@ export class Dom {
         let doc = this.el.ownerDocument,
             parent = this.el.parentElement,
             children = [],
-            { owner, root } = this,
-            add, child, dom, isText, old, ref, spec;
+            { owner, root } = context,
+            add, childEl, dom, isText, old, ref, spec;
 
-        for (child of this.el.childNodes) {
-            if ((dom = Dom.get(child))?.owner === owner) {
+        for (childEl of this.el.childNodes) {
+            if ((dom = Dom.get(childEl))?.owner === owner) {
                 children.push(dom);
             }
         }
@@ -453,13 +470,13 @@ export class Dom {
 
         for (spec of specs) {
             dom = children.pop() || null;
-            child = dom.el;
-            isText = child?.nodeType === Dom.TEXT;
+            childEl = dom.el;
+            isText = childEl?.nodeType === Dom.TEXT;
 
             if (typeof spec === 'string') {
-                if (child && isText) {
+                if (childEl && isText) {
                     if (dom.spec !== spec) {
-                        child.nodeValue = dom.spec = spec;
+                        childEl.nodeValue = dom.spec = spec;
                     }
                 }
                 else {
@@ -469,22 +486,22 @@ export class Dom {
                     dom.root = root;
                     dom.spec = spec;
 
-                    parent.insertBefore(add, child);
-                    child && children.push(child);
+                    parent.insertBefore(add, childEl);
+                    childEl && children.push(childEl);
                 }
             }
             else {
                 if (isText) {
-                    child && children.push(child);
-                    child = dom = null;
+                    childEl && children.push(childEl);
+                    childEl = dom = null;
                 }
                 // context.refs is the new refs, where owner.refs is the previous refs
                 else if ((ref = spec.ref) && (old = owner?.refs?.[ref]) && old !== dom) {
-                    child && children.push(child);
+                    childEl && children.push(childEl);
 
-                    child = old.el;
+                    childEl = old.el;
                     dom = old;
-                    remove(children, child);
+                    remove(children, childEl);
                 }
 
                 if (dom) {
@@ -497,13 +514,13 @@ export class Dom {
 
                     dom.update(spec, context);
 
-                    parent.insertBefore(dom.el, child);
+                    parent.insertBefore(dom.el, childEl);
                 }
             }
         }
 
         while ((dom = children.pop())) {
-            dom.el.remove();
+            dom.destroy();
         }
     }
 }
