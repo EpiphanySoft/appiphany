@@ -148,7 +148,9 @@ export const Factoryable = Base => class Factoryable extends Base {
         },
 
         type(cls, value) {
-            let { aliases } = cls;
+            let { aliases, $meta } = cls;
+
+            ($meta.types ??= $meta.super?.types?.slice() || []).push(value);
 
             cls.factory.register(cls);
 

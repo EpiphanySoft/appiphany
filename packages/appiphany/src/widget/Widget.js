@@ -49,13 +49,13 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             update (me) {
                 me.render();
             }
-        },
+        }
     };
 
     static #idMap = chain();
 
     static generateAutoId (prefix) {
-        let map = this.#idMap;
+        let map = Widget.#idMap;
 
         return map[prefix] = (map[prefix] || 0) + 1;
     }
@@ -112,7 +112,6 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
 
             if (!dom) {
                 this.#dom = dom = new Dom(adopt ? renderTo : null, this);
-                dom.adopted = adopt;
             }
             else if (dom.adopted !== adopt) {
                 throw new Error('Cannot change between adopted and rendered element');
@@ -126,6 +125,8 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             if (!watcher) {
                 this.#renderWatcher = watcher = Signal.watch(this.#recomposeSoon.bind(this));
                 watcher.watch(composer);
+
+                this.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
             }
         }
         else {
@@ -135,13 +136,11 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             }
 
             if (dom) {
-                if (dom.adopted) {
-                    dom.el = null;  // prevent el.remove()
-                }
-
                 dom.destroy();
                 this.#dom = null;
             }
         }
     }
 }
+
+Widget.initClass();

@@ -1,77 +1,11 @@
-import { chain, className, isEqual, pop, remove } from '@appiphany/appiphany';
+import { chain, className, isEqual, remove } from '@appiphany/appiphany';
+import { Event } from '@appiphany/appiphany/widget';
 
 const
     EMPTY_OBJECT = chain();
 
-export class Event {
-    static nextListenerId = 0;
-
-    static optionProps = {
-        capture : 1,
-        once    : 1,
-        passive : 1
-    };
-
-    static directiveProps = {
-        ...Event.optionProps,
-        id   : 1,
-        this : 1
-    };
-
-    static canonicalizeListener (listener, owner) {
-        let canon = [],
-            defaults = {},
-            add = key => {
-                // a new scope to ensure no stale closures
-                let handler = listener[key],
-                    options = defaults,
-                    that = listener.this || owner,
-                    t = typeof handler;
-
-                if (handler && t === 'object') {
-                    options = { ...defaults, ...handler };
-                    handler = options.handler;
-                    that = pop(options, 'this', that);
-
-                    delete options.handler;
-                    t = typeof handler;
-                }
-
-                if (t === 'string') {
-                    if (typeof that?.[handler] !== 'function') {
-                        throw new Error(`No method '${handler}' on ${that?.constructor.name}`);
-                    }
-
-                    let name = handler;
-
-                    handler = (...args) => that[name](...args);
-                }
-
-                canon.push([key, handler, options]);
-            },
-            key;
-
-        for (key in Event.optionProps) {
-            if (key in listener) {
-                defaults[key] = listener[key];
-            }
-        }
-
-        for (key in listener) {
-            if (!(key in Event.directiveProps)) {
-                add(key);
-            }
-            // else if (!(key in Event.optionProps)) {
-            //     directives[key] = listener[key];
-            // }
-        }
-
-        return { id: listener.id || `$${++this.nextListenerId}`, on: canon };
-    }
-}
 
 export class Dom {
-    #listeners;
     static ELEMENT = 1;
     static TEXT = 3;
 
@@ -241,12 +175,14 @@ export class Dom {
 
     //------------------------------------------------------------------------------------------
 
+    #listeners = null;
     #ownerListeners = null;
 
     constructor (el, owner) {
         owner = owner || null;
 
         this.el = el || null;
+        this.adopted = !!(owner && el);
         this.owner = owner;
         this.refs = owner && chain();
         this.root = owner && this;
@@ -261,7 +197,7 @@ export class Dom {
     }
 
     destroy () {
-        this.el?.remove();
+        !this.adopted && this.el?.remove();
         this.el = null;
 
         this.#ownerListeners?.();
@@ -416,7 +352,8 @@ export class Dom {
     }
 
     #_updateCls (classes, was) {
-        let classList = Array.from(this.el.classList),
+        let { el } = this,
+            classList = Array.from(el.classList),
             cls;
 
         for (cls in classes) {
@@ -434,7 +371,10 @@ export class Dom {
             }
         }
 
-        this.el.className = classList.join(' ');
+        cls = classList.join(' ').trim();
+
+        !cls && el.removeAttribute('class');
+        cls && el.setAttribute('class', cls);
     }
 
     #_updateHtml (html) {
