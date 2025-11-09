@@ -1,3 +1,4 @@
+import { panik } from '@appiphany/appiphany';
 import { WeakDict } from './WeakDict.js';
 
 const NULL_PAIR = [null, null];
@@ -14,7 +15,7 @@ export class Dag {
 
     read (item) {
         if (this.#lockReads) {
-            throw new Error('Cannot read signals in a locked state');
+            panik('Cannot read signals in a locked state');
         }
 
         let [, refs] = this.active;

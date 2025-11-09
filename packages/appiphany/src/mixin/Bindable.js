@@ -1,4 +1,4 @@
-import { Scheduler, Signal, capitalize } from '@appiphany/appiphany';
+import { Scheduler, Signal, capitalize, panik } from '@appiphany/appiphany';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
@@ -101,36 +101,38 @@ export const Bindable = Base => class Bindable extends Base {
                     }
                 }
 
-                me.getConfig('props');
+                me.getConfig('iprops');
                 me.bindProps(full);
 
                 // do not return anything... $bindings is populated by propsAdd
             }
         },
 
-        props: class {
+        iprops: class {
             value = {};
 
             apply(me, props, was) {
                 if (was) {
-                    throw new Error('props cannot be reconfigured');
+                    panik('iprops cannot be reconfigured');
                 }
 
-                me._props = createProps(me.parent);
+                let ret = me.getConfig('props');
 
-                me.defineProps(props);
+                me.defineProps(props, true);
+
+                return ret;
             }
 
-            addProp(proto, name, readonly) {
+            declProp(proto, name, readonly) {
                 let desc = {
                     configurable: true,
 
                     get () {
-                        return this.props[name];
+                        return this.iprops[name];
                     },
 
                     set (v) {
-                        this.props[name] = v;
+                        this.iprops[name] = v;
                     }
                 };
 
@@ -142,8 +144,6 @@ export const Bindable = Base => class Bindable extends Base {
             }
 
             extend(cls, props) {
-                props = props?.$;
-
                 if (props) {
                     let meta = cls.$meta,
                         { configs, expando } = meta,
@@ -153,10 +153,24 @@ export const Bindable = Base => class Bindable extends Base {
                    for (key in props) {
                        if (!configs[key]) {
                            expando[key] = true;
-                           this.addProp(proto, key, typeof props[key] === 'function');
+                           this.declProp(proto, key, typeof props[key] === 'function');
                        }
                    }
                 }
+            }
+        },
+
+        props: class {
+            value = {};
+
+            apply(me, props, was) {
+                if (was) {
+                    panik('props cannot be reconfigured');
+                }
+
+                me._props = createProps(me.parent);
+
+                me.defineProps(props);
             }
         }
     };
@@ -264,20 +278,17 @@ export const Bindable = Base => class Bindable extends Base {
     }
 
     defineProps (add, internal) {
-        if (!add) {
-            return;
-        }
-
         let signals = this._signals ??= Object.create(null),
             props = this.props,  // internal props
             target = internal ? props : getProto(props),
             options = {};
 
+        if (!add) {
+            return;
+        }
+
         for (const name in add) {
-            if (name === '$') {
-                !internal && this.defineProps(add[name], true);
-            }
-            else if (name !== 'sealed') {
+            if (name !== 'sealed') {
                 let existing = signals[name],
                     sig = add[name],  // <<< needs to be declared here to avoid a stale closure
                     formula = typeof sig === 'function',
@@ -319,7 +330,7 @@ export const Bindable = Base => class Bindable extends Base {
             }
         }
 
-        if (!internal && add.sealed !== false) {
+        if (internal && add.sealed !== false) {
             Object.seal(props);
         }
     }

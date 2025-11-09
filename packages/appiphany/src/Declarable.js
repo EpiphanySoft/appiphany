@@ -1,4 +1,4 @@
-import { decapitalize, ignore, chain, applyTo, quoteWrap } from '@appiphany/appiphany';
+import { decapitalize, ignore, chain, applyTo, panik, quoteWrap } from '@appiphany/appiphany';
 // import { Logger } from '@/util/Logger';
 import { Destroyable } from '@appiphany/appiphany';
 
@@ -233,7 +233,7 @@ export class Declarable extends Destroyable {
         (me.$meta.class !== C) && C.initClass();
 
         if (me.$meta.abstract) {
-            throw new Error(`Cannot create instance of abstract class ${C.className}`);
+            panik(`Cannot create instance of abstract class ${C.className}`);
         }
 
         me.construct(...args);

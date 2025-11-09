@@ -1,4 +1,4 @@
-import { Configurable, applyTo, isClass, isObject } from "@appiphany/appiphany";
+import { Configurable, applyTo, isClass, isObject, panik } from "@appiphany/appiphany";
 
 const
     { defineProperty } = Reflect;
@@ -32,8 +32,7 @@ export class Factory extends Configurable {
         ret = registry.get(type) || (me.caseless && registry.get(type.toLowerCase()));
 
         if (!ret && required) {
-            throw new Error(
-                `No such type "${type}" registered in ${me.owner.className} factory`);
+            panik(`No such type "${type}" registered in ${me.owner.className} factory`);
         }
 
         return ret;
@@ -89,7 +88,7 @@ export class Factory extends Configurable {
 
         if (!type) {
             if (!(type = me.lookup(options?.type || defaults?.type || me.defaultType))) {
-                throw new Error(`No default type for ${me.owner.className} factory`);
+                panik(`No default type for ${me.owner.className} factory`);
             }
         }
 
@@ -109,7 +108,7 @@ export class Factory extends Configurable {
             let { aliases, type } = cls;
 
             if (!type) {
-                throw new Error(`Must specify type class property`);
+                panik(`Must specify type class property`);
             }
 
             keys.push(type);
@@ -129,7 +128,7 @@ export class Factory extends Configurable {
 
         for (key of add) {
             if (registry.has(key)) {
-                throw new Error(`Factory cannot have duplicate key: "${key}"`);
+                panik(`Factory cannot have duplicate key: "${key}"`);
             }
 
             registry.set(key, cls);

@@ -1,4 +1,4 @@
-import { Destroyable } from "@appiphany/appiphany";
+import { Destroyable, panik } from "@appiphany/appiphany";
 
 
 class Subscription extends Destroyable {
@@ -39,7 +39,7 @@ export const Broadcastable = Base => class Broadcastable extends Base {
             entry, id, informant;
 
         if (me.firing) {
-            throw new Error('Reentrancy not allowed');
+            panik('Reentrancy not allowed');
         }
 
         try {

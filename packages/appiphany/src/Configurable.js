@@ -1,4 +1,4 @@
-import { clone, chain, isClass, isObject, jsonify, map, merge, SKIP, applyTo }
+import { clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo }
     from '@appiphany/appiphany';
 import { Declarable } from '@appiphany/appiphany';
 
@@ -294,7 +294,7 @@ export class Configurable extends Declarable {
                         target[k] = (v && target[k]) ? mergeCfg(target[k], v) : v;
                     }
                     else {
-                        throw new Error(`No such property "${k}" in class ${meta.name}`);
+                        panik(`No such property "${k}" in class ${meta.name}`);
                     }
                 }
             }
@@ -340,7 +340,7 @@ export class Configurable extends Declarable {
         missing = meta.requiredConfigs.filter(c => me[c] == null);
 
         if (missing.length) {
-            throw new Error(`Missing required configs for ${me}: ${missing.join(', ')}`);
+            panik(`Missing required configs for ${me}: ${missing.join(', ')}`);
         }
     }
 

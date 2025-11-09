@@ -1,4 +1,4 @@
-import { chain, className, isEqual, remove } from '@appiphany/appiphany';
+import { chain, className, clone, isEqual, isObject, remove } from '@appiphany/appiphany';
 import { Event } from '@appiphany/appiphany/widget';
 
 const
@@ -41,6 +41,10 @@ export class Dom {
         return Dom.get(Dom.getDocRoot());
     }
 
+    static get limbo () {
+        return Dom.get(Dom.getLimbo());
+    }
+
     static get win () {
         return Dom.get(Dom.getWin());
     }
@@ -65,6 +69,46 @@ export class Dom {
         }
 
         return ret || EMPTY_OBJECT;
+    }
+
+    static canonicalizeSpecs (specs) {
+        if (isObject(specs)) {
+            /*
+             TODO
+                specs: {
+                    a: {
+                        '>': 'foo'
+                    },
+                    b: {
+                        '>': 'foo'
+                    },
+                    foo: { ... },
+                    c: {
+                        '<': 'foo'
+                    },
+                    d: {
+                        '<': 'foo'
+                    }
+                }
+             */
+            let obj = specs,
+                key, val;
+
+            specs = [];
+
+            for (key in obj) {
+                val = obj[key];
+
+                if (val) {
+                    val = clone(val);
+                    val.ref = key;
+
+                    specs.push(val);
+                }
+            }
+        }
+
+        return specs;
     }
 
     static get (el) {
@@ -121,6 +165,12 @@ export class Dom {
 
     static getDocRoot (el) {
         return Dom.getDoc(el)?.body.parentElement;
+    }
+
+    static getLimbo (el) {
+        let doc = Dom.getDoc(el);
+
+        return doc && (doc.$limbo ??= doc.createElement('div'));
     }
 
     static getWin (el) {
@@ -253,15 +303,20 @@ export class Dom {
     update (spec, context) {
         let { el, spec: was } = this,
             { after, before, parent, listeners, class: cls, tag, html, text, data, ref, specs, style }
-                = (spec || (spec = {}));
+                = (spec ??= {});
+
+        // unwrap any Dom instances
+        after = after?.el || after;
+        before = before?.el || before;
+        parent = parent?.el || parent;
+
+        tag = tag || 'div';
 
         context = context || {
             owner: this.owner,
             refs: chain(),
             root: this
         };
-
-        tag = tag || 'div';
 
         if (!was) {
             was = {};
@@ -273,7 +328,7 @@ export class Dom {
         if (!el) {
             this.el = el = Dom.getDoc().createElement(tag);
         }
-        else if (el.tagName !== tag.toUpperCase()) {
+        else if (!this.adopted && el.tagName !== tag.toUpperCase()) {
             el.replaceWith(this.el = el = Dom.getDoc().createElement(tag));
         }
 
@@ -310,8 +365,8 @@ export class Dom {
                 this.#_updateHtml(html);
             }
         }
-        else if (specs != null) {
-            this.#_updateSubTree(specs, context);
+        else if (specs) {
+            this.#_updateSubTree(Dom.canonicalizeSpecs(specs), context);
         }
 
         if (!isEqual(listeners, was.listeners)) {
@@ -398,11 +453,15 @@ export class Dom {
             parent = this.el.parentElement,
             children = [],
             { owner, root } = context,
-            add, childEl, dom, isText, old, ref, spec;
+            add, childEl, dom, isText, nodeType, old, ref, spec;
 
         for (childEl of this.el.childNodes) {
-            if ((dom = Dom.get(childEl))?.owner === owner) {
-                children.push(dom);
+            nodeType = childEl.nodeType;
+
+            if (nodeType === Dom.TEXT || nodeType === Dom.ELEMENT) {
+                if ((dom = Dom.get(childEl))?.owner === owner) {
+                    children.push(dom);
+                }
             }
         }
 

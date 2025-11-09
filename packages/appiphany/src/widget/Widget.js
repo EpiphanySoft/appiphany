@@ -1,4 +1,4 @@
-import { chain, Configurable, Scheduler, Signal } from '@appiphany/appiphany';
+import { chain, panik, Configurable, Signal } from '@appiphany/appiphany';
 import { Bindable, Factoryable, Identifiable } from '@appiphany/appiphany/mixin';
 import { Dom } from '@appiphany/appiphany/widget';
 
@@ -8,7 +8,34 @@ const
         append: 'parent',
         before: 'before',
         after: 'after'
-    }
+    },
+    gatherRefs = (refs, ref, spec) => {
+        //  spec = {
+        //      specs: {
+        //          body: {
+        //              specs: {
+        //                  inner: {
+        //                  }
+        //              }
+        //          }
+        //      }
+        //  }
+        //
+        if (spec) {
+            if (ref) {
+                refs[ref] = spec;
+            }
+
+            if (spec.specs) {
+                for (ref in spec.specs) {
+                    gatherRefs(refs, ref, spec.specs[ref]);
+                }
+            }
+        }
+
+        return refs;
+    };
+
 
 export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryable) {
     static type = 'widget';
@@ -17,11 +44,9 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     };
 
     static configurable = {
-        props: {
-            $: {
-                cls: null,
-                tag: 'div'
-            }
+        iprops: {
+            cls: null,
+            tag: 'div'
         },
 
         /**
@@ -47,7 +72,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             }
 
             update (me) {
-                me.render();
+                me.recompose();
             }
         }
     };
@@ -66,14 +91,23 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
 
     #composer = null;
     #dom = null;
-    #recomposeNow = null;
+    #recomposer = null;
     #renderWatcher = null;
+    #watcherNotified = false;
 
     get dom () {
         return this.#dom;
     }
 
     compose () {
+        let spec = this.render(),
+            refs = gatherRefs({}, 'root', spec);
+
+
+        return spec;
+    }
+
+    render () {
         const { props } = this;
 
         return {
@@ -82,18 +116,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         };
     }
 
-    #recompose () {
-        this.render();
-        this.#renderWatcher?.watch();
-    }
-
-    #recomposeSoon () {
-        let work = this.#recomposeNow ??= this.#recompose.bind(this);
-
-        this.scheduler.add(work);
-    }
-
-    render () {
+    recompose () {
         let { id } = this,
             dom = this.#dom,
             [mode, renderTo] = this.renderTo,  // mode in {'append'|'before'|'after'|'adopt'}
@@ -114,16 +137,20 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 this.#dom = dom = new Dom(adopt ? renderTo : null, this);
             }
             else if (dom.adopted !== adopt) {
-                throw new Error('Cannot change between adopted and rendered element');
+                panik('Cannot change between adopted and rendered element');
             }
             else if (adopt && dom.el !== renderTo) {
-                throw new Error('Cannot change adopted element');
+                panik('Cannot change adopted element');
             }
 
             dom.update(spec);
 
             if (!watcher) {
-                this.#renderWatcher = watcher = Signal.watch(this.#recomposeSoon.bind(this));
+                this.#renderWatcher = watcher = Signal.watch(() => {
+                    this.#watcherNotified = true;
+                    this.recomposeSoon();
+                });
+
                 watcher.watch(composer);
 
                 this.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
@@ -140,6 +167,21 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 this.#dom = null;
             }
         }
+    }
+
+    #recomposeNow () {
+        this.recompose();
+
+        if (this.#watcherNotified) {
+            this.#watcherNotified = false;
+            this.#renderWatcher?.watch();
+        }
+    }
+
+    recomposeSoon () {
+        let recompose = this.#recomposer ??= () => this.#recomposeNow();
+
+        this.scheduler.add(recompose);
     }
 }
 

@@ -114,7 +114,7 @@ export class Destroyable {
 
         try {
             if (isAsync(me.withEnter) || isAsync(me.withExit)) {
-                throw new Error('Must use async fn (class has async withEnter/Exit)');
+                panik('Must use async fn (class has async withEnter/Exit)');
             }
 
             ret = me.withEnter();

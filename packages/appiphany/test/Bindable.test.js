@@ -416,14 +416,12 @@ describe('Bindable', () => {
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                props: {
-                    $: {
-                        dip: 3, // unique to this instance
-                        dop: 2,
+                iprops: {
+                    dip: 3, // unique to this instance
+                    dop: 2,
 
-                        wop () {
-                            return this.dip * this.dop;
-                        }
+                    wop () {
+                        return this.dip * this.dop;
                     }
                 }
             }
@@ -474,16 +472,16 @@ describe('Bindable', () => {
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
+                iprops: {
+                    dip: 3, // unique to this instance
+                    dop: 2,
+
+                    wop () {
+                        return this.dop * 100;
+                    }
+                },
+
                 props: {
-                    $: {
-                        dip: 3, // unique to this instance
-                        dop: 2,
-
-                        wop () {
-                            return this.dop * 100;
-                        }
-                    },
-
                     foo () {
                         return this.wop * this.dip;
                     }
@@ -493,16 +491,16 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
+                iprops: {
+                    dop: 9,
+                    wip: 10,  // unique to this instance
+
+                    wop () {
+                        return this.dop * this.wip;
+                    }
+                },
+
                 props: {
-                    $: {
-                        dop: 9,
-                        wip: 10,  // unique to this instance
-
-                        wop () {
-                            return this.dop * this.wip;
-                        }
-                    },
-
                     foo () {
                         return this.wop * 5;
                     }

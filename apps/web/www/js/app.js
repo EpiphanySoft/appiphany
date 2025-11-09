@@ -1,23 +1,8 @@
-import { Dom, Widget } from '@appiphany/appiphany/widget';
+import { Dom, Widget, Viewport } from '@appiphany/appiphany/widget';
 
 
 window.Dom = Dom;
 window.Widget = Widget;
-
-class Viewport extends Widget {
-    static type = 'viewport';
-
-    static configurable = {
-        props: {
-            $: {
-                tag: 'body'
-            }
-        },
-
-        renderTo: ['adopt', document.body]
-    };
-}
-
 window.Viewport = Viewport;
 
 debugger;

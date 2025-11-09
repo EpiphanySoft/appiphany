@@ -1,3 +1,4 @@
+import { panik } from '@appiphany/appiphany';
 import { Dag } from './Dag.js';
 import { WeakDict } from './WeakDict.js';
 
@@ -139,7 +140,7 @@ class Formula extends Signal {
         }
 
         if (this.#error) {
-            throw new Error(`Formula failed: "${this.name}"`, { cause: this.#error });
+            panik(`Formula failed: "${this.name}"`, { cause: this.#error });
         }
 
         return this.#value;
@@ -147,7 +148,7 @@ class Formula extends Signal {
 
     invalidate () {
         if (this.#active) {
-            throw new Error('Cannot invalidate a formula while it is recalculating');
+            panik('Cannot invalidate a formula while it is recalculating');
         }
 
         if (!this.#dirty) {
@@ -237,7 +238,7 @@ class Watcher {
 
     watch (...signals) {
         if (this.#state === 1) {
-            throw new Error('Cannot watch a signal while it is notifying');
+            panik('Cannot watch a signal while it is notifying');
         }
 
         for (const signal of signals) {
@@ -250,7 +251,7 @@ class Watcher {
 
     unwatch (...signals) {
         if (this.#state === 1) {
-            throw new Error('Cannot unwatch a signal while it is notifying');
+            panik('Cannot unwatch a signal while it is notifying');
         }
 
         if (signals.length) {

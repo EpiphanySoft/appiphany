@@ -650,6 +650,10 @@ export const
         value: ignore
     }),
 
+    panik = (msg, opts) => {
+        throw new Error(msg, opts);  // ex: opts = { cause: new Error('cause') }
+    },
+
     primitivize = v => {
         if (typeof v === 'string') {
             if (intRe.test(v)) {

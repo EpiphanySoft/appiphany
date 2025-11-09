@@ -1,4 +1,4 @@
-import { pop } from '@appiphany/appiphany';
+import { panik, pop } from '@appiphany/appiphany';
 
 
 export class Event {
@@ -37,7 +37,7 @@ export class Event {
 
                 if (t === 'string') {
                     if (typeof that?.[handler] !== 'function') {
-                        throw new Error(`No method '${handler}' on ${that?.constructor.name}`);
+                        panik(`No method '${handler}' on ${that?.constructor.name}`);
                     }
 
                     let name = handler;

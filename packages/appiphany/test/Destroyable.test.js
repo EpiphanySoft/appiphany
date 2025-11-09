@@ -1,4 +1,4 @@
-import { Destroyable, SKIP, sleep, thenable } from "@appiphany/appiphany";
+import { Destroyable, panik, SKIP, sleep, thenable } from "@appiphany/appiphany";
 
 import assertly from 'assertly';
 
@@ -258,7 +258,7 @@ describe('Destroyable', () => {
             expect(() => {
                 res.with(r => {
                     log.push(`woot ${ r.x }`);
-                    throw new Error('derp');
+                    panik('derp');
                 },
                 r => {
                     log.push(`otherwise ${r.x}`);
@@ -301,7 +301,7 @@ describe('Destroyable', () => {
 
             res.with({ throw: false }, r => {
                 log.push(`woot ${ r.x }`);
-                throw new Error('derp');
+                panik('derp');
             },
             r => {
                 log.push(`otherwise ${r.x}`);
@@ -454,7 +454,7 @@ describe('Destroyable', () => {
                 await res.with(async r => {
                     log.push(`>> woot ${r.x}`);
                     await sleep(1);
-                    throw new Error('derp');
+                    panik('derp');
                 },
                 async r => {
                     log.push(`>> otherwise ${r.x}`);
@@ -510,7 +510,7 @@ describe('Destroyable', () => {
             await res.with({ throw: false }, async r => {
                 log.push(`>> woot ${r.x}`);
                 await sleep(1);
-                throw new Error('derp');
+                panik('derp');
             },
             async r => {
                 log.push(`>> otherwise ${r.x}`);
