@@ -453,7 +453,7 @@ export class Dom {
             parent = this.el.parentElement,
             children = [],
             { owner, root } = context,
-            add, childEl, dom, isText, nodeType, old, ref, spec;
+            add, childEl, dom, isText, nodeType, old, ref, spec, specEl;
 
         for (childEl of this.el.childNodes) {
             nodeType = childEl.nodeType;
@@ -469,7 +469,7 @@ export class Dom {
 
         for (spec of specs) {
             dom = children.pop() || null;
-            childEl = dom.el;
+            childEl = dom?.el;
             isText = childEl?.nodeType === Dom.TEXT;
 
             if (typeof spec === 'string') {
@@ -490,6 +490,19 @@ export class Dom {
                 }
             }
             else {
+                specEl = (spec instanceof Dom) ?spec.el : Dom.is(spec) ? spec : null;
+
+                if (specEl) {
+                    debugger;
+                    remove(children, specEl);
+
+                    if (childEl !== specEl) {
+                        parent.insertBefore(specEl, childEl);
+                    }
+
+                    continue;
+                }
+
                 if (isText) {
                     childEl && children.push(childEl);
                     childEl = dom = null;

@@ -4,6 +4,7 @@ import { Dom } from '@appiphany/appiphany/widget';
 
 
 const
+    EMPTY_ARRAY = [],
     MODE_MAP = {
         append: 'parent',
         before: 'before',
@@ -83,7 +84,9 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
 
                         if (!item.is?.widget) {
                             item = clone(item);
+                            item.parent = me;
                             item.ref = ref;
+
                             item = Widget.factory.reconfigure(existingItem, item);
                         }
 
@@ -185,14 +188,27 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     compose () {
         let spec = this.render(),
             items = this.items,
-            it, refs;
+            it, ref, refs, renderTarget, specs;
 
         if (items) {
             refs = gatherRefs({}, 'root', spec);
-            debugger;
 
             for (it of items) {
-                // renderTarget
+                renderTarget = refs[it.renderTarget || 'root'];
+                debugger;
+
+                if (renderTarget) {
+                    it.recompose();
+
+                    specs = renderTarget.specs ??= {};
+
+                    if (Array.isArray(specs)) {
+                        specs.push(it.dom);
+                    }
+                    else {
+                        specs[it.ref] = it.dom;
+                    }
+                }
             }
         }
 
@@ -211,7 +227,9 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     recompose () {
         let { id } = this,
             dom = this.#dom,
-            [mode, renderTo] = this.renderTo,  // mode in {'append'|'before'|'after'|'adopt'}
+            [m, r2] = this.renderTo || EMPTY_ARRAY,  // {'append'|'before'|'after'|'adopt'}
+            renderTo = this.destroyed ? null : (r2 || Dom.limbo),
+            mode = renderTo ? m || 'append' : '',
             adopt = mode === 'adopt',
             composer = renderTo &&
                 (this.#composer ??= Signal.formula(this.compose.bind(this), { name: `composer@${id}` })),
@@ -224,7 +242,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         else {
             spec.id = id;
 
-            if (!adopt) {
+            if (!adopt && renderTo) {
                 spec[MODE_MAP[mode]] = renderTo;
             }
 
