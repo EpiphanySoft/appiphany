@@ -11,7 +11,13 @@ window.v.initialize();
 
 window.w = new Widget({
     renderTo: document.body,
-    cls: 'woot'
+    cls: 'woot',
+    items: {
+        foo: {
+            type: 'widget',
+            cls: 'derp'
+        }
+    }
 });
 
 window.w.initialize();

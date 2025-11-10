@@ -1,4 +1,4 @@
-import { chain, panik, Configurable, Signal } from '@appiphany/appiphany';
+import { chain, panik, Configurable, Signal, isObject, clone, isEqual } from '@appiphany/appiphany';
 import { Bindable, Factoryable, Identifiable } from '@appiphany/appiphany/mixin';
 import { Dom } from '@appiphany/appiphany/widget';
 
@@ -39,14 +39,91 @@ const
 
 export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryable) {
     static type = 'widget';
+    static expando = ['ref'];
     static factory = {
         defaultType: 'widget'
     };
 
     static configurable = {
-        iprops: {
+        $props: {
             cls: null,
+            items: null,
             tag: 'div'
+        },
+
+        items: class {
+            apply (me, newItems, was) {
+                //  newItems = {
+                //      foo: { type: 'widget' },
+                //      bar: { type: 'widget' },
+                //  }
+                //
+                let items = [],
+                    existingByRef = was && chain(),
+                    i = 0,
+                    existingItem, ref, item;
+
+                newItems ??= {};
+
+                if (!isObject(newItems)) {
+                    panik('items must be an object');
+                }
+
+                if (was) {
+                    for (item of was) {
+                        existingByRef[item.ref] = [i++, item];
+                    }
+                }
+
+                for (ref in newItems) {
+                    item = newItems[ref];
+
+                    if (item) {
+                        existingItem = existingByRef?.[ref] || null;
+
+                        if (!item.is?.widget) {
+                            item = clone(item);
+                            item.ref = ref;
+                            item = Widget.factory.reconfigure(existingItem, item);
+                        }
+
+                        if (item === existingItem) {
+                            // either newItems held an instantiated Widget to replace the existingItem,
+                            // or the reconfigure() of the existingItem returned the existingItem (now
+                            // with config changes).
+                            delete existingByRef[ref];
+                        }
+
+                        items.push(item);
+                    }
+                }
+
+                if (existingByRef) {
+                    for (ref in existingByRef) {
+                        existingByRef[ref].destroy();
+                    }
+                }
+
+                return isEqual(was, items) ? was : items;
+            }
+
+            update (me) {
+                if (me.initialized) {
+                    me.recompose();
+                }
+            }
+        },
+
+        renderTarget: class {
+            value = null;
+
+            update (me) {
+                let { parent } = me;
+
+                if (parent?.initialized) {
+                    parent.recompose();
+                }
+            }
         },
 
         /**
@@ -99,16 +176,31 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         return this.#dom;
     }
 
+    destruct () {
+        this.#unrender();
+
+        super.destruct();
+    }
+
     compose () {
         let spec = this.render(),
-            refs = gatherRefs({}, 'root', spec);
+            items = this.items,
+            it, refs;
 
+        if (items) {
+            refs = gatherRefs({}, 'root', spec);
+            debugger;
+
+            for (it of items) {
+                // renderTarget
+            }
+        }
 
         return spec;
     }
 
     render () {
-        const { props } = this;
+        let { props } = this;
 
         return {
             tag: props.tag,
@@ -126,7 +218,10 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             spec = composer?.get(),
             watcher = this.#renderWatcher;
 
-        if (spec) {
+        if (!spec) {
+            this.#unrender();
+        }
+        else {
             spec.id = id;
 
             if (!adopt) {
@@ -156,17 +251,6 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 this.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
             }
         }
-        else {
-            if (watcher) {
-                watcher.unwatch(this.#composer);
-                this.#renderWatcher = this.#composer = null;
-            }
-
-            if (dom) {
-                dom.destroy();
-                this.#dom = null;
-            }
-        }
     }
 
     #recomposeNow () {
@@ -182,6 +266,18 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         let recompose = this.#recomposer ??= () => this.#recomposeNow();
 
         this.scheduler.add(recompose);
+    }
+
+    #unrender () {
+        let watcher = this.#renderWatcher;
+
+        if (watcher) {
+            watcher.unwatch(this.#composer);
+            this.#renderWatcher = this.#composer = null;
+        }
+
+        this.#dom?.destroy();
+        this.#dom = null;
     }
 }
 

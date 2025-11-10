@@ -101,19 +101,19 @@ export const Bindable = Base => class Bindable extends Base {
                     }
                 }
 
-                me.getConfig('iprops');
+                me.getConfig('$props');
                 me.bindProps(full);
 
                 // do not return anything... $bindings is populated by propsAdd
             }
         },
 
-        iprops: class {
+        $props: class {
             value = {};
 
             apply(me, props, was) {
                 if (was) {
-                    panik('iprops cannot be reconfigured');
+                    panik('$props cannot be reconfigured');
                 }
 
                 let ret = me.getConfig('props');
@@ -128,11 +128,11 @@ export const Bindable = Base => class Bindable extends Base {
                     configurable: true,
 
                     get () {
-                        return this.iprops[name];
+                        return this.$props[name];
                     },
 
                     set (v) {
-                        this.iprops[name] = v;
+                        this.$props[name] = v;
                     }
                 };
 

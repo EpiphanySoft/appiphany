@@ -416,7 +416,7 @@ describe('Bindable', () => {
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                iprops: {
+                $props: {
                     dip: 3, // unique to this instance
                     dop: 2,
 
@@ -472,7 +472,7 @@ describe('Bindable', () => {
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                iprops: {
+                $props: {
                     dip: 3, // unique to this instance
                     dop: 2,
 
@@ -491,7 +491,7 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                iprops: {
+                $props: {
                     dop: 9,
                     wip: 10,  // unique to this instance
 
