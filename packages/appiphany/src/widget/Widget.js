@@ -52,6 +52,8 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             tag: 'div'
         },
 
+        itemRenderTarget: null,
+
         items: class {
             apply (me, newItems, was) {
                 //  newItems = {
@@ -112,7 +114,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
 
             update (me) {
                 if (me.initialized) {
-                    me.recompose();
+                    me.recompose(true);
                 }
             }
         },
@@ -124,7 +126,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 let { parent } = me;
 
                 if (parent?.initialized) {
-                    parent.recompose();
+                    parent.recompose(true);
                 }
             }
         },
@@ -152,7 +154,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             }
 
             update (me) {
-                me.recompose();
+                me.recompose(true);
             }
         }
     };
@@ -188,14 +190,15 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     compose () {
         let spec = this.render(),
             items = this.items,
+            { itemRenderTarget } = this,
             it, ref, refs, renderTarget, specs;
 
         if (items) {
             refs = gatherRefs({}, 'root', spec);
+            itemRenderTarget ??= 'root';
 
             for (it of items) {
-                renderTarget = refs[it.renderTarget || 'root'];
-                debugger;
+                renderTarget = refs[it.renderTarget || itemRenderTarget];
 
                 if (renderTarget) {
                     it.recompose();
@@ -224,7 +227,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         };
     }
 
-    recompose () {
+    recompose (full) {
         let { id } = this,
             dom = this.#dom,
             [m, r2] = this.renderTo || EMPTY_ARRAY,  // {'append'|'before'|'after'|'adopt'}
@@ -233,8 +236,12 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             adopt = mode === 'adopt',
             composer = renderTo &&
                 (this.#composer ??= Signal.formula(this.compose.bind(this), { name: `composer@${id}` })),
-            spec = composer?.get(),
-            watcher = this.#renderWatcher;
+            watcher = this.#renderWatcher,
+            spec;
+
+        full && this.#composer.invalidate();
+
+        spec = composer?.get();
 
         if (!spec) {
             this.#unrender();
@@ -281,9 +288,9 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     }
 
     recomposeSoon () {
-        let recompose = this.#recomposer ??= () => this.#recomposeNow();
+        let recomposer = this.#recomposer ??= () => this.#recomposeNow();
 
-        this.scheduler.add(recompose);
+        this.scheduler.add(recomposer);
     }
 
     #unrender () {

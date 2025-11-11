@@ -4,6 +4,7 @@ export const Identifiable = Base => class Identifiable extends Base {
     static configurable = {
         id: class {
             value = undefined;
+            priority = -1000;
 
             apply (me, v) {
                 let auto = me.autoGenId = v == null,

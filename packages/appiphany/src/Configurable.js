@@ -57,6 +57,16 @@ export class Config {
         return config;
     }
 
+    static sorter (a, b) {
+        let v = a.priority - b.priority;
+
+        if (!v) {
+            v = a.name.localeCompare(b.name);
+        }
+
+        return v;
+    }
+
     equal(a, b) {
         return a === b;
     }
@@ -182,6 +192,7 @@ applyTo(Config.prototype, {
     nullable: true,
     nullify: false,
     phase: 'ctor',  // in {'ctor', 'get', 'init'}
+    priority: 0,
 
     apply: null,
     update: null
@@ -351,7 +362,7 @@ export class Configurable extends Declarable {
             configData = me[configDataSym] ??= new Map(),
             { configuring } = me,
             firstTime = !me.instanceConfig,
-            cfg, name, phase, val;
+            active, cfg, name, phase, val;
 
         if (firstTime) {
             me.instanceConfig = config;
@@ -373,22 +384,30 @@ export class Configurable extends Declarable {
 
                     cfg = classConfigs[name] || Config.get(name);
                     cfg.defineInitter(me);
+
+                    (active ??= []).push(cfg);
                 }
             }
 
-            for (name in config) {
-                if (configData.has(name)) {
-                    // firstTime: skip over 'get' and 'init' phase configs
-                    // otherwise: process all configs
-                    phase = firstTime && classConfigs[name]?.phase;
+            if (active) {
+                active.sort(Config.sorter);
 
-                    if (!(phase === 'get' || phase === 'init')) {
-                        val = configData.get(name);
-                        configData.delete(name);
+                for (cfg of active) {
+                    name = cfg.name;
 
-                        configuring.stack.push(name);
-                        me[name] = val;
-                        configuring.stack.pop();
+                    if (configData.has(name)) {
+                        // firstTime: skip over 'get' and 'init' phase configs
+                        // otherwise: process all configs
+                        phase = firstTime && cfg.phase;
+
+                        if (!(phase === 'get' || phase === 'init')) {
+                            val = configData.get(name);
+                            configData.delete(name);
+
+                            configuring.stack.push(name);
+                            me[name] = val;
+                            configuring.stack.pop();
+                        }
                     }
                 }
             }

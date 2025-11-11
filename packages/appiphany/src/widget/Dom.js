@@ -167,10 +167,22 @@ export class Dom {
         return Dom.getDoc(el)?.body.parentElement;
     }
 
-    static getLimbo (el) {
-        let doc = Dom.getDoc(el);
+    static getEl (domOrEl) {
+        return (domOrEl instanceof Dom) ? domOrEl.el : Dom.is(domOrEl) ? domOrEl : null;
+    }
 
-        return doc && (doc.$limbo ??= doc.createElement('div'));
+    static getLimbo (el) {
+        let doc = Dom.getDoc(el),
+            limbo = doc?.$limbo;
+
+        if (doc && !limbo) {
+            doc.$limbo = limbo = doc.createElement('div');
+            limbo.id = 'limbo';
+            limbo.className = 'x-limbo';
+            doc.head.appendChild(limbo);
+        }
+
+        return limbo;
     }
 
     static getWin (el) {
@@ -449,13 +461,13 @@ export class Dom {
     }
 
     #_updateSubTree (specs, context) {
-        let doc = this.el.ownerDocument,
-            parent = this.el.parentElement,
+        let parent = this.el,
+            doc = parent.ownerDocument,
             children = [],
             { owner, root } = context,
             add, childEl, dom, isText, nodeType, old, ref, spec, specEl;
 
-        for (childEl of this.el.childNodes) {
+        for (childEl of parent.childNodes) {
             nodeType = childEl.nodeType;
 
             if (nodeType === Dom.TEXT || nodeType === Dom.ELEMENT) {
@@ -490,14 +502,14 @@ export class Dom {
                 }
             }
             else {
-                specEl = (spec instanceof Dom) ?spec.el : Dom.is(spec) ? spec : null;
+                specEl = Dom.getEl(spec);
 
                 if (specEl) {
-                    debugger;
                     remove(children, specEl);
 
                     if (childEl !== specEl) {
                         parent.insertBefore(specEl, childEl);
+                        childEl && children.push(childEl);
                     }
 
                     continue;
