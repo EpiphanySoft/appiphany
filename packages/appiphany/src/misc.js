@@ -13,7 +13,16 @@ const
     lowerRe = /^[a-z]+$/,
     falsyRe = /^(no|off|false)$/i,
     truthyRe = /^(yes|true|on)$/i,
-    upperMatch = (_, c) => c.toUpperCase();
+    upperMatch = (_, c) => c.toUpperCase(),
+    xssMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    },
+    xssRe = /[&<>"']/g,
+    xssFn = m => xssMap[m];
 
 export const
     decimalRe = /^-?((?:\d+(?:\.\d*)?)|(?:\.\d+))$/,
@@ -22,6 +31,8 @@ export const
     c2h = name => c2h.cache[name] ??= name.replace(camelWordBreakRe, hyphenateMatch),
     // hyphenated-to-camelCase:
     h2c = name => h2c.cache[name] ??= name.replace(hyphenAlphaRe, upperMatch),
+
+    xss = s => s?.replace(xssRe, xssFn),
 
     applyDefaults = (makeCopy, target, ...sources) => {
         if (typeof makeCopy !== 'boolean') {

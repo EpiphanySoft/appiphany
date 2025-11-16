@@ -1,4 +1,6 @@
-body {
-    background-color: #000;
-    color: red;
-}
+@import "bulma/bulma.css";
+
+/*body {*/
+/*    background-color: #000;*/
+/*    color: red;*/
+/*}*/
