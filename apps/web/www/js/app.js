@@ -17,6 +17,11 @@ window.w = new Widget({
             type: 'widget',
             cls: 'derp',
             html: 'Woot!!!'
+        },
+        bar: {
+            type: 'widget',
+            cls: 'woot',
+            html: 'derp!'
         }
     }
 });

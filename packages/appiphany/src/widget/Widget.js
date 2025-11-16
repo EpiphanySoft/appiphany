@@ -71,7 +71,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         itemRenderTarget: null,
 
         /**
-         * Widget can container other widgets. This property is an object mapping ref names to
+         * A `Widget` can container other widgets. This property is an object mapping ref names to
          * widget configs:
          *
          *      new Widget({
@@ -83,6 +83,9 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
          *              }
          *          }
          *      });
+         *
+         * The keys of the object preserve their declaration order and that order determines their
+         * order in the DOM.
          */
         items: class {
             apply (me, newItems, was) {
@@ -94,7 +97,8 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 let items = {},
                     existingByRef = was && chain(),
                     i = 0,
-                    existingItem, ref, item;
+                    same = true,
+                    existingIndex, existingItem, ref, item;
 
                 newItems ??= {};
 
@@ -103,16 +107,18 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 }
 
                 if (was) {
-                    for (item of was) {
-                        existingByRef[item.ref] = [i++, item];
+                    for (ref in was) {
+                        existingByRef[ref] = [i++, was[ref]];
                     }
                 }
+
+                i = 0;
 
                 for (ref in newItems) {
                     item = newItems[ref];
 
                     if (item) {
-                        existingItem = existingByRef?.[ref] || null;
+                        [existingIndex, existingItem] = existingByRef?.[ref] || EMPTY_ARRAY;
 
                         if (!item.is?.widget) {
                             item = clone(item);
@@ -128,18 +134,28 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                             // with config changes).
                             delete existingByRef[ref];
                         }
+                        else {
+                            same = false;
+                        }
 
                         items[ref] = item;
+
+                        if (existingIndex !== i) {
+                            same = false;
+                        }
                     }
+
+                    ++i;
                 }
 
                 if (existingByRef) {
                     for (ref in existingByRef) {
                         existingByRef[ref].destroy();
+                        same = false;
                     }
                 }
 
-                return isEqual(was, items) ? was : items;
+                return same ? was : items;
             }
 
             update (me) {
@@ -225,14 +241,13 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 renderTarget = refs[it.renderTarget || itemRenderTarget];
 
                 if (renderTarget) {
-                    specs = renderTarget.specs ??= {};
+                    specs = renderTarget.specs ??= [];
 
-                    if (Array.isArray(specs)) {
-                        specs.push(it.dom);
+                    if (!Array.isArray(specs)) {
+                        renderTarget.specs = specs = Dom.canonicalizeSpecs(specs);
                     }
-                    else {
-                        specs[it.ref] = it.dom;
-                    }
+
+                    specs.push(it.dom);
                 }
             }
         }
@@ -335,6 +350,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     recomposeSoon () {
         let recomposer = this.#recomposer ??= () => this.#recomposeNow();
 
+        console.log(`invalidated ${this.id}`);
         this.scheduler.add(recomposer);
     }
 
