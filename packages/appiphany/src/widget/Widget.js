@@ -62,6 +62,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         $props: {
             cls: null,
             html: null,
+            style: null,
             tag: 'div'
         },
 
@@ -269,7 +270,8 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         return {
             tag: props.tag,
             class: props.cls,
-            html: props.html
+            html: props.html,
+            style: props.style
         };
     }
 

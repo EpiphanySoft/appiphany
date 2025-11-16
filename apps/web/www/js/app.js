@@ -9,21 +9,21 @@ debugger;
 window.v = new Viewport();
 window.v.initialize();
 
-window.w = new Widget({
+window.w = Widget.factory.create({
     renderTo: document.body,
     cls: 'woot',
     items: {
         foo: {
             type: 'widget',
             cls: 'derp',
-            html: 'Woot!!!'
+            html: 'Woot!!!',
+            style: { color: 'yellow' }
         },
         bar: {
             type: 'widget',
             cls: 'woot',
-            html: 'derp!'
+            html: 'derp!',
+            style: 'color: lime; fontSize: 2em'
         }
     }
 });
-
-window.w.initialize();
