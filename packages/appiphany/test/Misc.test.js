@@ -1,5 +1,7 @@
 import {
     Base64,
+    c2h,
+    h2c,
     chain,
     clone,
     SmartArray,
@@ -34,6 +36,17 @@ const
 
 
 describe('Misc', () => {
+    it('c2h', () => {
+        expect(c2h('fooBarZip')).to.equal('foo-bar-zip');
+        expect(c2h('foo-bar-zip')).to.equal('foo-bar-zip');
+        expect(c2h('--foo-bar-zip')).to.equal('--foo-bar-zip');
+    });
+
+    it('h2c', () => {
+        expect(h2c('foo-bar-zip')).to.equal('fooBarZip');
+        expect(h2c('fooBar-zip')).to.equal('fooBarZip');
+    });
+
     it('chain', () => {
         let o1 = chain();
         let o2 = chain(o1);

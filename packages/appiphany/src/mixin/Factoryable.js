@@ -42,7 +42,7 @@ export class Factory extends Configurable {
         let me = this,
             { typeKey } = me,
             defaults = options?.defaults,
-            type;
+            ret, type;
 
         if (typeof config === 'string') {
             type = config;
@@ -83,20 +83,24 @@ export class Factory extends Configurable {
         }
 
         if (!config) {
-            return null;
+            ret = null;
         }
-
-        if (!type) {
-            if (!(type = me.lookup(options?.type || defaults?.type || me.defaultType))) {
-                panik(`No default type for ${me.owner.className} factory`);
+        else {
+            if (!type) {
+                if (!(type = me.lookup(options?.type || defaults?.type || me.defaultType))) {
+                    panik(`No default type for ${me.owner.className} factory`);
+                }
             }
+
+            if (defaults) {
+                config = type.squashConfigs(defaults, config);
+            }
+
+            ret = new type(config);
+            ret.initialize?.();
         }
 
-        if (defaults) {
-            config = type.squashConfigs(defaults, config);
-        }
-
-        return new type(config);
+        return ret;
     }
 
     register(cls, ...keys) {

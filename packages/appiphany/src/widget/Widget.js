@@ -1,4 +1,5 @@
-import { chain, panik, Configurable, Signal, isObject, clone, isEqual } from '@appiphany/appiphany';
+import { chain, panik, Configurable, Signal, isObject, clone, isEqual }
+    from '@appiphany/appiphany';
 import { Bindable, Factoryable, Identifiable } from '@appiphany/appiphany/mixin';
 import { Dom } from '@appiphany/appiphany/widget';
 
@@ -45,15 +46,44 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         defaultType: 'widget'
     };
 
+    static #idMap = chain();
+
+    static generateAutoId (prefix) {
+        let map = Widget.#idMap;
+
+        return map[prefix] = (map[prefix] || 0) + 1;
+    }
+
+    static identifierPrefix () {
+        return this.type;
+    }
+
     static configurable = {
         $props: {
             cls: null,
-            items: null,
+            html: null,
             tag: 'div'
         },
 
+        /**
+         * The default `renderTarget` for items that do not specify their own `renderTarget`.
+         */
         itemRenderTarget: null,
 
+        /**
+         * Widget can container other widgets. This property is an object mapping ref names to
+         * widget configs:
+         *
+         *      new Widget({
+         *          renderTo: document.body,
+         *          items: {
+         *              btn: {
+         *                  type: 'button',
+         *                  ...
+         *              }
+         *          }
+         *      });
+         */
         items: class {
             apply (me, newItems, was) {
                 //  newItems = {
@@ -61,7 +91,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                 //      bar: { type: 'widget' },
                 //  }
                 //
-                let items = [],
+                let items = {},
                     existingByRef = was && chain(),
                     i = 0,
                     existingItem, ref, item;
@@ -99,7 +129,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                             delete existingByRef[ref];
                         }
 
-                        items.push(item);
+                        items[ref] = item;
                     }
                 }
 
@@ -119,6 +149,10 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             }
         },
 
+        /**
+         * The ref name of the element to render this widget's content into. If not specified, the
+         * parent widget's `itemRenderTarget` is used.
+         */
         renderTarget: class {
             value = null;
 
@@ -159,21 +193,10 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         }
     };
 
-    static #idMap = chain();
-
-    static generateAutoId (prefix) {
-        let map = Widget.#idMap;
-
-        return map[prefix] = (map[prefix] || 0) + 1;
-    }
-
-    static idPrefix () {
-        return this.type;
-    }
-
     #composer = null;
     #dom = null;
     #recomposer = null;
+    #renderToUsed = false;
     #renderWatcher = null;
     #watcherNotified = false;
 
@@ -197,12 +220,11 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
             refs = gatherRefs({}, 'root', spec);
             itemRenderTarget ??= 'root';
 
-            for (it of items) {
+            for (ref in items) {
+                it = items[ref];
                 renderTarget = refs[it.renderTarget || itemRenderTarget];
 
                 if (renderTarget) {
-                    it.recompose();
-
                     specs = renderTarget.specs ??= {};
 
                     if (Array.isArray(specs)) {
@@ -218,30 +240,53 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         return spec;
     }
 
+    initialize() {
+        super.initialize();
+
+        if (!this.dom) {
+            this.recompose();
+        }
+    }
+
     render () {
         let { props } = this;
 
         return {
             tag: props.tag,
-            class: props.cls
+            class: props.cls,
+            html: props.html
         };
+    }
+
+    #getRenderPlan () {
+        let renderTo = !this.destroyed && this.renderTo,
+            renderToUsed = this.#renderToUsed,
+            mode;
+
+        if (renderTo) {
+            this.#renderToUsed = renderToUsed = true;
+            [mode, renderTo] = renderTo;
+        }
+        else if (renderToUsed) {
+            renderTo = Dom.limbo;
+        }
+
+        return [renderToUsed, mode || 'append', renderTo];
     }
 
     recompose (full) {
         let { id } = this,
             dom = this.#dom,
-            [m, r2] = this.renderTo || EMPTY_ARRAY,  // {'append'|'before'|'after'|'adopt'}
-            renderTo = this.destroyed ? null : (r2 || Dom.limbo),
-            mode = renderTo ? m || 'append' : '',
+            [renderToUsed, mode, renderTo] = this.#getRenderPlan(),
             adopt = mode === 'adopt',
-            composer = renderTo &&
-                (this.#composer ??= Signal.formula(this.compose.bind(this), { name: `composer@${id}` })),
+            composer = this.#composer
+                ??= Signal.formula(this.compose.bind(this), { name: `composer@${id}` }),
             watcher = this.#renderWatcher,
             spec;
 
-        full && this.#composer.invalidate();
+        full && composer.invalidate();
 
-        spec = composer?.get();
+        spec = composer.get();
 
         if (!spec) {
             this.#unrender();
@@ -249,7 +294,7 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         else {
             spec.id = id;
 
-            if (!adopt && renderTo) {
+            if (!adopt && renderToUsed) {
                 spec[MODE_MAP[mode]] = renderTo;
             }
 

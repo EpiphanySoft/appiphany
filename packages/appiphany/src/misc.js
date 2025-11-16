@@ -5,14 +5,24 @@ const
     AsyncFunction = (async() => {}).constructor,
     plainObjectSym = Symbol('plainObject'),
     capsPrefixRe = /^([A-Z]+)([^A-Z])?/,
+    camelWordBreakRe = /([a-z])([A-Z])/g,
     collectionWas = Symbol('was'),
+    hyphenAlphaRe = /-([a-z])/g,
+    hyphenateMatch = (_, m1, m2) => `${m1}-${m2.toLowerCase()}`, // 'xB' => 'x-b'
     intRe = /^\d+$/,
     lowerRe = /^[a-z]+$/,
     falsyRe = /^(no|off|false)$/i,
     truthyRe = /^(yes|true|on)$/i,
-    typeCache = {};
+    upperMatch = (_, c) => c.toUpperCase();
 
 export const
+    decimalRe = /^-?((?:\d+(?:\.\d*)?)|(?:\.\d+))$/,
+
+    // camelCase-to-hyphenated:
+    c2h = name => c2h.cache[name] ??= name.replace(camelWordBreakRe, hyphenateMatch),
+    // hyphenated-to-camelCase:
+    h2c = name => h2c.cache[name] ??= name.replace(hyphenAlphaRe, upperMatch),
+
     applyDefaults = (makeCopy, target, ...sources) => {
         if (typeof makeCopy !== 'boolean') {
             sources.unshift(target);
@@ -829,9 +839,9 @@ export const
         }
         else if ((t = typeof val) === 'object') {
             t = toString.call(val);
-            t = (t in typeCache)
-                ? typeCache[t]
-                : (typeCache[t] = t.slice(8, -1).toLowerCase());  // '[object '.length = 8
+            t = (t in typeOf.cache)
+                ? typeOf.cache[t]
+                : (typeOf.cache[t] = t.slice(8, -1).toLowerCase());  // '[object '.length = 8
 
             if (t === 'object') {
                 if (!isObject(val)) {
@@ -857,6 +867,9 @@ export const
     }
 ;
 
+c2h.cache = chain();
+h2c.cache = chain();
+typeOf.cache = chain();
 
 export class AutoMap extends Map {
     constructor(iterable, createFn) {

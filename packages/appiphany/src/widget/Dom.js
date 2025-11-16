@@ -1,9 +1,81 @@
-import { chain, className, clone, isEqual, isObject, remove } from '@appiphany/appiphany';
+import { c2h, chain, className, clone, decapitalize, decimalRe, h2c, isEqual,
+         isObject, remove }
+    from '@appiphany/appiphany';
 import { Event } from '@appiphany/appiphany/widget';
 
 const
-    EMPTY_OBJECT = chain();
+    EMPTY_OBJECT = chain(),
+    TRBL = ['Top', 'Right', 'Bottom', 'Left'],
+    c2d = s => `data-${c2h(s)}`,
+    cartesianJoin = (a, b) => a.map(x => b.map(y => decapitalize(`${x}${y}`))).flat(),
+    colonRe = /\s*:\s*/g,
+    semiRe = /\s*;\s*/g;
 
+//================================================================================================
+
+class StyleHandler {
+    constructor (name, units) {
+        this.name = name;
+        this.units = units;
+    }
+
+    set (el, value) {
+        if (value == null) {
+            el.style.removeProperty(this.name);
+        }
+        else {
+            el.style.setProperty(this.name, this.unitize(value));
+        }
+    }
+
+    unitize (value) {
+        if (value != null) {
+            value = String(value);
+
+            if (this.units && decimalRe.test(value)) {
+                value += this.units;
+            }
+        }
+
+        return value;
+    }
+}
+
+
+//================================================================================================
+
+export class Style {
+    static #handlers = chain();  // [hyphenatedName] = StyleHandler
+
+    static grok (name, units) {
+        let hyphenatedName = c2h(name); // c2h caches the name to hyphenatedName mapping
+
+        return this.#handlers[hyphenatedName] ??= new StyleHandler(hyphenatedName, units);
+    }
+
+    static parse (style) {
+        return (typeof style === 'string')
+            ? Object.fromEntries(style.split(semiRe).map(entry => entry.split(colonRe)))
+            : (style || {});
+    }
+
+    static applyTo (el, styles) {
+        if (el && styles) {
+            for (let name in styles) {
+                Style.grok(name).set(el, styles[name]);
+            }
+        }
+    }
+}
+
+// Register standard CSS properties with px default units:
+[   ...cartesianJoin(['margin', 'padding', ''], TRBL),
+    ...cartesianJoin([...cartesianJoin(['border'], TRBL), 'max', 'min', 'outline', ''], ['Width']),
+    ...cartesianJoin(['max', 'min', 'line', ''], ['Height'])
+].forEach(name => Style.grok(name, 'px'));
+
+
+//================================================================================================
 
 export class Dom {
     static ELEMENT = 1;
@@ -362,23 +434,23 @@ export class Dom {
 
         ref && context?.refs && (context.refs[ref] = this);
 
-        this.#_updateAttrs(spec, was);
-        this.#_updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
-        this.#_updateData(data, was.data);
-        this.#_updateStyle(style, was.style);
+        this._updateAttrs(spec, was);
+        this._updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
+        this._updateData(data, was.data);
+        this._updateStyle(style, was.style);
 
         if (text != null) {
             if (text !== was.text) {
-                this.#_updateText(text);
+                this._updateText(text);
             }
         }
         else if (html != null) {
             if (html !== was.html) {
-                this.#_updateHtml(html);
+                this._updateHtml(html);
             }
         }
         else if (specs) {
-            this.#_updateSubTree(Dom.canonicalizeSpecs(specs), context);
+            this._updateSubTree(Dom.canonicalizeSpecs(specs), context);
         }
 
         if (!isEqual(listeners, was.listeners)) {
@@ -390,7 +462,7 @@ export class Dom {
         this.spec = spec;
     }
 
-    #_updateAttrs (attrs, was) {
+    _updateAttrs (attrs, was) {
         let { el } = this,
             name, val;
 
@@ -418,7 +490,7 @@ export class Dom {
         }
     }
 
-    #_updateCls (classes, was) {
+    _updateCls (classes, was) {
         let { el } = this,
             classList = Array.from(el.classList),
             cls;
@@ -444,23 +516,63 @@ export class Dom {
         cls && el.setAttribute('class', cls);
     }
 
-    #_updateHtml (html) {
+    _updateHtml (html) {
         this.el.innerHTML = html;
     }
 
-    #_updateText (text) {
+    _updateText (text) {
         this.el.textContent = text;
     }
 
-    #_updateData (data, was) {
-        // TODO
+    _updateData (data, was) {
+        let { el } = this,
+            key, name, value;
+
+        data ??= {};
+        was ??= {};
+
+        for (key in data) {
+            if ((value = data[key]) !== was[key]) {
+                name = c2d(key);
+
+                if (value == null) {
+                    el.removeAttribute(name);
+                }
+                else {
+                    el.setAttribute(name, value);
+                }
+            }
+        }
+
+        for (key in was) {
+            if (!(key in data)) {
+                el.removeAttribute(c2d(key));
+            }
+        }
     }
 
-    #_updateStyle (style, was) {
-        // TODO
+    _updateStyle (style, was) {
+        let delta, key;
+
+        style = Style.parse(style);
+        was = Style.parse(was);
+
+        for (key in style) {
+            if (style[key] !== was[key]) {
+                (delta ??= {})[key] = style[key];
+            }
+        }
+
+        for (key in was) {
+            if (!(key in style)) {
+                (delta ??= {})[key] = '';
+            }
+        }
+
+        delta && Style.applyTo(this.el, delta);
     }
 
-    #_updateSubTree (specs, context) {
+    _updateSubTree (specs, context) {
         let parent = this.el,
             doc = parent.ownerDocument,
             children = [],

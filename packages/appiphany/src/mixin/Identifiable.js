@@ -1,3 +1,6 @@
+import { decapitalize } from '@appiphany/appiphany';
+
+
 export const Identifiable = Base => class Identifiable extends Base {
     static idSep = '-';
 
@@ -21,18 +24,18 @@ export const Identifiable = Base => class Identifiable extends Base {
     };
 
     static generateAutoIdPrefix () {
-        let prefix = this.idPrefix();
+        let prefix = this.identifierPrefix();
 
         return prefix ? prefix + this.idSep : '';
     }
 
-    static generateAutoId (prefix) {
+    static generateAutoId (/* prefix */) {
         let { $meta: meta } = this;
 
         return meta.nextId = (meta.nextId || 0) + 1;
     }
 
-    static idPrefix () {
-        return this.className;
+    static identifierPrefix () {
+        return decapitalize(this.className);
     }
 }

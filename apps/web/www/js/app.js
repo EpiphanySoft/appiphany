@@ -15,7 +15,8 @@ window.w = new Widget({
     items: {
         foo: {
             type: 'widget',
-            cls: 'derp'
+            cls: 'derp',
+            html: 'Woot!!!'
         }
     }
 });
