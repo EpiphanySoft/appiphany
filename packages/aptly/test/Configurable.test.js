@@ -1,4 +1,4 @@
-import { Configurable, applyTo, clone, ignore } from '@appiphany/aptly';
+import { Configurable, Config, applyTo, clone, ignore } from '@appiphany/aptly';
 import { Identifiable } from '@appiphany/aptly/mixin';
 
 import assertly from 'assertly';
@@ -22,6 +22,60 @@ describe('Configurable', () => {
         expect(foo2.derp).to.equal(42);
 
         expect(foo.$meta).to.be(foo2.$meta);
+    });
+
+    it('handles arrays', () => {
+        class Foo extends Configurable {
+            static configurable = {
+                derp: class {
+                    array = true;
+                }
+            };
+        }
+
+        let a = [1, 2, 3];
+        let foo = new Foo({ derp: a });
+
+        expect(foo.derp).to.equal(a);
+
+        foo.derp = a.slice();
+
+        expect(foo.derp).to.be(a);
+    });
+
+    it('handles flags', () => {
+        class Foo extends Configurable {
+            static configurable = {
+                derp: class extends Config.Flags {
+                    //
+                }
+            };
+        }
+
+        let a = { a: true, b: true };
+        let foo = new Foo({ derp: a });
+
+        expect(foo.derp).to.equal(a);
+
+        foo.derp = { b: true, a: true };
+
+        expect(foo.derp).to.be(a);
+
+        foo.derp = 'a,b';
+
+        expect(foo.derp).to.be(a);
+
+        foo.derp = ['a', 'b'];
+
+        expect(foo.derp).to.be(a);
+
+        foo.derp = 'a,b,-c';
+
+        expect(foo.derp).to.equal({ a: true, b: true, c: false });
+
+        foo.derp = ['x', 'y'];
+
+        expect(foo.derp).to.equal({ x: true, y: true });
     });
 
     it('className', () => {
@@ -941,8 +995,8 @@ describe('Configurable', () => {
             let inst1 = new Foo();
             let inst2 = new Foo();
 
-            expect(inst1.id).to.equal('Foo-1');
-            expect(inst2.id).to.equal('Foo-2');
+            expect(inst1.id).to.equal('foo-1');
+            expect(inst2.id).to.equal('foo-2');
         });
     });
 });

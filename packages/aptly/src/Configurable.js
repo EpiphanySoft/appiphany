@@ -68,7 +68,21 @@ export class Config {
     }
 
     equal(a, b) {
-        return a === b;
+        let ret = a === b,
+            i, n;
+
+        if (!ret && a && b && this.array && Array.isArray(a) && Array.isArray(b)) {
+            ret = (n = a.length) === b.length;
+
+            if (ret) {
+                for (i = 0; i < n && (ret = a[i] === b[i]); ++i) {
+                    // just loop
+                }
+            }
+            // else fall below and return false
+        }
+
+        return ret;
     }
 
     extend(cls, val) {
@@ -188,6 +202,7 @@ applyTo(Config.prototype, {
     name: null,
     prop: null,
 
+    array: false,
     default: null,
     nullable: true,
     nullify: false,
@@ -197,6 +212,52 @@ applyTo(Config.prototype, {
     apply: null,
     update: null
 });
+
+const
+    wordRe = /,|\s+/;
+
+class Flags extends Config {
+    apply (instance, v, was) {
+        if (typeof v === 'string') {
+            v = v.split(wordRe).filter(s => s);
+        }
+
+        if (Array.isArray(v)) {
+            v = Object.fromEntries(v.map(s => s.startsWith('-') ? [s.slice(1), false] : [s, true]));
+        }
+
+        if (v && was) {
+            let same = true,
+                k;
+
+            for (k in v) {
+                same = v[k] === was[k];
+
+                if (!same) {
+                    break;
+                }
+            }
+
+            if (same) {
+                for (k in was) {
+                    same = v[k] === was[k];
+
+                    if (!same) {
+                        break;
+                    }
+                }
+            }
+
+            if (same) {
+                v = was;
+            }
+        }
+
+        return v;
+    }
+}
+
+Config.Flags = Flags;
 
 //=======================================================================================
 
@@ -212,10 +273,12 @@ export class Configurable extends Declarable {
                 val = configs[name];
 
                 if (val && isClass(val)) {
-                    base = classConfigs[name]?.constructor || Config.get(name).constructor;
+                    if (!(val.prototype instanceof Config)) {
+                        base = classConfigs[name]?.constructor || Config.get(name).constructor;
 
-                    Object.setPrototypeOf(val, base);
-                    Object.setPrototypeOf(val.prototype, base.prototype);
+                        Object.setPrototypeOf(val, base);
+                        Object.setPrototypeOf(val.prototype, base.prototype);
+                    }
 
                     classConfigs[name] = config = val.create(name);
                     proto = val.prototype;
@@ -371,6 +434,7 @@ export class Configurable extends Declarable {
         try {
             if (!configuring) {
                 me.configuring = configuring = {
+                    firstTime,
                     depth: 0,
                     stack: []
                 };

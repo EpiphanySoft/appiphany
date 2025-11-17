@@ -11,6 +11,8 @@ export class Factory extends Configurable {
 
         owner: null,
 
+        stateProvider: null,
+
         typeKey: 'type'
     };
 

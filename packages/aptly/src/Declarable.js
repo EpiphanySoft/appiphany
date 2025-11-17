@@ -1,4 +1,4 @@
-import { decapitalize, ignore, chain, applyTo, panik, quoteWrap, Destroyable }
+import { decapitalize, ignore, chain, applyTo, panik, quoteWrap, Destroyable, isObject }
     from '@appiphany/aptly';
 // import { Logger } from '@/util/Logger';
 
@@ -103,6 +103,17 @@ export class Declarable extends Destroyable {
 
     static declarable = {
         abstract (cls, value) {
+            if (isObject(value)) {
+                let { contract } = cls.$meta,
+                    method;
+
+                for (method in value) {
+                    contract[method] = [value[method], cls.name];
+                }
+
+                value = true;
+            }
+
             cls.$meta.abstract = value;
             delete cls.abstract;
         },
@@ -198,7 +209,7 @@ export class Declarable extends Destroyable {
 
         if (missing) {
             meta.abstract =
-                `Cannot instantiate class with unimplemented methods (${missing.join(', ')})`;
+                `Cannot instantiate class with abstract methods (${missing.join(', ')})`;
         }
     }
 
