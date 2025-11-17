@@ -36,8 +36,10 @@ const mount = paths => {
 
 mount({
     '/': '../web/www',
-    '/appiphany/import': '../../packages/appiphany/import',
-    '/appiphany/src': '../../packages/appiphany/src'
+    '/aptly/import': '../../packages/aptly/import',
+    '/aptly/src': '../../packages/aptly/src',
+    '/webly/import': '../../packages/webly/import',
+    '/webly/src': '../../packages/webly/src'
 });
 
 await Apis.mount('/~api', path.join(import.meta.dirname, 'api'));

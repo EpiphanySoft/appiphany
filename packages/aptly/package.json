@@ -1,0 +1,12 @@
+{
+  "name": "@appiphany/aptly",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+      ".": "./import/index.js",
+      "./mixin": "./import/mixin/index.js"
+  },
+
+  "dependencies": {
+  }
+}

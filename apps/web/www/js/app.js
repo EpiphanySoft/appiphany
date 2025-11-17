@@ -1,4 +1,4 @@
-import { Dom, Widget, Viewport } from '@appiphany/appiphany/widget';
+import { Dom, Widget, Viewport } from '@appiphany/webly';
 
 
 window.Dom = Dom;
