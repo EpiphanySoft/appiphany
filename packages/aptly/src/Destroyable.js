@@ -42,6 +42,14 @@ const
     };
 
 export class Destroyable {
+    static new (...args) {
+        let ret = new this(...args);
+
+        this.prototype.initialize && ret.initialize();
+
+        return ret;
+    }
+
     constructor() {
         // must come from class proto since we're in super constructor
         let me = this,

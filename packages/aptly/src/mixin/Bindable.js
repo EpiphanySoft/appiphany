@@ -133,6 +133,10 @@ export const Bindable = Base => class Bindable extends Base {
 
                     set (v) {
                         this.$props[name] = v;
+
+                        if (this.initialized !== false && !this.onConfigChange?.$nop) {
+                            this.onConfigChange?.(name);
+                        }
                     }
                 };
 

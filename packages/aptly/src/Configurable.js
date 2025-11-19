@@ -113,6 +113,8 @@ export class Config {
             instance[prop] = v;
 
             me.update?.(instance, v, was, firstTime);
+
+            instance.initialized && !instance.onConfigChange.$nop && instance.onConfigChange(me.name);
         }
     }
 
@@ -526,6 +528,10 @@ export class Configurable extends Declarable {
         return this[name];
     }
 
+    onConfigChange (name) {
+        // template method
+    }
+
     toJSON() {
         return map(this.$meta.configs, (v, k) => {
             v = this[k];
@@ -534,6 +540,8 @@ export class Configurable extends Declarable {
         });
     }
 }
+
+Configurable.prototype.onConfigChange.$nop = true;
 
 // Cannot use declarables because there are static getters for these:
 applyTo(Configurable.$meta, { // this calls Configurable.initClass()

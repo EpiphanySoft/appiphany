@@ -984,6 +984,40 @@ describe('Configurable', () => {
         ]);
     });
 
+    it('onConfigChange', () => {
+        let log = [];
+
+        class Foo extends Configurable {
+            static configurable = {
+                foo: null,
+                bar: null
+            }
+
+            onConfigChange (name) {
+                log.push([name, this[name]]);
+            }
+        }
+
+        let inst = Foo.new({ foo: 42, bar: 427 });
+
+        expect(log).to.equal([]);
+
+        inst.foo = 1;
+
+        expect(log).to.equal([
+            ['foo', 1]
+        ]);
+        log.length = 0;
+
+        inst.configure({ foo: 3, bar: 2 });
+        log.sort((a, b) => a[0].localeCompare(b[0]));
+
+        expect(log).to.equal([
+            ['bar', 2],
+            ['foo', 3]
+        ]);
+    });
+
     describe('Identifiable', () => {
         it('should work', () => {
             let log = [];

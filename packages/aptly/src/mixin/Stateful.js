@@ -21,6 +21,10 @@ export const Stateful = Base => class Stateful extends Base {
 
         stateProvider: null
     };
+
+    onConfigChange (name) {
+        // TODO
+    }
 }
 
 export class StateProvider extends Configurable {

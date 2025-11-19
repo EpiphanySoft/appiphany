@@ -98,8 +98,7 @@ export class Factory extends Configurable {
                 config = type.squashConfigs(defaults, config);
             }
 
-            ret = new type(config);
-            ret.initialize?.();
+            ret = type.new ? type.new(config) : new type(config);
         }
 
         return ret;
