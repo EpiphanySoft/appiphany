@@ -28,14 +28,18 @@ export const Stateful = Base => class Stateful extends Base {
 }
 
 export class StateProvider extends Configurable {
-    static abstract = {
-        clearValues () {},
-        deleteValue (key) {},
-        getValue (key) {},
-        setValue (key, value) {}
-    };
-
     static configurable = {
-        scope: null
+        /**
+         * @config {String}
+         * The prefix to use for state keys.
+         */
+        scope: null,
+
+        /**
+         * @config {Object}
+         * Either a `localStorage` or `sessionStorage` object or an object that conforms to the
+         * same interface.
+         */
+        storage: null
     };
 }

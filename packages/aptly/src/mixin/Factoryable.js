@@ -42,8 +42,9 @@ export class Factory extends Configurable {
 
     reconfigure(instance, config, options = null) {
         let me = this,
-            { typeKey } = me,
+            { stateProvider, typeKey } = me,
             defaults = options?.defaults,
+            originalConfig = config,
             ret, type;
 
         if (typeof config === 'string') {
@@ -98,7 +99,15 @@ export class Factory extends Configurable {
                 config = type.squashConfigs(defaults, config);
             }
 
-            ret = type.new ? type.new(config) : new type(config);
+            if (stateProvider) {
+                if (originalConfig === config) {
+                    config = applyTo({}, config);
+                }
+
+                config.stateProvider = stateProvider;
+            }
+
+            ret = (typeof type.new === 'function') ? type.new(config) : new type(config);
         }
 
         return ret;
