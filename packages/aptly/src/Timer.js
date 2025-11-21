@@ -1,4 +1,4 @@
-import { applyTo, deferred, Scheduler } from '@appiphany/aptly';
+import { applyTo, deferred, Scheduler, thenable } from '@appiphany/aptly';
 
 
 export class Timer {
@@ -13,6 +13,7 @@ export class Timer {
     generation = 0;
     immediate = false;
     restartable = '';
+    running = false;
     // TODO throttle
 
     constructor (fn, options) {
@@ -72,36 +73,47 @@ export class Timer {
             gen, restartable;
 
         if (!me.#disabled) {
-            if (!me.pending) {
-                me.args = args;
+            restartable = me.restartable || '';
+
+            if (me.running) {
+                if (!me.immediate) {
+                    if (!me.args || restartable.includes('a')) {
+                        me.args = args;
+                    }
+
+                    ret = (me.#deferred ??= deferred()).promise;
+                }
             }
             else {
-                restartable = me.restartable || '';
-
-                if (restartable.includes('a')) {
-                    // if the args are restartable, replace them
+                if (!me.pending) {
                     me.args = args;
                 }
+                else {
+                    if (restartable.includes('a')) {
+                        // if the args are restartable, replace them
+                        me.args = args;
+                    }
 
-                if (!restartable.includes('t')) {
-                    // if the timer is not restartable, return the current promise
-                    // and leave the timer running
-                    return me.#deferred.promise;
+                    if (!restartable.includes('t')) {
+                        // if the timer is not restartable, return the current promise
+                        // and leave the timer running
+                        return me.#deferred.promise;
+                    }
+
+                    // otherwise, cancel the current timer and start a new one
+                    me._cancelTimer();
                 }
 
-                // otherwise, cancel the current timer and start a new one
-                me._cancelTimer();
-            }
+                if (me.immediate) {
+                    me._onTick();
+                    ret = true;
+                }
+                else {
+                    gen = ++me.generation;
+                    ret = (me.#deferred ??= deferred()).promise;
 
-            if (me.immediate) {
-                me._onTick();
-                ret = true;
-            }
-            else {
-                gen = ++me.generation;
-                ret = (me.#deferred ??= deferred()).promise;
-
-                me.#timerId = me._start(() => me._onTick(gen));
+                    me.#timerId = me._start(() => me._onTick(gen));
+                }
             }
         }
 
@@ -135,17 +147,34 @@ export class Timer {
 
     _onTick (gen = this.generation) {
         let me = this,
-            args = me.args;
+            args = me.args,
+            deferred, ret,
+            tailFn = _ => {
+                deferred?.resolve(true);
+                me.running = false;
+
+                if (me.args) {
+                    let newGen = ++me.generation;
+
+                    me.#timerId = me._start(() => me._onTick(newGen));
+                }
+            };
 
         // if the Timer instance has been modified since the timer was scheduled,
         // ignore this call.
         if (gen === me.generation) {
-            me.#timerId = me.args = null;
+            deferred = me.#deferred;
+            me.#deferred = me.#timerId = me.args = null;
+            me.running = true;
 
-            args?.length ? me.fn(...args) : me.fn();
+            ret = args?.length ? me.fn(...args) : me.fn();
 
-            me.#deferred?.resolve(true);
-            me.#deferred = null;
+            if (thenable(ret)) {
+                ret.finally(tailFn);
+            }
+            else {
+                tailFn();
+            }
         }
     }
 }
