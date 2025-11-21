@@ -1,45 +1,8 @@
 import { applyTo, deferred, Scheduler } from '@appiphany/aptly';
 
-const { defineProperty: defineProp } = Object;
 
 export class Timer {
     static types = {};
-
-    static decorate (prototype, name, options) {
-        let cls = this,
-            methodFn = prototype[name];
-
-        defineProp(prototype, name, {
-            get () {
-                let invokeFn = (...args) => methodFn.apply(this, args),
-                    wrapFn = (...args) => wrapFn.timer.start(...args),
-                    scheduler = (cls === SchedulerTimer) && this.scheduler;
-
-                wrapFn.timer = new cls(invokeFn, options);
-
-                if (scheduler) {
-                    wrapFn.timer.scheduler = scheduler;
-                }
-
-                defineProp(wrapFn, 'now', {
-                    value (...args) {
-                        wrapFn(...args);
-
-                        return wrapFn.timer.flush();
-                    }
-                });
-
-                // On first access of the delayable method, this getter is called. It
-                // shadows the getter on the prototype with the wrapFn that is bound
-                // this the instance. This means each instance will gets its own timer.
-                defineProp(this, name, { value: wrapFn });
-
-                // This is the only time this getter is called on this instance (due
-                // to the above), but we still need to return the wrapFn for this call.
-                return wrapFn;
-            }
-        });
-    }
 
     #disabled = false;
     #deferred = null;
@@ -50,6 +13,7 @@ export class Timer {
     generation = 0;
     immediate = false;
     restartable = '';
+    // TODO throttle
 
     constructor (fn, options) {
         this.fn = fn;
@@ -72,6 +36,34 @@ export class Timer {
 
     get timerId () {
         return this.#timerId;
+    }
+
+    cancel () {
+        let me = this;
+
+        me._cancelTimer();
+        me.args = null;
+        me.#deferred?.resolve(false);
+        me.#deferred = me.#timerId = null;
+    }
+
+    flush () {
+        let me = this,
+            args = me.args,
+            deferred = me.#deferred,
+            ret = false;
+
+        if (me.pending) {
+            me.#deferred = null;
+            me.cancel();
+
+            me.args = args;
+            me.#deferred = deferred;
+            me._onTick();
+            ret = true;
+        }
+
+        return ret;
     }
 
     start (...args) {
@@ -116,37 +108,19 @@ export class Timer {
         return ret;
     }
 
-    cancel () {
-        let me = this;
-
-        me._cancelTimer();
-        me.args = null;
-        me.#deferred?.resolve(false);
-        me.#deferred = me.#timerId = null;
-    }
-
-    flush () {
-        let me = this,
-            args = me.args,
-            deferred = me.#deferred,
-            ret = false;
-
-        if (me.pending) {
-            me.#deferred = null;
-            me.cancel();
-
-            me.args = args;
-            me.#deferred = deferred;
-            me._onTick();
-            ret = true;
-        }
-
-        return ret;
-    }
+    //------------------------------------------------
+    // Overridable methods based on timer type
 
     _cancel (timerId) {
         clearTimeout(timerId);
     }
+
+    _start (fn) {
+        return setTimeout(fn, this.delay);
+    }
+
+    //------------------------------------------------
+    // Private
 
     _cancelTimer () {
         let me = this,
@@ -174,16 +148,12 @@ export class Timer {
             me.#deferred = null;
         }
     }
-
-    _start (fn) {
-        return setTimeout(fn, this.delay);
-    }
 }
 
 /**
  * Timer that uses queueMicrotask to schedule the callback.
  */
-class AsapTimer extends Timer {
+export class AsapTimer extends Timer {
     static nextId = 0;
 
     _cancel () {
@@ -204,7 +174,7 @@ class AsapTimer extends Timer {
  *
  * This is a client-only form of timer.
  */
-class RafTimer extends Timer {
+export class RafTimer extends Timer {
     _cancel (timerId) {
         cancelAnimationFrame(timerId);
     }
@@ -219,11 +189,8 @@ class RafTimer extends Timer {
  *
  * This is a client-only form of timer.
  */
-class SchedulerTimer extends Timer {
+export class SchedulerTimer extends Timer {
     static nextId = 0;
-
-    priority = 0;
-    scheduler = null;
 
     _cancel () {
         // no cancel method
@@ -235,6 +202,11 @@ class SchedulerTimer extends Timer {
         return ++SchedulerTimer.nextId;
     }
 }
+
+applyTo(SchedulerTimer.prototype, {
+    priority: 0,
+    scheduler: null
+});
 
 
 Timer.types.asap    = AsapTimer;
