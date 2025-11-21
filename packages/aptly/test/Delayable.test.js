@@ -104,7 +104,7 @@ describe('Delayable', () => {
 
         class Foo extends Configurable.mixin(Delayable) {
             static delayable = {
-                woot: 'scheduler'
+                woot: 'sched'
             };
 
             woot (arg) {
@@ -114,7 +114,7 @@ describe('Delayable', () => {
 
         let foo = Foo.new();
 
-        expect(foo.woot.timer).to.be.a(Timer.types.scheduler);
+        expect(foo.woot.timer).to.be.a(Timer.types.sched);
         expect(foo.woot.timer.pending).to.be(false);
 
         let promise = foo.woot(42);
@@ -223,6 +223,71 @@ describe('Delayable', () => {
 
         expect(ok).to.be(true);
         expect(log).to.equal([42]);
+    });
+
+    it('should support now()', async() => {
+        let log = [];
+
+        class Foo extends Configurable.mixin(Delayable) {
+            static delayable = {
+                bar: 'asap'
+            };
+
+            bar (arg) {
+                log.push(arg);
+            }
+        }
+
+        let inst = Foo.new();
+
+        expect(inst.bar.timer).to.be.a(Timer.types.asap);
+        expect(inst.bar.timer.pending).to.be(false);
+
+        let promise = inst.bar.now(42);
+
+        expect(log).to.equal([42]);
+        expect(inst.bar.timer.pending).to.be(false);
+        expect(promise === true).to.be(true);
+
+        // mimics non-immediate
+        let ok = await promise;
+
+        expect(ok).to.be(true);
+        expect(log).to.equal([42]);
+    });
+
+    it('should support now() when disabled', async() => {
+        let log = [];
+
+        class Foo extends Configurable.mixin(Delayable) {
+            static delayable = {
+                bar: 'asap'
+            };
+
+            bar (arg) {
+                log.push(arg);
+            }
+        }
+
+        let inst = Foo.new();
+
+        expect(inst.bar.timer).to.be.a(Timer.types.asap);
+        expect(inst.bar.timer.pending).to.be(false);
+        expect(inst.bar.timer.disabled).to.be(false);
+
+        inst.bar.timer.disabled = true;
+
+        let promise = inst.bar.now(42);
+
+        expect(log).to.equal([]);
+        expect(inst.bar.timer.pending).to.be(false);
+        expect(promise === false).to.be(true);
+
+        // mimics non-immediate
+        let ok = await promise;
+
+        expect(ok).to.be(false);
+        expect(log).to.equal([]);
     });
 
     it('should support multiple calls', async() => {

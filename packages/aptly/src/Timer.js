@@ -21,6 +21,14 @@ export class Timer {
                     wrapFn.timer.scheduler = scheduler;
                 }
 
+                defineProp(wrapFn, 'now', {
+                    value (...args) {
+                        wrapFn(...args);
+
+                        return wrapFn.timer.flush();
+                    }
+                });
+
                 // On first access of the delayable method, this getter is called. It
                 // shadows the getter on the prototype with the wrapFn that is bound
                 // this the instance. This means each instance will gets its own timer.
@@ -120,7 +128,8 @@ export class Timer {
     flush () {
         let me = this,
             args = me.args,
-            deferred = me.#deferred;
+            deferred = me.#deferred,
+            ret = false;
 
         if (me.pending) {
             me.#deferred = null;
@@ -129,7 +138,10 @@ export class Timer {
             me.args = args;
             me.#deferred = deferred;
             me._onTick();
+            ret = true;
         }
+
+        return ret;
     }
 
     _cancel (timerId) {
@@ -225,7 +237,7 @@ class SchedulerTimer extends Timer {
 }
 
 
-Timer.types.asap      = AsapTimer;
-Timer.types.raf       = RafTimer;
-Timer.types.scheduler = SchedulerTimer;
-Timer.types.timeout   = Timer;
+Timer.types.asap    = AsapTimer;
+Timer.types.raf     = RafTimer;
+Timer.types.sched   = SchedulerTimer;
+Timer.types.timeout = Timer;
