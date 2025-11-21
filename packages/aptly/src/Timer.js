@@ -1,21 +1,9 @@
-import { applyTo } from '@appiphany/aptly';
+import { applyTo, deferred, Scheduler } from '@appiphany/aptly';
 
 const { defineProperty: defineProp } = Object;
 
 export class Timer {
     static types = {};
-
-    static create (fn, options) {
-        if (typeof options === 'number') {
-            options = { delay: options };
-        }
-
-        let timer = new this(fn, options);
-
-        timer.start();
-
-        return timer;
-    }
 
     static decorate (prototype, name, options) {
         let cls = this,
@@ -23,31 +11,35 @@ export class Timer {
 
         defineProp(prototype, name, {
             get () {
-                let invokeFn = (...args) => {
-                        methodFn.apply(this, args);
-                    },
-                    wrapFn = (...args) => {
-                        wrapFn.timer.start(...args);
-                        // TODO return a promise
-                    };
+                let invokeFn = (...args) => methodFn.apply(this, args),
+                    wrapFn = (...args) => wrapFn.timer.start(...args),
+                    scheduler = (cls === SchedulerTimer) && this.scheduler;
 
                 wrapFn.timer = new cls(invokeFn, options);
 
-                defineProp(this, name, {
-                    value: wrapFn
-                });
+                if (scheduler) {
+                    wrapFn.timer.scheduler = scheduler;
+                }
 
+                // On first access of the delayable method, this getter is called. It
+                // shadows the getter on the prototype with the wrapFn that is bound
+                // this the instance. This means each instance will gets its own timer.
+                defineProp(this, name, { value: wrapFn });
+
+                // This is the only time this getter is called on this instance (due
+                // to the above), but we still need to return the wrapFn for this call.
                 return wrapFn;
             }
         });
     }
 
     #disabled = false;
+    #deferred = null;
+    #timerId = null;
 
     args = null;
     delay = 0;
     generation = 0;
-    id = null;
     immediate = false;
     restartable = '';
 
@@ -67,11 +59,16 @@ export class Timer {
     }
 
     get pending () {
-        return this.id !== null;
+        return this.#timerId !== null;
+    }
+
+    get timerId () {
+        return this.#timerId;
     }
 
     start (...args) {
         let me = this,
+            ret = false,
             gen, restartable;
 
         if (!me.#disabled) {
@@ -82,54 +79,71 @@ export class Timer {
                 restartable = me.restartable || '';
 
                 if (restartable.includes('a')) {
+                    // if the args are restartable, replace them
                     me.args = args;
                 }
 
                 if (!restartable.includes('t')) {
-                    return;
+                    // if the timer is not restartable, return the current promise
+                    // and leave the timer running
+                    return me.#deferred.promise;
                 }
 
+                // otherwise, cancel the current timer and start a new one
                 me._cancelTimer();
             }
 
             if (me.immediate) {
                 me._onTick();
+                ret = true;
             }
             else {
                 gen = ++me.generation;
+                ret = (me.#deferred ??= deferred()).promise;
 
-                me.id = me._start(() => me._onTick(gen));
+                me.#timerId = me._start(() => me._onTick(gen));
             }
         }
+
+        return ret;
     }
 
     cancel () {
-        this._cancelTimer();
-        this.args = null;
+        let me = this;
+
+        me._cancelTimer();
+        me.args = null;
+        me.#deferred?.resolve(false);
+        me.#deferred = me.#timerId = null;
     }
 
     flush () {
         let me = this,
-            args = me.args;
+            args = me.args,
+            deferred = me.#deferred;
 
         if (me.pending) {
+            me.#deferred = null;
             me.cancel();
+
             me.args = args;
+            me.#deferred = deferred;
             me._onTick();
         }
     }
 
-    _cancel (id) {
-        clearTimeout(id);
+    _cancel (timerId) {
+        clearTimeout(timerId);
     }
 
     _cancelTimer () {
-        let id = this.id;
+        let me = this,
+            timerId = me.#timerId;
 
-        if (id) {
-            this._cancel(id);
-            this.id = null;
-            ++this.generation;
+        if (timerId) {
+            me._cancel(timerId);
+            me.#timerId = null;
+            ++me.generation;
         }
     }
 
@@ -137,10 +151,15 @@ export class Timer {
         let me = this,
             args = me.args;
 
+        // if the Timer instance has been modified since the timer was scheduled,
+        // ignore this call.
         if (gen === me.generation) {
-            me.id = me.args = null;
+            me.#timerId = me.args = null;
 
             args?.length ? me.fn(...args) : me.fn();
+
+            me.#deferred?.resolve(true);
+            me.#deferred = null;
         }
     }
 
@@ -157,11 +176,13 @@ class AsapTimer extends Timer {
 
     _cancel () {
         // cannot un-queueMicrotask so we rely on the generation number mismatch to
-        // avoid calling our fn
+        // avoid calling our fn (we rely on the generation number to effectively
+        // cancel the timer)
     }
 
     _start (fn) {
         queueMicrotask(fn);
+
         return ++AsapTimer.nextId;
     }
 }
@@ -172,8 +193,8 @@ class AsapTimer extends Timer {
  * This is a client-only form of timer.
  */
 class RafTimer extends Timer {
-    _cancel (id) {
-        cancelAnimationFrame(id);
+    _cancel (timerId) {
+        cancelAnimationFrame(timerId);
     }
 
     _start (fn) {
@@ -181,7 +202,30 @@ class RafTimer extends Timer {
     }
 }
 
+/**
+ * Timer that uses requestAnimationFrame to schedule the callback.
+ *
+ * This is a client-only form of timer.
+ */
+class SchedulerTimer extends Timer {
+    static nextId = 0;
 
-Timer.types.asap    = AsapTimer;
-Timer.types.raf     = RafTimer;
-Timer.types.timeout = Timer;
+    priority = 0;
+    scheduler = null;
+
+    _cancel () {
+        // no cancel method
+    }
+
+    _start (fn) {
+        (this.scheduler || Scheduler.instance).add(fn, this.priority);
+
+        return ++SchedulerTimer.nextId;
+    }
+}
+
+
+Timer.types.asap      = AsapTimer;
+Timer.types.raf       = RafTimer;
+Timer.types.scheduler = SchedulerTimer;
+Timer.types.timeout   = Timer;

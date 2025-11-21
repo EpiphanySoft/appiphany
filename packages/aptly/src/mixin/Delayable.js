@@ -26,6 +26,7 @@ export const Delayable = Base => class Delayable extends Base {
                 }
 
                 type = Timer.types[options.type || 'timeout'];
+
                 type.decorate(cls.prototype, name, options);
             }
         }
