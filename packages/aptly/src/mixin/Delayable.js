@@ -7,7 +7,7 @@ const decorate = (cls, prototype, name, options) => {
 
     defineProp(prototype, name, {
         get () {
-            let invokeFn = (...args) => methodFn.apply(this, args),
+            let invokeFn = (...args) => methodFn.apply(this, args), // _onTick needs return value
                 wrapFn = (...args) => wrapFn.timer.start(...args),
                 scheduler = (cls === SchedulerTimer) && this.scheduler;
 
