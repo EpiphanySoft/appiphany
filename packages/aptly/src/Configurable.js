@@ -328,7 +328,7 @@ export class Configurable extends Declarable {
     static expando = EXPANDO_NONE;
 
     static proto = {
-        configuring: false,
+        configuring: null,
 
         initialConfig: null,  // config object passed to constructor
         instanceConfig: null  // fully populated config object
@@ -427,6 +427,7 @@ export class Configurable extends Declarable {
             configData = me[configDataSym] ??= new Map(),
             { configuring } = me,
             firstTime = !me.instanceConfig,
+            ignoreNull = firstTime,
             active, cfg, name, phase, val;
 
         if (firstTime) {
@@ -437,45 +438,57 @@ export class Configurable extends Declarable {
             if (!configuring) {
                 me.configuring = configuring = {
                     firstTime,
+                    data: configData,
                     depth: 0,
-                    stack: []
+                    modified: null
                 };
             }
 
             ++configuring.depth;
 
-            for (name in config) {
-                if (!firstTime || config[name] !== null) {
-                    configData.set(name, config[name]);
+            main: for (;;) {
+                for (name in config) {
+                    if (!(ignoreNull && config[name] === null)) {
+                        configData.set(name, config[name]);
 
-                    cfg = classConfigs[name] || Config.get(name);
-                    cfg.defineInitter(me);
+                        cfg = classConfigs[name] || Config.get(name);
+                        cfg.defineInitter(me);
 
-                    (active ??= []).push(cfg);
+                        (active ??= []).push(cfg);
+                    }
                 }
-            }
 
-            if (active) {
-                active.sort(Config.sorter);
+                if (active) {
+                    active.sort(Config.sorter);
 
-                for (cfg of active) {
-                    name = cfg.name;
+                    for (cfg of active) {
+                        name = cfg.name;
 
-                    if (configData.has(name)) {
-                        // firstTime: skip over 'get' and 'init' phase configs
-                        // otherwise: process all configs
-                        phase = firstTime && cfg.phase;
+                        if (configData.has(name)) {
+                            // firstTime: skip over 'get' and 'init' phase configs
+                            // otherwise: process all configs
+                            phase = firstTime && cfg.phase;
 
-                        if (!(phase === 'get' || phase === 'init')) {
-                            val = configData.get(name);
-                            configData.delete(name);
+                            if (!(phase === 'get' || phase === 'init')) {
+                                val = configData.get(name);
+                                configData.delete(name);
 
-                            configuring.stack.push(name);
-                            me[name] = val;
-                            configuring.stack.pop();
+                                me[name] = val;
+
+                                config = configuring.modified;
+
+                                if (config) {
+                                    configuring.modified = null;
+                                    ignoreNull = false;
+
+                                    continue main;
+                                }
+                            }
                         }
                     }
                 }
+
+                break;
             }
 
             if (!configData.size) {
