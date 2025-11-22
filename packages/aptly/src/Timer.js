@@ -32,7 +32,7 @@ export class Timer {
     }
 
     get pending () {
-        return this.#timerId !== null;
+        return this.args !== null;
     }
 
     get timerId () {

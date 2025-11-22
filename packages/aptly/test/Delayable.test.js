@@ -1,4 +1,4 @@
-import { Configurable, thenable, Timer } from '@appiphany/aptly';
+import { Configurable, deferred, sleep, thenable, Timer } from '@appiphany/aptly';
 import { Delayable } from '@appiphany/aptly/mixin';
 
 import assertly from 'assertly';
@@ -443,5 +443,120 @@ describe('Delayable', () => {
 
         expect(ok).to.be(true);
         expect(log).to.equal([42]);
+    });
+
+    it('should support async', async() => {
+        let log = [];
+        let def1 = deferred();
+        let def2 = deferred();
+
+        class Foo extends Configurable.mixin(Delayable) {
+            static delayable = {
+                bar: true
+            };
+
+            async bar (arg) {
+                log.push(`>> ${arg}`);
+
+                def2.resolve();
+
+                await def1.promise;
+
+                log.push(`<< ${arg}`);
+            }
+        }
+
+        let foo = Foo.new();
+
+        let promise = foo.bar(42);
+
+        expect(log).to.equal([]);
+        expect(foo.bar.timer.pending).to.be(true);
+
+        await def2.promise;
+
+        expect(thenable(promise)).to.be(true);
+        expect(log).to.equal(['>> 42']);
+
+        expect(foo.bar.timer.pending).to.be(false);
+        expect(foo.bar.timer.running).to.be(true);
+
+        def1.resolve();
+
+        let ok = await promise;
+
+        expect(ok).to.be(true);
+        expect(foo.bar.timer.pending).to.be(false);
+        expect(foo.bar.timer.running).to.be(false);
+        expect(log).to.equal(['>> 42', '<< 42']);
+    });
+
+    it('should support restartable async', async() => {
+        let log = [];
+        let def1 = deferred();
+        let def2 = deferred();
+        let def3 = deferred();
+        let def4 = deferred();
+
+        class Foo extends Configurable.mixin(Delayable) {
+            static delayable = {
+                bar: true
+            };
+
+            async bar (arg, d1, d2) {
+                log.push(`>> ${arg}`);
+
+                d1.resolve();
+
+                await d2.promise;
+
+                log.push(`<< ${arg}`);
+            }
+        }
+
+        let foo = Foo.new();
+
+        let ret1 = foo.bar(42, def1, def2);
+
+        expect(log).to.equal([]);
+        expect(foo.bar.timer.pending).to.be(true);
+        expect(thenable(ret1)).to.be(true);
+
+        await def1.promise;
+
+        expect(log).to.equal(['>> 42']);
+        expect(foo.bar.timer.pending).to.be(false);
+        expect(foo.bar.timer.running).to.be(true);
+
+        // call bar() while the prior async call is still running
+        let ret2 = foo.bar(427, def3, def4);
+
+        expect(thenable(ret2)).to.be(true);
+        expect(log).to.equal(['>> 42']);
+
+        expect(foo.bar.timer.pending).to.be(true);
+        expect(foo.bar.timer.running).to.be(true);
+
+        def2.resolve();
+
+        let ok = await ret1;
+
+        expect(ok).to.be(true);
+        expect(log).to.equal(['>> 42', '<< 42']);
+
+        await def3.promise;
+
+        expect(log).to.equal(['>> 42', '<< 42', '>> 427']);
+        expect(foo.bar.timer.pending).to.be(false);
+        expect(foo.bar.timer.running).to.be(true);
+
+        def4.resolve();
+
+        ok = await ret2;
+
+        expect(ok).to.be(true);
+        expect(log).to.equal(['>> 42', '<< 42', '>> 427', '<< 427']);
+        expect(foo.bar.timer.pending).to.be(false);
+        expect(foo.bar.timer.running).to.be(false);
     });
 });
