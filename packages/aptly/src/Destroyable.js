@@ -50,7 +50,7 @@ export class Destroyable {
         return ret;
     }
 
-    constructor() {
+    constructor () {
         // must come from class proto since we're in super constructor
         let me = this,
             { initialize } = me;
@@ -64,7 +64,7 @@ export class Destroyable {
         }
     }
 
-    cascadeDestroy(obj) {
+    cascadeDestroy (obj) {
         let ref = new WeakRef(obj),
             cascade = (this[cascadeDestroySym] || (this[cascadeDestroySym] = new Set()));
 
@@ -73,7 +73,7 @@ export class Destroyable {
         return () => cascade.delete(ref);
     }
 
-    destroy() {
+    destroy () {
         let me = this,
             cascadeDestroy = me[cascadeDestroySym],
             obj;
@@ -97,11 +97,11 @@ export class Destroyable {
         }
     }
 
-    destruct() {
+    destruct () {
         //
     }
 
-    with(options, fn, otherwise) {
+    with (options, fn, otherwise) {
         let me = this,
             entered, ex, ret;
 
@@ -160,7 +160,7 @@ export class Destroyable {
         return ret;
     }
 
-    async _withAsync(options, fn, otherwise) {
+    async _withAsync (options, fn, otherwise) {
         let me = this,
             entered, ex, ret;
 
@@ -200,8 +200,8 @@ export class Destroyable {
         return ret;
     }
 
-    withEnter() {}
-    withExit(e) {}
+    withEnter () {}
+    withExit (e) {}
 }
 
 applyTo(Destroyable.prototype, {

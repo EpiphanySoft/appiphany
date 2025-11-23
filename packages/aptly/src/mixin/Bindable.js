@@ -1,4 +1,5 @@
 import { Scheduler, Signal, capitalize, panik } from '@appiphany/aptly';
+import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
@@ -54,16 +55,16 @@ const
  * By default, props are sealed. This means that they cannot be extended to add new props
  * dynamically. To disable this, set the `sealed` property to false on the `props` config.
  */
-export const Bindable = Base => class Bindable extends Base {
+export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) {
     static proto = {
         _signals: null
     };
 
     static configurable = {
         parent: class {
-            value = null;
+            update(me, v, was) {
+                super.update(me, v, was);
 
-            update(me, v) {
                 let props = me._props;
 
                 if (props) {

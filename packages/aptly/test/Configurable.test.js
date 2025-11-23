@@ -984,6 +984,37 @@ describe('Configurable', () => {
         ]);
     });
 
+    it('mixin using mixin', () => {
+        let log = [];
+
+        const Mixin1 = Base => class Mixin1 extends Base {
+        };
+
+        const Mixin2 = Base => class Mixin2 extends Base.mixin(Mixin1) {
+        };
+
+        const Mixin3 = Base => class Mixin3 extends Base.mixin(Mixin1) {
+        };
+
+        class Foo extends Configurable.mixin(Mixin1, Mixin2, Mixin3) {
+        }
+
+        let inst = Foo.new();
+
+        for (let meta = inst.$meta; meta; meta = meta.super) {
+            log.push(meta.name);
+        }
+
+        expect(log.reverse()).to.equal([
+            'Declarable',
+            'Configurable',
+            'Mixin1',
+            'Mixin3',
+            'Mixin2',
+            'Foo'
+        ]);
+    });
+
     it('onConfigChange', () => {
         let log = [];
 
