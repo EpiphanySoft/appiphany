@@ -30,6 +30,14 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
             }
         },
 
+        stateDirty: class {
+            value = null;
+
+            update (instance, dirty) {
+                dirty && instance.stateProvider?.enqueue(instance);
+            }
+        },
+
         stateId: class {
             value = null;
 
@@ -61,7 +69,7 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         let me = this;
 
         if (me.initialized && me.stateId && me.stateful?.[name]) {
-            me.stateProvider?.enqueue(me);
+            me.stateDirty = true;
         }
     }
 }

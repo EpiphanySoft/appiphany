@@ -146,9 +146,20 @@ export class ChildStateProvider extends StateProvider {
     static monolithic = true;
 
     static configurable = {
-        stateId: null,
+        owner: null,
 
-        stateProvider: null
+        stateId: class {
+            default = '$';
+            value   = null;
+        },
+
+        stateProvider: class {
+            value = null;
+
+            get (instance) {
+                return instance._stateProvider || instance.owner?.stateProvider || null;
+            }
+        }
     };
 
     _loadData (data) {
