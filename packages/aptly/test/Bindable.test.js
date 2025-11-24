@@ -220,9 +220,9 @@ describe('Bindable', () => {
         expect(inst.props.bar).to.be(20);
         expect(log.get()).to.equal([]);
 
-        inst0 = new Bar();
-        inst0.props.foo = 21;
-        inst.parent = inst0;
+        let inst1 = new Bar();
+        inst1.props.foo = 21;
+        inst.parent = inst1;
 
         expect(inst.props.woot).to.be(21 * 10 * 3 * 5);
         expect(log.get()).to.equal([

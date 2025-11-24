@@ -10,7 +10,7 @@ export class StateProvider extends Configurable.mixin(Delayable) {
         _saveData (dirtyData) {}
     };
 
-    static granular = true;
+    static monolithic = false;
 
     static delayable = {
         _flush: 'asap'
@@ -26,8 +26,8 @@ export class StateProvider extends Configurable.mixin(Delayable) {
         await this._loadData(this.#data);
     }
 
-    get granular () {
-        return this.constructor.granular;
+    get monolithic () {
+        return this.constructor.monolithic;
     }
 
     delete (key) {
@@ -50,11 +50,11 @@ export class StateProvider extends Configurable.mixin(Delayable) {
                 data.set(key, value);
             }
 
-            if (me.granular) {
-                (me.#dirty ??= new Set()).add(key);
+            if (me.monolithic) {
+                me.#dirty = true;
             }
             else {
-                me.#dirty = true;
+                (me.#dirty ??= new Set()).add(key);
             }
         }
     }
@@ -67,7 +67,7 @@ export class StateProvider extends Configurable.mixin(Delayable) {
             data, key;
 
         if (dirtyData && dirty) {
-            if (!me.granular) {
+            if (me.monolithic) {
                 dirty = false;
             }
             else {
@@ -110,14 +110,14 @@ export class StateProvider extends Configurable.mixin(Delayable) {
 
     _save () {
         let me = this,
-            { granular } = me,
+            { monolithic } = me,
             data = me.#data,
             dirty = me.#dirty,
             dirtyData = dirty && new Map(),
             key;
 
         if (dirty) {
-            for (key of (granular ? dirty : data).keys()) {
+            for (key of (monolithic ? data : dirty).keys()) {
                 // if a key has been deleted, get(key) will return undefined
                 // which is what triggers its deletion by _saveData()
                 dirtyData.set(key, data.get(key));
@@ -125,23 +125,6 @@ export class StateProvider extends Configurable.mixin(Delayable) {
 
             return me._saveData(dirtyData);  // can be async if it returns a promise
         }
-    }
-}
-
-
-export class ChildStateProvider extends StateProvider {
-    static configurable = {
-        stateId: null,
-
-        stateProvider: null
-    };
-
-    _loadData (data) {
-        // no data source
-    }
-
-    _saveData (dirtyData) {
-        this.clearDirty(dirtyData);
     }
 }
 
@@ -157,6 +140,25 @@ export class MemoryStateProvider extends StateProvider {
 }
 
 StateProvider.instance = new MemoryStateProvider();
+
+
+export class ChildStateProvider extends StateProvider {
+    static monolithic = true;
+
+    static configurable = {
+        stateId: null,
+
+        stateProvider: null
+    };
+
+    _loadData (data) {
+        // no data source
+    }
+
+    _saveData (dirtyData) {
+        this.clearDirty(dirtyData);
+    }
+}
 
 
 export class StorageStateProvider extends StateProvider {

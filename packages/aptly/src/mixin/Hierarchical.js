@@ -1,9 +1,78 @@
 import { panik } from '../misc.js';
 
 const
-    insertingSym = Symbol('inserting');
+    insertingSym = Symbol('inserting'),
+    { create: chainProto, defineProperty, getPrototypeOf: getProto, setPrototypeOf: setProto } = Object,
+    createInheritable = p => chainProto(chainProto(p?.inheritable || null)),
+    typeMatcher = type => {
+        type = type || '';
+
+        let t = typeof type;
+
+        if (t === 'string') {
+            if (type === '*') {
+                type = '';
+            }
+
+            // ex, search for 'widget' or 'button' matches hierarchicalType='widget:button'
+            return item => item.hierarchicalType.includes(type)
+        }
+
+        if (t === 'function') {
+            return type;
+        }
+
+        if (type instanceof RegExp) {
+            return item => type.test(item.hierarchicalType);
+        }
+
+        return _ => true;
+    };
 
 /**
+ * Hierarchical objects are objects that can have parent/child relationships with other
+ * hierarchical objects. Information is inheritable down this hierarchy using prototype
+ * chains:
+ *
+ *        ╔══════════════╗
+ *        ║              ║    inherited        ┌──────────────┐
+ *        ║    parent    ╟─────────────────────▶ inherited to │
+ *        ║              ╟─────────────────┐   │    parent    │
+ *        ╚═════▲════▲═══╝   inheritable   │   └───────△──────┘
+ *              │    │                     │           :
+ *              │    │                     │           : __proto__
+ *              │    │    parent           │   ┌───────┴──────┐
+ *              │    └─────┐               └───▶ inherited to │
+ *              │          │                   │   children   │
+ *              │          │                   └───────△────△─┘
+ *              │          │                           :    :
+ *              │          │                     ┌ ─ ─ ┘    :
+ *              │  ╔═══════╧══════╗    __proto__ :          :
+ *              │  ║              ║              :          :
+ *              │  ║    child1    ║      ┌───────┴──────┐   :
+ *              │  ║              ╟──────▶ inherited to │   :
+ *              │  ╚══════════════╝      │    child1    │   :
+ *              │                        └───────△──────┘   :  __proto__
+ *              │                                :          └ ─ ─ ─ ┐
+ *              │                      __proto__ :                  :
+ *              │ parent                 ┌───────┴──────┐           :
+ *              │                        │ inherited to │           :
+ *              │                        │   child1's   │           :
+ *              │                        │   children   │           :
+ *      ╔═══════╧══════╗                 └──────────────┘           :
+ *      ║              ║                                            :
+ *      ║    child2    ║   inherited                        ┌───────┴──────┐
+ *      ║              ╟────────────────────────────────────▶ inherited to │
+ *      ╚══════════════╝                                    │    child2    │
+ *                                                          └───────△──────┘
+ *                                                                  :
+ *                                                                  : __proto__
+ *                                                                  :
+ *                                                          ┌───────┴──────┐
+ *                                                          │ inherited to │
+ *                                                          │   child2's   │
+ *                                                          │   children   │
+ *                                                          └──────────────┘
  *
  */
 export const Hierarchical = Base => class Hierarchical extends Base {
@@ -11,11 +80,27 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         parent: class {
             value = null;
 
-            update(me, v, was) {
-                debugger;
+            apply(me, parent) {
+                for (let up = parent; up; up = up.parent) {
+                    if (up === me) {
+                        panik('parent cannot be a child of itself');
+                    }
+                }
+
+                return parent;
+            }
+
+            update(me, parent, was) {
                 was?._unlinkChild(me);
 
-                !me[insertingSym] && v?.insertChild(me);
+                let inherited = me.inherited,
+                    inheritable = parent?.inheritable;
+
+                if (getProto(inherited) !== inheritable) {
+                    setProto(inherited, inheritable);
+                }
+
+                !me[insertingSym] && parent?.insertChild(me);
             }
         }
     };
@@ -24,6 +109,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
 
     static proto = {
         [insertingSym]: false,
+        childCount: 0,
         nextSib: null,
         prevSib: null
     };
@@ -33,6 +119,41 @@ export const Hierarchical = Base => class Hierarchical extends Base {
 
     get hierarchicalType () {
         return this.constructor.hierarchicalType;
+    }
+
+    get inheritable () {
+        let inheritable = createInheritable(this.parent);
+
+        defineProperty(this, 'inheritable', { value: inheritable });  // don't call here again
+
+        return inheritable;
+    }
+
+    get inherited () {
+        let inherited = getProto(this.inheritable);
+
+        defineProperty(this, 'inherited', { value: inherited });  // don't call here again
+
+        return inherited;
+    }
+
+    //------------------------------------------------------------------------------------------
+    // Navigating the hierarchy
+
+    get children () {
+        return this.childrenByType();
+    }
+
+    get childrenReverse () {
+        return this.childrenReverseByType();
+    }
+
+    get firstChild () {
+        return this.firstChildByType();
+    }
+
+    get lastChild () {
+        return this.lastChildByType();
     }
 
     get nextSibling () {
@@ -59,27 +180,31 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         return prevSib;
     }
 
-    * children (type = this.hierarchicalType) {
+    * childrenByType (type = this.hierarchicalType) {
+        let matcher = typeMatcher(type);
+
         for (let child = this.#firstChild; child; child = child.nextSib) {
-            if (type === '*' || type === child.hierarchicalType) {
+            if (matcher(child)) {
                 yield child;
             }
         }
     }
 
-    firstChild (type = this.hierarchicalType) {
-        for (let child = this.#firstChild; child; child = child.nextSib) {
-            if (type === '*' || type === child.hierarchicalType) {
-                return child;
-            }
-        }
+    * childrenReverseByType (type = this.hierarchicalType) {
+        let matcher = typeMatcher(type);
 
-        return null;
-    }
-
-    lastChild (type = this.hierarchicalType) {
         for (let child = this.#lastChild; child; child = child.prevSib) {
-            if (type === '*' || type === child.hierarchicalType) {
+            if (matcher(child)) {
+                yield child;
+            }
+        }
+    }
+
+    firstChildByType (type = this.hierarchicalType) {
+        let matcher = typeMatcher(type);
+
+        for (let child = this.#firstChild; child; child = child.nextSib) {
+            if (matcher(child)) {
                 return child;
             }
         }
@@ -87,37 +212,63 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         return null;
     }
 
-    insertChild (child, refChild = null) {
+    lastChildByType (type = this.hierarchicalType) {
+        let matcher = typeMatcher(type);
+
+        for (let child = this.#lastChild; child; child = child.prevSib) {
+            if (matcher(child)) {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    up (type) {
+        let up = this,
+            matcher, n;
+
+        if (typeof type === 'number') {
+            for (n = type; (up = up.parent); --n) {
+                if (!n) {
+                    return up;
+                }
+            }
+        }
+        else {
+            matcher = typeMatcher(type);
+
+            while ((up = up.parent)) {
+                if (matcher(up)) {
+                    return up;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    //------------------------------------------------------------------------------------------
+    // Manipulation
+
+    insertChild (child, beforeChild = null) {
         let me = this,
             tail = me.#lastChild,
             prevSib;
 
-        if (refChild && refChild.parent !== me) {
-            panik('refChild must be a child of this parent');
+        if (beforeChild && beforeChild.parent !== me) {
+            panik('beforeChild must be a child of this parent');
         }
 
         child[insertingSym] = true;
 
         try {
-            child.parent = me;
-            child.nextSib = refChild;
+            child.parent = me;  // may unlink child from its previous parent
+            child.nextSib = beforeChild;
 
-            if (!refChild) {
-                if (tail) {
-                    tail.nextSib = child;
-                }
-                else {
-                    me.#firstChild = child;
-                }
-
-                child.prevSib = tail;
-
-                me.#lastChild = child;
-            }
-            else {
-                child.prevSib = prevSib = refChild.prevSib;
-
-                refChild.prevSib = child;
+            if (beforeChild) {
+                child.prevSib = prevSib = beforeChild.prevSib;
+                beforeChild.prevSib = child;
 
                 if (prevSib) {
                     prevSib.nextSib = child;
@@ -126,6 +277,19 @@ export const Hierarchical = Base => class Hierarchical extends Base {
                     me.#firstChild = child;
                 }
             }
+            else {
+                if (tail) {
+                    tail.nextSib = child;
+                }
+                else {
+                    me.#firstChild = child;
+                }
+
+                child.prevSib = tail;
+                me.#lastChild = child;
+            }
+
+            ++me.childCount;
         }
         finally {
             child[insertingSym] = false;
@@ -133,27 +297,30 @@ export const Hierarchical = Base => class Hierarchical extends Base {
     }
 
     _unlinkChild (child) {
-        let { prevSib, nextSib } = child;
+        let me = this,
+            { prevSib, nextSib } = child;
 
-        if ((nextSib ? nextSib.parent : this.#lastChild) !== this ||
-            (prevSib ? prevSib.parent : this.#firstChild) !== this ) {
-            panik('child is not a child of this parent');
+        if ((nextSib ? nextSib.parent !== me : (me.#lastChild !== child) ) ||
+            (prevSib ? prevSib.parent !== me : (me.#firstChild !== child) ) ) {
+            panik('child is not a child of me parent');
         }
 
         if (nextSib) {
             nextSib.prevSib = prevSib;
         }
         else {
-            this.#lastChild = prevSib;
+            me.#lastChild = prevSib;
         }
 
         if (prevSib) {
             prevSib.nextSib = nextSib;
         }
         else {
-            this.#firstChild = nextSib;
+            me.#firstChild = nextSib;
         }
 
         child.nextSib = child.prevSib = null;
+
+        --me.childCount;
     }
 }
