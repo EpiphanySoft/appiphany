@@ -1,13 +1,17 @@
-import { Configurable } from '@appiphany/aptly';
-import { Delayable } from '@appiphany/aptly/mixin';
+import { applyTo, chain, clone, Configurable } from '@appiphany/aptly';
+import { Delayable, Factoryable } from '@appiphany/aptly/mixin';
 
 
-export class StateProvider extends Configurable.mixin(Delayable) {
+export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
     static instance = null;
 
     static abstract = {
         _loadData (data) {},
         _saveData (dirtyData) {}
+    };
+
+    static factory = {
+        // defaultType: 'memory'
     };
 
     static monolithic = false;
@@ -16,7 +20,7 @@ export class StateProvider extends Configurable.mixin(Delayable) {
         _flush: 'asap'
     };
 
-    #data = new Map();
+    #data = chain();
     #dirty = null;
     #queue = null;
 
@@ -35,19 +39,19 @@ export class StateProvider extends Configurable.mixin(Delayable) {
     }
 
     get (key) {
-        return this.#data.get(key);
+        return this.#data[key];
     }
 
     set (key, value) {
         let me = this,
             data = me.#data;
 
-        if (data.get(key) !== value) {
+        if (data[key] !== value) {
             if (value === undefined) {
-                data.delete(key);
+                delete data[key];
             }
             else {
-                data.set(key, value);
+                data[key] = value;
             }
 
             if (me.monolithic) {
@@ -73,8 +77,8 @@ export class StateProvider extends Configurable.mixin(Delayable) {
             else {
                 data = me.#data;
 
-                for (key of dirtyData.keys()) {
-                    if (data.get(key) === dirtyData.get(key)) {
+                for (key in dirtyData) {
+                    if (data[key] === dirtyData[key]) {
                         dirty.delete(key);
                     }
                 }
@@ -113,14 +117,19 @@ export class StateProvider extends Configurable.mixin(Delayable) {
             { monolithic } = me,
             data = me.#data,
             dirty = me.#dirty,
-            dirtyData = dirty && new Map(),
+            dirtyData = dirty && chain(),
             key;
 
         if (dirty) {
-            for (key of (monolithic ? data : dirty).keys()) {
-                // if a key has been deleted, get(key) will return undefined
-                // which is what triggers its deletion by _saveData()
-                dirtyData.set(key, data.get(key));
+            if (monolithic) {
+                applyTo(dirtyData, data);
+            }
+            else {
+                for (key of dirty.keys()) {
+                    // if a key has been deleted, [key] evaluates to undefined
+                    // which is what triggers its deletion by _saveData()
+                    dirtyData[key] = data[key];
+                }
             }
 
             return me._saveData(dirtyData);  // can be async if it returns a promise
@@ -130,6 +139,8 @@ export class StateProvider extends Configurable.mixin(Delayable) {
 
 
 export class MemoryStateProvider extends StateProvider {
+    static type = 'memory';
+
     _loadData (_) {
         // no data source
     }
@@ -145,34 +156,28 @@ StateProvider.instance = new MemoryStateProvider();
 export class ChildStateProvider extends StateProvider {
     static monolithic = true;
 
+    static type = 'child';
+
     static configurable = {
         owner: null,
 
-        stateId: class {
-            default = '$';
-            value   = null;
-        },
-
-        stateProvider: class {
-            value = null;
-
-            get (instance) {
-                return instance._stateProvider || instance.owner?.stateProvider || null;
-            }
-        }
+        stateId: 'childState'
     };
 
     _loadData (data) {
-        // no data source
+        applyTo(data, clone(this.owner[this.stateId]));
     }
 
     _saveData (dirtyData) {
+        this.owner[this.stateId] = dirtyData;
         this.clearDirty(dirtyData);
     }
 }
 
 
 export class StorageStateProvider extends StateProvider {
+    static type = 'storage';
+
     static configurable = {
         encoder: JSON,
 
@@ -209,7 +214,7 @@ export class StorageStateProvider extends StateProvider {
                     value = value ? encoder.parse(value) : null;
                 }
 
-                data.set(key.slice(scope.length), value);
+                data[key.slice(scope.length)] = value;
             }
         }
     }
@@ -218,7 +223,8 @@ export class StorageStateProvider extends StateProvider {
         let { encoder, scope, storage } = this,
             key, value;
 
-        for ([key, value] of dirtyData.entries()) {
+        for (key in dirtyData) {
+            value = dirtyData[key];
             key = scope + key;
 
             if (value === undefined) {

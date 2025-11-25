@@ -428,7 +428,7 @@ export class Configurable extends Declarable {
             { configuring } = me,
             firstTime = !me.instanceConfig,
             ignoreNull = firstTime,
-            active, cfg, name, phase, val;
+            active, cfg, modified, name, phase, val;
 
         if (firstTime) {
             me.instanceConfig = config;
@@ -475,12 +475,15 @@ export class Configurable extends Declarable {
 
                                 me[name] = val;
 
-                                config = configuring.modified;
+                                modified = configuring.modified;
 
-                                if (config) {
+                                if (modified) {
                                     configuring.modified = null;
+                                    config = modified;
                                     ignoreNull = false;
 
+                                    // we need to stop activating configs and inject the
+                                    // changes into the configuration process.
                                     continue main;
                                 }
                             }
