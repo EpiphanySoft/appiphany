@@ -22,12 +22,16 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
 
     #data = chain();
     #dirty = null;
-    #queue = null;
+    #statefulQueue = null;
 
     async initialize () {
         super.initialize();
 
         await this._loadData(this.#data);
+    }
+
+    get dirty () {
+        return this.monolithic ? this.#dirty : !!this.#dirty?.size();
     }
 
     get monolithic () {
@@ -72,7 +76,7 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
 
         if (dirtyData && dirty) {
             if (me.monolithic) {
-                dirty = false;
+                me.#dirty = false;
             }
             else {
                 data = me.#data;
@@ -82,34 +86,33 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
                         dirty.delete(key);
                     }
                 }
-
-                if (!dirty.size()) {
-                    dirty = null;
-                }
             }
-
-            me.#dirty = dirty;
         }
     }
 
-    enqueue (item) {
-        (this.#queue ??= new Map()).set(item.stateId, item);
+    enqueue (statefulItem) {
+        (this.#statefulQueue ??= new Map()).set(statefulItem.stateId, statefulItem);
         this._flush();
     }
 
     // Private methods
 
     _flush () {
-        let queue = this.#queue,
-            id, item;
+        let me = this,
+            statefulQueue = me.#statefulQueue,
+            statefulItem, stateId;
 
-        this.#queue = null;
+        me.#statefulQueue = null;
 
-        for ([id, item] of queue.entries()) {
-            // TODO
+        for (statefulItem of statefulQueue.values()) {
+            stateId = statefulItem.stateId;
+
+            if (stateId) {
+                me.set(stateId, statefulItem.getState());
+            }
         }
 
-        return this._save();
+        return me._save();
     }
 
     _save () {

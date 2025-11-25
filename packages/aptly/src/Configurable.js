@@ -482,8 +482,8 @@ export class Configurable extends Declarable {
                                     config = modified;
                                     ignoreNull = false;
 
-                                    // we need to stop activating configs and inject the
-                                    // changes into the configuration process.
+                                    // stop activating configs and inject the changes into the
+                                    // configuration process
                                     continue main;
                                 }
                             }

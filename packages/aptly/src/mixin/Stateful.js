@@ -8,7 +8,13 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
             value = null;
 
             apply (instance, value) {
-                return isObject(value) ? value : {};
+                return (value === true) ? {} : value;
+            }
+
+            update (instance, value) {
+                if (value && !instance.childStateProvider) {
+                    instance.childStateProvider = {};
+                }
             }
         },
 
@@ -18,28 +24,38 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
             apply (instance, value, was) {
                 return StateProvider.reconfigure(was, value, {
                     defaults: {
-                        type: 'child'
+                        type: 'child',
+                        owner: instance
                     }
                 });
             }
 
-            get (instance) {
-                return instance.inherited.stateProvider || StateProvider.instance;
-            }
-
             update (instance, value) {
+                let { inheritable } = instance;
+
                 if (value) {
-                    instance.inherited.stateProvider = value;
+                    inheritable.stateProvider = value;
                 }
                 else {
-                    delete instance.inherited.stateProvider;
+                    delete inheritable.stateProvider;
                 }
             }
         },
 
         stateful: class extends Config.Flags {
-            value = 'childState';
+            value = null;
             priority = -999;
+
+            apply (instance, value, was) {
+                let ret = super.apply(instance, value, was),
+                    childState = ret && instance.childState;
+
+                if (childState) {
+                    ret.childState = true;
+                }
+
+                return ret;
+            }
 
             update (instance, value) {
                 let { configuring, stateId: id, stateProvider: provider } = instance,
@@ -97,15 +113,45 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
             }
 
             update (instance, value) {
+                let { inherited } = instance;
+
                 if (value) {
-                    instance.inherited.stateProvider = value;
+                    inherited.stateProvider = value;
                 }
                 else {
-                    delete instance.inherited.stateProvider;
+                    delete inherited.stateProvider;
                 }
             }
         }
     };
+
+    getState (clean = true) {
+        let me = this,
+            { stateful } = me,
+            classConfigs = me.$meta.configs,
+            state = null,
+            cfg, key, value;
+
+        if (stateful) {
+            state = {};
+
+            for (key in stateful) {
+                if (stateful[key]) {
+                    value = me[key];
+
+                    if (!(cfg = classConfigs[key]) || value !== cfg.default) {
+                        state[key] = value;
+                    }
+                }
+            }
+        }
+
+        if (clean) {
+            me.stateDirty = false;
+        }
+
+        return state;
+    }
 
     onConfigChange (name) {
         let me = this;
