@@ -95,6 +95,7 @@ export class Factory extends Configurable {
 
             if (defaults) {
                 config = type.squashConfigs(defaults, config);
+                delete config[typeKey];
             }
 
             ret = (typeof type.new === 'function') ? type.new(config) : new type(config);

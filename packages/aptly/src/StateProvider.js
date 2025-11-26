@@ -31,7 +31,7 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
     }
 
     get dirty () {
-        return this.monolithic ? this.#dirty : !!this.#dirty?.size();
+        return this.monolithic ? this.#dirty : !!this.#dirty?.size;
     }
 
     get monolithic () {
@@ -64,6 +64,8 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
             else {
                 (me.#dirty ??= new Set()).add(key);
             }
+
+            !me._flush.timer.running && me._flush();
         }
     }
 
@@ -104,11 +106,13 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
 
         me.#statefulQueue = null;
 
-        for (statefulItem of statefulQueue.values()) {
-            stateId = statefulItem.stateId;
+        if (statefulQueue) {
+            for (statefulItem of statefulQueue.values()) {
+                stateId = statefulItem.stateId;
 
-            if (stateId) {
-                me.set(stateId, statefulItem.getState());
+                if (stateId) {
+                    me.set(stateId, statefulItem.getState());
+                }
             }
         }
 
@@ -176,6 +180,8 @@ export class ChildStateProvider extends StateProvider {
         this.clearDirty(dirtyData);
     }
 }
+
+ChildStateProvider.initClass();
 
 
 export class StorageStateProvider extends StateProvider {
@@ -245,3 +251,5 @@ export class StorageStateProvider extends StateProvider {
         this.clearDirty(dirtyData);
     }
 }
+
+StorageStateProvider.initClass();

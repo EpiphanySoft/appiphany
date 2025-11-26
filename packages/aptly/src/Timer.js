@@ -48,6 +48,10 @@ export class Timer {
         v && this.cancel();
     }
 
+    get flushed () {
+        return this.#deferred?.promise;
+    }
+
     get pending () {
         return this.#args !== null;
     }
