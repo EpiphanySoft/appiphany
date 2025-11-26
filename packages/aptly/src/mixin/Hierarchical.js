@@ -118,6 +118,16 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         prevSib: null
     };
 
+    destruct () {
+        this.parent?._unlinkChild(this);
+
+        for (let child of this.childrenByType('*')) {
+            child.destroy();
+        }
+
+        super.destruct();
+    }
+
     get hierarchicalType () {
         return this.constructor.hierarchicalType;
     }
@@ -176,7 +186,9 @@ export const Hierarchical = Base => class Hierarchical extends Base {
     * childrenByType (type = this.hierarchicalType) {
         let matcher = typeMatcher(type);
 
-        for (let child = this._firstChild; child; child = child.nextSib) {
+        for (let next, child = this._firstChild; child; child = next) {
+            next = child.nextSib;  // incase the child is destroyed/removed
+
             if (matcher(child)) {
                 yield child;
             }

@@ -6,6 +6,8 @@ const
     getParentProps = p => getProto(p?.props),
     createProps = p => Object.create(Object.create(getParentProps(p)));
 
+let nextEffectId = 0;
+
 /**
  * This mixin adds the ability to define props on a class. Props exist as both published
  * and internal. Props (both internal and published) and are accessed via the `props`
@@ -60,7 +62,11 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
 
     static proto = {
         $bindWatcher: null,
+        $effectWatcher: null,
         $statefulWatcher: null,
+        $onBindPropSync: null,
+        $onEffectHandler: null,
+        $onStatefulPropSync: null,
         _signals: null
     };
 
@@ -183,6 +189,19 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             }
         }
     };
+
+    destruct () {
+        let me = this,
+            effects = me._effects;
+
+        me.$bindWatcher?.unwatch();
+        me.$effectWatcher?.unwatch();
+        me.$statefulWatcher?.unwatch()
+
+        effects && Object.values(effects).forEach(un => un());
+
+        super.destruct();
+    }
 
     get published () {
         return getProto(this.props);
@@ -348,10 +367,90 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         }
     }
 
+    _onEffectHandler () {
+        if (!this.destroyed) {
+            let watcher = this.$effectWatcher,
+                effect;
+
+            for (effect of watcher.getPending()) {
+                effect.get(); // run the effect fns
+            }
+
+            watcher.watch();
+        }
+    }
+
+    _onEffectHandlerNotify () {
+        if (!this.destroyed) {
+            this.scheduler?.add(this.$onEffectHandler ??= () => this._onEffectHandler());
+        }
+    }
+
+    effect (options) {
+        let me = this,
+            effects = me._effects ??= {},
+            watcher = me.$effectWatcher ??= Signal.watch(() => me._onEffectHandlerNotify()),
+            t = typeof options,
+            cleanup, fn, name, signal, un;
+
+        if (t === 'function') {
+            fn = options;
+            name = fn.name;
+        }
+        else if (t === 'string') {
+            name = options;
+            fn = (...args) => me[name](...args);
+        }
+        else if (options && t === 'object') {
+            fn = options.fn;
+            name = options.name || fn.name;
+        }
+        else {
+            panik('invalid effect options');
+        }
+
+        name = name || `effect-${++nextEffectId}`;
+
+        signal = Signal.formula(() => {
+            cleanup?.();
+            cleanup = fn.call(me);
+        }, { name });
+
+        un = () => {
+            cleanup?.();
+            delete effects[name];
+            watcher.unwatch(signal);
+        };
+
+        un.signal = signal;
+
+        effects[name]?.();
+        effects[name] = un;
+
+        watcher.watch(signal);
+        signal.get();
+
+        return un;
+    }
+
+    effects (effects) {
+        let uns = [];
+
+        for (let key in effects) {
+            uns.push(this.effect(effects[key]));
+        }
+
+        return () => uns.forEach(un => un());
+    }
+
+    uneffect (name) {
+        this._effects?.[name]?.();
+    }
+
     _onStatefulPropChange () {
         if (!this.destroyed) {
-            this.stateDirty = true;
             this.$statefulWatcher.watch();
+            this.stateDirty = true;
         }
     }
 

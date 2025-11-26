@@ -42,7 +42,8 @@ const integrity = root => {
 }
 
 describe('Hierarchical', () => {
-    let nextId = 0;
+    let nextId = 0,
+        log;
 
     class A extends Configurable.mixin(Hierarchical) {
         id = ++nextId;
@@ -50,6 +51,16 @@ describe('Hierarchical', () => {
         static configurable = {
             name: null
         };
+
+        destruct () {
+            let { name, id } = this;
+
+            log.push(`>> ~${name}${id}`);
+
+            super.destruct();
+
+            log.push(`<< ~${name}${id}`);
+        }
 
         dump (log = [], level = 0) {
             log.push(`${'>'.repeat(level)}${level ? ' ' : ''}${this.name}${this.id}`);
@@ -64,26 +75,40 @@ describe('Hierarchical', () => {
 
     beforeEach(() => {
         nextId = 0;
+        log = [];
     });
 
     it('should basically work', () => {
         let a = new A({ name: 'a', });
         let b = new A({ name: 'b', parent: a });
         let c = new A({ name: 'c', parent: b });
-        let d = new A({ name: 'd', parent: a });
+        let d = new A({ name: 'd', parent: c });
         let e = new A({ name: 'e', parent: a });
-
-        let log = a.dump();
 
         integrity(a);
 
-        expect(log).to.equal([
+        expect(a.dump()).to.equal([
             'a1',
             '> b2',
             '>> c3',
-            '> d4',
+            '>>> d4',
             '> e5'
         ]);
+
+        a.destroy();
+
+        expect(log).to.equal([
+            '>> ~a1',
+                '>> ~b2',
+                    '>> ~c3',
+                        '>> ~d4',
+                        '<< ~d4',
+                    '<< ~c3',
+                '<< ~b2',
+                '>> ~e5',
+                '<< ~e5',
+            '<< ~a1',
+        ])
     });
 
     it('should be able to move nodes', () => {

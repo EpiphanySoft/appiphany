@@ -19,7 +19,7 @@ const
     }
 
 describe('Bindable', () => {
-    it('should basically work', () => {
+    it('should basically work', async () => {
         const log = logger();
 
         class Foo extends Configurable.mixin(Bindable) {
@@ -57,6 +57,31 @@ describe('Bindable', () => {
         expect(() => {
             inst.props.derp = 0;
         }).to.throw();
+
+        inst.effects({
+            woot () {
+                log.out('>> effect woot');
+                log.out(`bar=${this.props.bar}`);
+                log.out('<< effect woot');
+            }
+        });
+
+        expect(log.get()).to.equal([
+            '>> effect woot',
+            'bar=420',
+            '<< effect woot'
+        ]);
+
+        inst.props.foo = 427;
+
+        await until(() => log.length > 0);
+
+        expect(log.get()).to.equal([
+            '>> effect woot',
+            'get bar',
+            'bar=4270',
+            '<< effect woot',
+        ]);
     });
 
     it('should work in a class hierarchy', () => {
