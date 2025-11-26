@@ -366,9 +366,15 @@ export class Configurable extends Declarable {
                     if (cfgs[k]) {
                         target[k] = cfgs[k].merge(target[k], v);
                     }
-                    else {
+                    else if (expando[k] || expando['*']) {
                         target[k] = (v && target[k]) ? mergeCfg(target[k], v) : v;
                     }
+                    else {
+                        panik(`No such property "${k}" in class ${meta.name}`);
+                    }
+                    // else {
+                    //     target[k] = (v && target[k]) ? mergeCfg(target[k], v) : v;
+                    // }
                 }
             }
         }

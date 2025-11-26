@@ -148,7 +148,7 @@ describe('Signal', () => {
         expect(f1.get()).to.be(210);
 
         expect(logged()).to.equal([
-            'notified 1',
+            `notified ${w.id}`,
             'get f = 210'
         ]);
 
@@ -171,7 +171,7 @@ describe('Signal', () => {
 
         expect(f1.get()).to.be(770);
         expect(logged()).to.equal([
-            'notified 1',
+            `notified ${w.id}`,
             'get f = 770'
         ]);
     });

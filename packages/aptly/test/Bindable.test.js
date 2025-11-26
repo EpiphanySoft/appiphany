@@ -27,9 +27,9 @@ describe('Bindable', () => {
                 props: {
                     foo: 21,
 
-                    bar () {
+                    bar: props => {
                         log.out('get bar');
-                        return this.foo * 10;
+                        return props.foo * 10;
                     }
                 }
             }
@@ -98,9 +98,9 @@ describe('Bindable', () => {
         class Bar extends Foo {
             static configurable = {
                 props: {
-                    bar () {
+                    bar: props => {
                         log.out('get bar');
-                        return this.foo * 10;
+                        return props.foo * 10;
                     }
                 }
             }
@@ -140,9 +140,9 @@ describe('Bindable', () => {
         class Bar extends Foo {
             static configurable = {
                 props: {
-                    bar () {
+                    bar: props => {
                         log.out('get bar');
-                        return this.foo * 10;
+                        return props.foo * 10;
                     }
                 }
             }
@@ -151,9 +151,9 @@ describe('Bindable', () => {
         class Derp extends Bar {
             static configurable = {
                 props: {
-                    derp () {
+                    derp: props => {
                         log.out('get derp');
-                        return this.bar * 3;
+                        return props.bar * 3;
                     }
                 }
             }
@@ -162,9 +162,9 @@ describe('Bindable', () => {
         class Woot extends Derp {
             static configurable = {
                 props: {
-                    woot () {
+                    woot: props => {
                         log.out('get woot');
-                        return this.derp * 5;
+                        return props.derp * 5;
                     }
                 }
             }
@@ -201,9 +201,9 @@ describe('Bindable', () => {
         class Bar extends Foo {
             static configurable = {
                 props: {
-                    bar () {
+                    bar: props => {
                         log.out('get bar');
-                        return this.foo * 10;
+                        return props.foo * 10;
                     }
                 }
             }
@@ -226,10 +226,14 @@ describe('Bindable', () => {
 
                 props: {
                     woot () {
-                        log.out('get woot');
-                        return this.bar * this.derp * 5;
+                        log.out(`get woot ${this.id}`);
+                        return this.props.bar * this.props.derp * 5;
                     }
                 }
+            }
+
+            static proto = {
+                id: 123
             }
         }
 
@@ -238,12 +242,14 @@ describe('Bindable', () => {
 
         expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
         expect(log.get()).to.equal([
-            'get woot',
+            'get woot 123',
             'get bar'
         ]);
         expect(inst.props.derp).to.be(3);
         expect(inst.props.bar).to.be(20);
         expect(log.get()).to.equal([]);
+
+        inst.id = 234;
 
         let inst1 = new Bar();
         inst1.props.foo = 21;
@@ -251,7 +257,7 @@ describe('Bindable', () => {
 
         expect(inst.props.woot).to.be(21 * 10 * 3 * 5);
         expect(log.get()).to.equal([
-            'get woot',
+            'get woot 234',
             'get bar'
         ]);
         expect(inst.props.derp).to.be(3);
@@ -306,18 +312,22 @@ describe('Bindable', () => {
 
                 props: {
                     bar () {
-                        log.out('get bar');
-                        return this.foo * 5;
+                        log.out(`get bar ${this.id}`);
+                        return this.props.foo * 5;
                     }
                 }
             }
+
+            static proto = {
+                id: 321
+            };
         }
 
         let parent = new Parent({ parent: root });
         let inst = new Foo({ parent });
 
         expect(log.get()).to.equal([
-            'get bar',
+            'get bar 321',
             'set derp 15',
             'set woot 3',
             'set wop 42'
@@ -332,6 +342,7 @@ describe('Bindable', () => {
         expect(inst.wop).to.be(42);
 
         parent.props.foo = 10;
+        inst.id = 432;
 
         expect(inst.scheduler.pending).to.be(true);
         expect(log.get()).to.equal([
@@ -341,7 +352,7 @@ describe('Bindable', () => {
         await sleep(20);
 
         expect(log.get()).to.equal([
-            'get bar',
+            'get bar 432',
             'set derp 50',
             'set woot 10'
         ]);
@@ -395,9 +406,9 @@ describe('Bindable', () => {
                 },
 
                 bind: {
-                    woot () {
+                    woot: props => {
                         log.out('calc woot');
-                        return this.foo * 5;
+                        return props.foo * 5;
                     }
                 }
             }
@@ -445,8 +456,8 @@ describe('Bindable', () => {
                     dip: 3, // unique to this instance
                     dop: 2,
 
-                    wop () {
-                        return this.dip * this.dop;
+                    wop: props => {
+                        return props.dip * props.dop;
                     }
                 }
             }
@@ -501,14 +512,14 @@ describe('Bindable', () => {
                     dip: 3, // unique to this instance
                     dop: 2,
 
-                    wop () {
-                        return this.dop * 100;
+                    wop: props => {
+                        return props.dop * 100;
                     }
                 },
 
                 props: {
-                    foo () {
-                        return this.wop * this.dip;
+                    foo: props => {
+                        return props.wop * props.dip;
                     }
                 }
             }
@@ -520,15 +531,11 @@ describe('Bindable', () => {
                     dop: 9,
                     wip: 10,  // unique to this instance
 
-                    wop () {
-                        return this.dop * this.wip;
-                    }
+                    wop: props => props.dop * props.wip
                 },
 
                 props: {
-                    foo () {
-                        return this.wop * 5;
-                    }
+                    foo: props => props.wop * 5
                 }
             }
         }

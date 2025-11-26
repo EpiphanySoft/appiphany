@@ -238,7 +238,7 @@ export class Declarable extends Destroyable {
     }
 
     static implements (...interfaces) {
-        let cls = this,
+        let cls = class Impl extends this {},
             { contract } = cls.$meta,
             descr, fn, intf, method;
 

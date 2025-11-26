@@ -1,4 +1,4 @@
-import { Destroyable, Scheduler, Signal, capitalize, panik, chain } from '@appiphany/aptly';
+import { Destroyable, Scheduler, Signal, capitalize, panik, chain, applyTo } from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
@@ -8,21 +8,29 @@ const
 
 
 class Bindings extends Destroyable {
-    #bindings = chain();
     #handler;
     #owner;
-    #priority;
     #watcher;
 
-    constructor (owner, options) {
+    #map = chain();
+    // = {
+    //      config: Signal.formula + {
+    //          prop: 'foo',
+    //          twoWay: true,
+    //          update: v => { ... }
+    //      }
+    //  }
+
+    constructor (owner) {
         super();
 
         let me = this;
 
-        me.#handler = me.#onChange.bind(me);
+        me.#handler = () => me.#onChange();
         me.#owner = owner;
-        me.#priority = options?.priority ?? 0;
         me.#watcher = Signal.watch(() => me.#onNotify());
+
+        me.priority = 0;
     }
 
     destruct () {
@@ -31,15 +39,99 @@ class Bindings extends Destroyable {
         super.destruct();
     }
 
+    get map () {
+        return this.#map;
+    }
+
+    add (configName, prop, was) {
+        let owner = this.#owner,
+            { props } = owner,
+            sig, twoWay;
+
+        if (typeof prop === 'function') {
+            if (was?.calc === prop) {
+                return null;
+            }
+
+            sig = Signal.formula(() => prop.call(owner, props), { name: `bind:${configName}` });
+
+            sig.calc = prop;
+        }
+        else {
+            // config: 'prop'   one-way
+            // config: '~prop'  two-way
+            twoWay = prop[0] === '~';
+            prop = twoWay ? prop.slice(1) : prop;
+
+            if (was && was.name === prop && was.twoWay === twoWay) {
+                return null;
+            }
+
+            sig = Signal.formula(() => props[prop], { name: prop });
+
+            sig.twoWay = twoWay;
+            sig.update = twoWay && (v => props[prop] = v);
+        }
+
+        sig.configName = configName;
+
+        owner[configName] = sig.get();
+
+        return sig;
+    }
+
+    update (bind) {
+        let bindings = this.#map,
+            watcher = this.#watcher,
+            add, configName, remove;
+
+        for (configName in bind) {
+            let prop = bind[configName], // in for-loop to avoid stale closure
+                was = bindings[configName],
+                sig;
+
+            if (prop) {
+                sig = this.add(configName, prop, was);
+
+                if (!sig) {
+                    continue;
+                }
+
+                bindings[configName] = sig;
+                sig && (add ??= []).push(sig);
+            }
+
+            if (was) {
+                delete bindings[configName];
+                (remove ??= []).push(was);
+            }
+        }
+
+        add && watcher.watch(...add);
+        remove && watcher.unwatch(...remove);
+
+    }
+
     #onChange () {
-        if (!this.#owner.destroyed) {
-            this.#watcher.watch();
+        let me = this,
+            owner = me.#owner,
+            watcher = me.#watcher,
+            changes, sig;
+
+        if (!owner.destroyed) {
+            for (sig of watcher.getPending()) {
+                (changes ??= {})[sig.configName] = sig.get();
+            }
+
+            changes && owner.configure(changes);
+
+            watcher.watch();
         }
     }
 
     #onNotify () {
         if (!this.#owner.destroyed) {
-            this.#owner.scheduler?.add(this.#handler, this.#priority);
+            this.#owner.scheduler?.add(this.#handler, this.priority);
         }
     }
 }
@@ -197,12 +289,10 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     static className= 'Bindable';
 
     static proto = {
-        $bindWatcher: null,
-        $onBindPropSync: null,
-
         $statefulWatcher: null,
         $onStatefulPropSync: null,
 
+        _bindings: null,
         _signals: null
     };
 
@@ -230,28 +320,20 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         bind: class {
             value = null;
 
-            apply (me, bind, was) {
-                let full = Object.create(null),
-                    name;
+            update (me, bind, was) {
+                me.getConfig('$props');
 
-                if (bind) {
-                    for (name in bind) {
-                        full[name] = bind[name];
-                    }
-                }
+                bind = applyTo(chain(), bind);
 
                 if (was) {
-                    for (name in was) {
-                        if (!(name in full)) {
-                            full[name] = null;
+                    for (let name in was) {
+                        if (!(name in bind)) {
+                            bind[name] = null;
                         }
                     }
                 }
 
-                me.getConfig('$props');
-                me.bindProps(full);
-
-                // do not return anything... $bindings is populated by propsAdd
+                me.bindings.update(bind);
             }
         },
 
@@ -342,11 +424,16 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     };
 
     destruct () {
-        this.$bindWatcher?.unwatch();
-        this.$statefulWatcher?.unwatch()
+        this._bindings?.destroy();
         this.effects?.destroy();
+        this.$statefulWatcher?.unwatch()
 
         super.destruct();
+    }
+
+
+    get bindings () {
+        return this._bindings ??= new Bindings(this);
     }
 
     get published () {
@@ -369,101 +456,12 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     }
 
     //----------------------------------------------------------------------------------------
-    // bind support
-
-    _onBindPropSync () {
-        let me = this,
-            changes, sig;
-
-        if (!me.destroyed) {
-            for (sig of this.$bindWatcher.getPending()) {
-                (changes ??= {})[sig.configName] = sig.get();
-            }
-
-            changes && this.configure(changes);
-
-            this.$bindWatcher.watch();
-        }
-    }
-
-    _onBindWatcherNotify () {
-        if (!this.destroyed) {
-            this.scheduler?.add(this.$onBindPropSync ??= () => this._onBindPropSync());
-        }
-    }
-
-    bindProps (bind) {
-        if (!bind) {
-            return;
-        }
-
-        let bindings = this.$bindings ??= Object.create(null),
-            // = {
-            //      config: Signal.formula + {
-            //          prop: 'foo',
-            //          twoWay: true,
-            //          update: v => { ... }
-            //      }
-            //  }
-            props = this.props,
-            watcher = this.$bindWatcher ??= Signal.watch(() => this._onBindWatcherNotify()),
-            add, configName, remove;
-
-        for (configName in bind) {
-            // config: 'prop'   one-way
-            // config: '~prop'  two-way
-            let prop = bind[configName], // in for-loop to avoid stale closure
-                was = bindings[configName],
-                sig, twoWay;
-
-            if (prop) {
-                if (typeof prop === 'function') {
-                    if (was?.calc === prop) {
-                        continue;
-                    }
-
-                    sig = Signal.formula(() => prop.call(props, props), { name: `calc${capitalize(configName)}` });
-
-                    sig.calc = prop;
-                }
-                else {
-                    twoWay = prop[0] === '~';
-                    prop = twoWay ? prop.slice(1) : prop;
-
-                    if (was && was.name === prop && was.twoWay === twoWay) {
-                        continue;
-                    }
-
-                    sig = Signal.formula(() => props[prop], { name: prop });
-
-                    sig.twoWay = twoWay;
-                    sig.update = twoWay && (v => props[prop] = v);
-                }
-
-                sig.configName = configName;
-
-                (add ??= []).push(sig);
-
-                bindings[configName] = sig;
-                this[configName] = sig.get();
-            }
-
-            if (was) {
-                delete bindings[configName];
-                (remove ??= []).push(was);
-            }
-        }
-
-        add && watcher.watch(...add);
-        remove && watcher.unwatch(...remove);
-    }
-
-    //----------------------------------------------------------------------------------------
     // props / $props support
 
     defineProps (add, internal) {
-        let signals = this._signals ??= Object.create(null),
-            props = this.props,  // internal props
+        let me = this,
+            signals = me._signals ??= chain(),
+            props = me.props,  // internal props
             target = internal ? props : getProto(props),
             options = {};
 
@@ -489,7 +487,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
                     };
 
                 options.name = name;
-                sig = formula ? Signal.formula(sig.bind(props), options) : Signal.value(sig, options);
+                sig = formula ? Signal.formula(sig.bind(me, props), options) : Signal.value(sig, options);
                 signals[name] = sig;
                 sig.internal = internal;
 
@@ -508,9 +506,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
 
                 Object.defineProperty(target, name, property)
 
-                if (existing) {
-                    existing.invalidate();
-                }
+                existing?.invalidate();
             }
         }
 
