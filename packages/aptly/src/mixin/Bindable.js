@@ -1,12 +1,148 @@
-import { Scheduler, Signal, capitalize, panik } from '@appiphany/aptly';
-import { Hierarchical, Stateful } from '@appiphany/aptly/mixin';
+import { Destroyable, Scheduler, Signal, capitalize, panik, chain } from '@appiphany/aptly';
+import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
     getParentProps = p => getProto(p?.props),
     createProps = p => Object.create(Object.create(getParentProps(p)));
 
-let nextEffectId = 0;
+
+class Bindings extends Destroyable {
+    #bindings = chain();
+    #handler;
+    #owner;
+    #priority;
+    #watcher;
+
+    constructor (owner, options) {
+        super();
+
+        let me = this;
+
+        me.#handler = me.#onChange.bind(me);
+        me.#owner = owner;
+        me.#priority = options?.priority ?? 0;
+        me.#watcher = Signal.watch(() => me.#onNotify());
+    }
+
+    destruct () {
+        this.#watcher.unwatch();
+
+        super.destruct();
+    }
+
+    #onChange () {
+        if (!this.#owner.destroyed) {
+            this.#watcher.watch();
+        }
+    }
+
+    #onNotify () {
+        if (!this.#owner.destroyed) {
+            this.#owner.scheduler?.add(this.#handler, this.#priority);
+        }
+    }
+}
+
+
+class Effects extends Destroyable {
+    static idSeed = 0;
+
+    #effects = chain();
+    #handler;
+    #owner;
+    #priority;
+    #watcher;
+
+    constructor (owner, options) {
+        super();
+
+        let me = this;
+
+        me.#owner = owner;
+        me.#handler = me.#onRun.bind(me);
+        me.#priority = options?.priority ?? 0;
+        me.#watcher = Signal.watch(() => me.#onNotify());
+    }
+
+    destruct () {
+        Object.values(this.#effects).forEach(un => un());
+
+        this.#watcher.unwatch();
+
+        super.destruct();
+    }
+
+    add (name, fn) {
+        let me = this,
+            effects = me.#effects,
+            owner = me.#owner,
+            watcher = me.#watcher,
+            cleanup, signal, un;
+
+        signal = Signal.formula(() => {
+            cleanup?.();
+            cleanup = !owner.destroyed && fn.call(owner);
+        }, { name });
+
+        un = () => {
+            cleanup?.();
+            delete effects[name];
+            watcher.unwatch(signal);
+        };
+
+        un.signal = signal;
+
+        effects[name]?.();
+        effects[name] = un;
+
+        watcher.watch(signal);
+        signal.get();
+
+        return un;
+    }
+
+    addMany (effects) {
+        let uns = [],
+            fn;
+
+        for (let key in effects) {
+            fn = effects[key];
+
+            if (typeof fn === 'function') {
+                uns.push(this.add(key, fn));
+            }
+            else if (fn == null) {
+                this.remove(key);
+            }
+        }
+
+        return () => uns.forEach(un => un());
+    }
+
+    remove (name) {
+        this.#effects[name]?.();
+    }
+
+    #onNotify () {
+        if (!this.#owner.destroyed) {
+            this.#owner.scheduler?.add(this.#handler, this.#priority);
+        }
+    }
+
+    #onRun () {
+        if (!this.#owner.destroyed) {
+            let watcher = this.#watcher,
+                effect;
+
+            for (effect of watcher.getPending()) {
+                effect.get(); // run the effect fns
+            }
+
+            watcher.watch();
+        }
+    }
+}
 
 /**
  * This mixin adds the ability to define props on a class. Props exist as both published
@@ -62,17 +198,17 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
 
     static proto = {
         $bindWatcher: null,
-        $effectWatcher: null,
-        $statefulWatcher: null,
         $onBindPropSync: null,
-        $onEffectHandler: null,
+
+        $statefulWatcher: null,
         $onStatefulPropSync: null,
+
         _signals: null
     };
 
     static configurable = {
         parent: class {
-            update(me, parent, was) {
+            update (me, parent, was) {
                 super.update(me, parent, was);
 
                 let props = me._props;
@@ -94,7 +230,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         bind: class {
             value = null;
 
-            apply(me, bind, was) {
+            apply (me, bind, was) {
                 let full = Object.create(null),
                     name;
 
@@ -119,10 +255,25 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             }
         },
 
+        effects: class {
+            value = null;
+            phase = 'init';
+
+            apply (instance, effects, was) {
+                if (effects) {
+                    was ??= new Effects(instance, effects);
+
+                    was.addMany(effects);
+                }
+
+                return was;
+            }
+        },
+
         $props: class {
             value = {};
 
-            apply(me, props, was) {
+            apply (me, props, was) {
                 if (was) {
                     panik('$props cannot be reconfigured');
                 }
@@ -134,7 +285,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
                 return ret;
             }
 
-            declProp(proto, name, readonly) {
+            declProp (proto, name, readonly) {
                 let desc = {
                     configurable: true,
 
@@ -158,7 +309,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
                 Object.defineProperty(proto, name, desc);
             }
 
-            extend(cls, props) {
+            extend (cls, props) {
                 if (props) {
                     let meta = cls.$meta,
                         { configs, expando } = meta,
@@ -178,7 +329,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         props: class {
             value = {};
 
-            apply(me, props, was) {
+            apply (me, props, was) {
                 if (was) {
                     panik('props cannot be reconfigured');
                 }
@@ -191,14 +342,9 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     };
 
     destruct () {
-        let me = this,
-            effects = me._effects;
-
-        me.$bindWatcher?.unwatch();
-        me.$effectWatcher?.unwatch();
-        me.$statefulWatcher?.unwatch()
-
-        effects && Object.values(effects).forEach(un => un());
+        this.$bindWatcher?.unwatch();
+        this.$statefulWatcher?.unwatch()
+        this.effects?.destroy();
 
         super.destruct();
     }
@@ -221,6 +367,9 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             delete pub.$scheduler;
         }
     }
+
+    //----------------------------------------------------------------------------------------
+    // bind support
 
     _onBindPropSync () {
         let me = this,
@@ -273,7 +422,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
                         continue;
                     }
 
-                    sig = Signal.formula(() => prop.call(props), { name: `calc${capitalize(configName)}` });
+                    sig = Signal.formula(() => prop.call(props, props), { name: `calc${capitalize(configName)}` });
 
                     sig.calc = prop;
                 }
@@ -308,6 +457,9 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         add && watcher.watch(...add);
         remove && watcher.unwatch(...remove);
     }
+
+    //----------------------------------------------------------------------------------------
+    // props / $props support
 
     defineProps (add, internal) {
         let signals = this._signals ??= Object.create(null),
@@ -367,31 +519,14 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         }
     }
 
-    _onEffectHandler () {
-        if (!this.destroyed) {
-            let watcher = this.$effectWatcher,
-                effect;
+    //----------------------------------------------------------------------------------------
+    // Effects
 
-            for (effect of watcher.getPending()) {
-                effect.get(); // run the effect fns
-            }
-
-            watcher.watch();
-        }
-    }
-
-    _onEffectHandlerNotify () {
-        if (!this.destroyed) {
-            this.scheduler?.add(this.$onEffectHandler ??= () => this._onEffectHandler());
-        }
-    }
-
-    effect (options) {
+    addEffect (options) {
         let me = this,
-            effects = me._effects ??= {},
-            watcher = me.$effectWatcher ??= Signal.watch(() => me._onEffectHandlerNotify()),
+            { effects } = me,
             t = typeof options,
-            cleanup, fn, name, signal, un;
+            fn, name;
 
         if (t === 'function') {
             fn = options;
@@ -409,43 +544,22 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             panik('invalid effect options');
         }
 
-        name = name || `effect-${++nextEffectId}`;
+        name = name || `effect-${++Effects.idSeed}`;
 
-        signal = Signal.formula(() => {
-            cleanup?.();
-            cleanup = fn.call(me);
-        }, { name });
-
-        un = () => {
-            cleanup?.();
-            delete effects[name];
-            watcher.unwatch(signal);
-        };
-
-        un.signal = signal;
-
-        effects[name]?.();
-        effects[name] = un;
-
-        watcher.watch(signal);
-        signal.get();
-
-        return un;
-    }
-
-    effects (effects) {
-        let uns = [];
-
-        for (let key in effects) {
-            uns.push(this.effect(effects[key]));
+        if (!effects) {
+            me.effects = {};      // create the Effects instance
+            effects = me.effects; // get the new Effects instance
         }
 
-        return () => uns.forEach(un => un());
+        return effects.add(name, fn);
     }
 
-    uneffect (name) {
-        this._effects?.[name]?.();
+    removeEffect (name) {
+        this.effects?.remove(name);
     }
+
+    //----------------------------------------------------------------------------------------
+    // Stateful support
 
     _onStatefulPropChange () {
         if (!this.destroyed) {

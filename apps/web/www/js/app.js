@@ -5,7 +5,7 @@ window.Dom = Dom;
 window.Component = Component;
 window.Viewport = Viewport;
 
-window.v = Component.factory.create({
+window.v = Component.create({
     type: 'viewport',
     props: {
         woot: 'light'
@@ -30,7 +30,10 @@ window.v = Component.factory.create({
                 bar: {
                     cls: 'woot',
                     html: 'derp!',
-                    style: 'color: lime; fontSize: 2em'
+                    style: 'color: lime; fontSize: 2em',
+                    bind: {
+                        html: p => p.woot?.toUpperCase()
+                    }
                 },
                 btn: {
                     type: 'button',

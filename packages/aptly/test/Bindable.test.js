@@ -58,13 +58,13 @@ describe('Bindable', () => {
             inst.props.derp = 0;
         }).to.throw();
 
-        inst.effects({
+        inst.effects = {
             woot () {
                 log.out('>> effect woot');
                 log.out(`bar=${this.props.bar}`);
                 log.out('<< effect woot');
             }
-        });
+        };
 
         expect(log.get()).to.equal([
             '>> effect woot',
