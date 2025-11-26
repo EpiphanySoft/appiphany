@@ -14,10 +14,24 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
         // defaultType: 'memory'
     };
 
+    static configurable = {
+        flushPriority: class {
+            default = 100;
+            value   = null;
+
+            update (instance, value) {
+                instance._flush.timer.priority = value;
+            }
+        }
+    };
+
     static monolithic = false;
 
     static delayable = {
-        _flush: 'asap'
+        _flush: {
+            type: 'sched',
+            priority: 100
+        }
     };
 
     #data = chain();
@@ -166,6 +180,8 @@ export class ChildStateProvider extends StateProvider {
     static type = 'child';
 
     static configurable = {
+        flushPriority: 99,
+
         owner: null,
 
         stateId: 'childState'

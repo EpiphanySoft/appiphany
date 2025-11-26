@@ -14,7 +14,7 @@ const
                 type = '';
             }
 
-            // ex, search for 'widget' or 'button' matches hierarchicalType='widget:button'
+            // ex, search for 'component' or 'button' matches hierarchicalType='component:button'
             return item => item.hierarchicalType.includes(type)
         }
 
@@ -109,32 +109,25 @@ export const Hierarchical = Base => class Hierarchical extends Base {
 
     static proto = {
         [insertingSym]: false,
+        _firstChild: null,
+        _lastChild: null,
+        _inheritable: null,
+        _inherited: null,
         childCount: 0,
         nextSib: null,
         prevSib: null
     };
-
-    #firstChild = null;
-    #lastChild = null;
 
     get hierarchicalType () {
         return this.constructor.hierarchicalType;
     }
 
     get inheritable () {
-        let inheritable = createInheritable(this.parent);
-
-        defineProperty(this, 'inheritable', { value: inheritable });  // don't call here again
-
-        return inheritable;
+        return this._inheritable ??= createInheritable(this.parent);
     }
 
     get inherited () {
-        let inherited = getProto(this.inheritable);
-
-        defineProperty(this, 'inherited', { value: inherited });  // don't call here again
-
-        return inherited;
+        return this._inherited ??= getProto(this.inheritable);
     }
 
     //------------------------------------------------------------------------------------------
@@ -183,7 +176,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
     * childrenByType (type = this.hierarchicalType) {
         let matcher = typeMatcher(type);
 
-        for (let child = this.#firstChild; child; child = child.nextSib) {
+        for (let child = this._firstChild; child; child = child.nextSib) {
             if (matcher(child)) {
                 yield child;
             }
@@ -193,7 +186,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
     * childrenReverseByType (type = this.hierarchicalType) {
         let matcher = typeMatcher(type);
 
-        for (let child = this.#lastChild; child; child = child.prevSib) {
+        for (let child = this._lastChild; child; child = child.prevSib) {
             if (matcher(child)) {
                 yield child;
             }
@@ -203,7 +196,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
     firstChildByType (type = this.hierarchicalType) {
         let matcher = typeMatcher(type);
 
-        for (let child = this.#firstChild; child; child = child.nextSib) {
+        for (let child = this._firstChild; child; child = child.nextSib) {
             if (matcher(child)) {
                 return child;
             }
@@ -215,7 +208,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
     lastChildByType (type = this.hierarchicalType) {
         let matcher = typeMatcher(type);
 
-        for (let child = this.#lastChild; child; child = child.prevSib) {
+        for (let child = this._lastChild; child; child = child.prevSib) {
             if (matcher(child)) {
                 return child;
             }
@@ -253,7 +246,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
 
     insertChild (child, beforeChild = null) {
         let me = this,
-            tail = me.#lastChild,
+            tail = me._lastChild,
             prevSib;
 
         if (beforeChild && beforeChild.parent !== me) {
@@ -274,7 +267,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
                     prevSib.nextSib = child;
                 }
                 else {
-                    me.#firstChild = child;
+                    me._firstChild = child;
                 }
             }
             else {
@@ -282,11 +275,11 @@ export const Hierarchical = Base => class Hierarchical extends Base {
                     tail.nextSib = child;
                 }
                 else {
-                    me.#firstChild = child;
+                    me._firstChild = child;
                 }
 
                 child.prevSib = tail;
-                me.#lastChild = child;
+                me._lastChild = child;
             }
 
             ++me.childCount;
@@ -300,8 +293,8 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         let me = this,
             { prevSib, nextSib } = child;
 
-        if ((nextSib ? nextSib.parent !== me : (me.#lastChild !== child) ) ||
-            (prevSib ? prevSib.parent !== me : (me.#firstChild !== child) ) ) {
+        if ((nextSib ? nextSib.parent !== me : (me._lastChild !== child) ) ||
+            (prevSib ? prevSib.parent !== me : (me._firstChild !== child) ) ) {
             panik('child is not a child of me parent');
         }
 
@@ -309,14 +302,14 @@ export const Hierarchical = Base => class Hierarchical extends Base {
             nextSib.prevSib = prevSib;
         }
         else {
-            me.#lastChild = prevSib;
+            me._lastChild = prevSib;
         }
 
         if (prevSib) {
             prevSib.nextSib = nextSib;
         }
         else {
-            me.#firstChild = nextSib;
+            me._firstChild = nextSib;
         }
 
         child.nextSib = child.prevSib = null;

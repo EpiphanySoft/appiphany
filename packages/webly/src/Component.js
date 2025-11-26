@@ -38,17 +38,17 @@ const
     };
 
 
-export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryable) {
-    static type = 'widget';
+export class Component extends Configurable.mixin(Bindable, Identifiable, Factoryable) {
+    static type = 'component';
     static expando = ['ref'];
     static factory = {
-        defaultType: 'widget'
+        defaultType: 'component'
     };
 
     static #idMap = chain();
 
     static generateAutoId (prefix) {
-        let map = Widget.#idMap;
+        let map = Component.#idMap;
 
         return map[prefix] = (map[prefix] || 0) + 1;
     }
@@ -71,10 +71,10 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         itemRenderTarget: null,
 
         /**
-         * A `Widget` can container other widgets. This property is an object mapping ref names to
-         * widget configs:
+         * A `Component` can container other component. This property is an object mapping ref names to
+         * component configs:
          *
-         *      new Widget({
+         *      new Component({
          *          renderTo: document.body,
          *          items: {
          *              btn: {
@@ -84,14 +84,14 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
          *          }
          *      });
          *
-         * The keys of the object preserve their declaration order and that order determines their
+         * The keys of the object preserve their declaration order, and that order determines their
          * order in the DOM.
          */
         items: class {
             apply (me, newItems, was) {
                 //  newItems = {
-                //      foo: { type: 'widget' },
-                //      bar: { type: 'widget' },
+                //      foo: { type: 'component' },
+                //      bar: { type: 'component' },
                 //  }
                 //
                 let items = {},
@@ -120,16 +120,16 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
                     if (item) {
                         [existingIndex, existingItem] = existingByRef?.[ref] || EMPTY_ARRAY;
 
-                        if (!item.is?.widget) {
+                        if (!item.is?.component) {
                             item = clone(item);
                             item.parent = me;
                             item.ref = ref;
 
-                            item = Widget.factory.reconfigure(existingItem, item);
+                            item = Component.factory.reconfigure(existingItem, item);
                         }
 
                         if (item === existingItem) {
-                            // either newItems held an instantiated Widget to replace the existingItem,
+                            // either newItems held an instantiated Component to replace the existingItem,
                             // or the reconfigure() of the existingItem returned the existingItem (now
                             // with config changes).
                             delete existingByRef[ref];
@@ -166,8 +166,8 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
         },
 
         /**
-         * The ref name of the element to render this widget's content into. If not specified, the
-         * parent widget's `itemRenderTarget` is used.
+         * The ref name of the element to render this component's content into. If not specified,
+         * the parent component's `itemRenderTarget` is used.
          */
         renderTarget: class {
             value = null;
@@ -368,4 +368,4 @@ export class Widget extends Configurable.mixin(Bindable, Identifiable, Factoryab
     }
 }
 
-Widget.initClass();
+Component.initClass();

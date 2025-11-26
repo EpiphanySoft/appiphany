@@ -1,8 +1,8 @@
 import { xss } from '@appiphany/aptly';
-import { Widget } from '@appiphany/webly';
+import { Component } from '@appiphany/webly';
 
 
-export class Button extends Widget {
+export class Button extends Component {
     static type = 'button';
 
     static configurable = {

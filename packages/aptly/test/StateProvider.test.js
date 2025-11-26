@@ -1,7 +1,7 @@
-import { clone, merge, StateProvider } from '@appiphany/aptly';
+import { ChildStateProvider, clone, Configurable, merge, StateProvider } from '@appiphany/aptly';
 
 import assertly from 'assertly';
-import { mockery } from './utils.js';
+import { createStorage, mockery } from './utils.js';
 
 const { expect } = assertly;
 
@@ -36,6 +36,8 @@ describe('StateProvider', _ => {
             expect(mock.calls).to.equal([
                 [{ foo: 42 }]
             ]);
+
+            mock.clear();
 
             provider.set('bar', 427);
             expect(provider.dirty).to.be(true);
@@ -100,15 +102,6 @@ describe('StateProvider', _ => {
 
     describe('StorageStateProvider', () => {
         const create = creator('storage');
-        const createStorage = (data = {}) => ({
-            data,
-
-            get length () { return Object.keys(this.data).length; },
-            key (i) { return Object.keys(this.data)[i]; },
-            getItem (key) { return this.data[key]; },
-            setItem (key, value) { this.data[key] = value; },
-            removeItem (key) { delete this.data[key]; }
-        });
 
         it('should basically work', async () => {
             let storage = createStorage({

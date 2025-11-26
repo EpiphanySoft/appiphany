@@ -1,7 +1,7 @@
-import { Widget } from '@appiphany/webly';
+import { Component } from '@appiphany/webly';
 
 
-export class Viewport extends Widget {
+export class Viewport extends Component {
     static type = 'viewport';
 
     static configurable = {

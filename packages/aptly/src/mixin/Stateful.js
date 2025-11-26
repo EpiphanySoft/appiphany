@@ -48,7 +48,9 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
 
             apply (instance, value, was) {
                 let ret = super.apply(instance, value, was),
-                    childState = ret && instance.childState;
+                    // don't trigger childState update here ... just need to know if it will
+                    // be activated.
+                    childState = ret && instance.peekConfig('childState');
 
                 if (childState) {
                     ret.childState = true;

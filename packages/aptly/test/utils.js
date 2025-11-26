@@ -88,6 +88,15 @@ export const
 
         return mocker.clear();
     },
+    createStorage = (data = {}) => ({
+        data,
+
+        get length () { return Object.keys(this.data).length; },
+        key (i) { return Object.keys(this.data)[i]; },
+        getItem (key) { return this.data[key]; },
+        setItem (key, value) { this.data[key] = value; },
+        removeItem (key) { delete this.data[key]; }
+    }),
     sleep = ms => new Promise(resolve => setTimeout(() => resolve(), ms)),
     stall = () => Promise.resolve(),
     until = async fn => {

@@ -545,6 +545,16 @@ export class Configurable extends Declarable {
         // template method
     }
 
+    peekConfig (name) {
+        let { configuring } = this;
+
+        if (configuring?.data.has(name)) {
+            return configuring.data.get(name);
+        }
+
+        return this[Config.get(name).prop];
+    }
+
     toJSON() {
         return map(this.$meta.configs, (v, k) => {
             v = this[k];
