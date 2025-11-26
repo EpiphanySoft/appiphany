@@ -1,5 +1,5 @@
 import { Scheduler, Signal, capitalize, panik } from '@appiphany/aptly';
-import { Hierarchical } from '@appiphany/aptly/mixin';
+import { Hierarchical, Stateful } from '@appiphany/aptly/mixin';
 
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
@@ -56,19 +56,23 @@ const
  * dynamically. To disable this, set the `sealed` property to false on the `props` config.
  */
 export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) {
+    static className= 'Bindable';
+
     static proto = {
+        $bindWatcher: null,
+        $statefulWatcher: null,
         _signals: null
     };
 
     static configurable = {
         parent: class {
-            update(me, v, was) {
-                super.update(me, v, was);
+            update(me, parent, was) {
+                super.update(me, parent, was);
 
                 let props = me._props;
 
                 if (props) {
-                    Object.setPrototypeOf(getProto(props), getParentProps(v));
+                    Object.setPrototypeOf(getProto(props), getParentProps(parent));
 
                     let signals = me._signals;
 
@@ -199,21 +203,25 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         }
     }
 
-    _onWatcherNotify () {
-        let work = this.$onPropSync ??= this._onPropSync.bind(this);
+    _onBindPropSync () {
+        let me = this,
+            changes, sig;
 
-        this.scheduler.add(work);
+        if (!me.destroyed) {
+            for (sig of this.$bindWatcher.getPending()) {
+                (changes ??= {})[sig.configName] = sig.get();
+            }
+
+            changes && this.configure(changes);
+
+            this.$bindWatcher.watch();
+        }
     }
 
-    _onPropSync () {
-        let changes = {};
-
-        for (let sig of this.$watcher.getPending()) {
-            changes[sig.configName] = sig.get();
+    _onBindWatcherNotify () {
+        if (!this.destroyed) {
+            this.scheduler?.add(this.$onBindPropSync ??= () => this._onBindPropSync());
         }
-
-        this.$watcher.watch();
-        this.configure(changes);
     }
 
     bindProps (bind) {
@@ -230,7 +238,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             //      }
             //  }
             props = this.props,
-            watcher = this.$watcher ??= Signal.watch(() => this._onWatcherNotify()),
+            watcher = this.$bindWatcher ??= Signal.watch(() => this._onBindWatcherNotify()),
             add, configName, remove;
 
         for (configName in bind) {
@@ -338,5 +346,62 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         if (internal && add.sealed !== false) {
             Object.seal(props);
         }
+    }
+
+    _onStatefulPropChange () {
+        if (!this.destroyed) {
+            this.stateDirty = true;
+            this.$statefulWatcher.watch();
+        }
+    }
+
+    _onStatefulWatcherNotify () {
+        if (!this.destroyed) {
+            this.scheduler?.add(this.$onStatefulPropSync ??= () => this._onStatefulPropChange());
+        }
+    }
+
+    loadStatefulProps (state) {
+        let me = this,
+            name, props, $props, sig, signals, value;
+
+        me.getConfig('$props');
+        signals = me._signals;
+
+        for (name in state) {
+            sig = signals[name];
+
+            if (sig) {
+                value = state[name];
+                delete state[name];
+
+                if (sig.internal) {
+                    ($props ??= me.$props)[name] = value;
+                }
+                else {
+                    (props ??= me.props)[name] = value;
+                }
+            }
+        }
+    }
+
+    watchStatefulProps (stateful) {
+        let me = this,
+            watcher = me.$statefulWatcher ??= Signal.watch(() => me._onStatefulWatcherNotify()),
+            add, name, sig, signals;
+
+        if (stateful) {
+            me.getConfig('$props');
+            signals = me._signals;
+
+            for (name in stateful) {
+                sig = signals[name];
+                sig && (add ??= []).push(sig);
+            }
+        }
+
+        watcher.unwatch();
+
+        add && watcher.watch(...add);
     }
 }

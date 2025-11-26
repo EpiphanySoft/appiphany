@@ -1,8 +1,13 @@
 import { Config, isObject, StateProvider } from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
+const
+    EMPTY_OBJECT = Object.freeze({});
+
 
 export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) {
+    static className= 'Stateful';
+
     static configurable = {
         childState: class {
             value = null;
@@ -81,9 +86,12 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
                     }
 
                     if (config) {
+                        instance.loadStatefulProps?.(config);
                         configuring.modified = config;
                     }
                 }
+
+                id && instance.watchStatefulProps?.(value);
             }
         },
 
@@ -131,6 +139,7 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         let me = this,
             { stateful } = me,
             classConfigs = me.$meta.configs,
+            props = me.$props || EMPTY_OBJECT,
             state = null,
             cfg, key, value;
 
@@ -139,9 +148,10 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
 
             for (key in stateful) {
                 if (stateful[key]) {
-                    value = me[key];
+                    cfg = classConfigs[key];
+                    value = cfg || !(key in props) ? me[key] : props[key];
 
-                    if (!(cfg = classConfigs[key]) || value !== cfg.default) {
+                    if (!cfg || value !== cfg.default) {
                         state[key] = value;
                     }
                 }

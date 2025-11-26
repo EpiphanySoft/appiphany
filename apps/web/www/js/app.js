@@ -7,6 +7,17 @@ window.Viewport = Viewport;
 
 window.v = Component.factory.create({
     type: 'viewport',
+    props: {
+        woot: 'light'
+    },
+    stateProvider: {
+        type: 'storage',
+        storage: localStorage
+    },
+    stateful: {
+        woot: true,
+        theme: true
+    },
     items: {
         foo: {
             cls: 'woot',

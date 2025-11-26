@@ -1,5 +1,5 @@
-import { chain, panik, Configurable, Signal, isObject, clone } from '@appiphany/aptly';
-import { Bindable, Factoryable, Identifiable } from '@appiphany/aptly/mixin';
+import { chain, panik, Widget, Signal, isObject, clone } from '@appiphany/aptly';
+import { Factoryable } from '@appiphany/aptly/mixin';
 import { Dom } from '@appiphany/webly';
 
 
@@ -38,7 +38,7 @@ const
     };
 
 
-export class Component extends Configurable.mixin(Bindable, Identifiable, Factoryable) {
+export class Component extends Widget.mixin(Factoryable) {
     static type = 'component';
     static expando = ['ref'];
     static factory = {

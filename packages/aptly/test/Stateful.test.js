@@ -26,6 +26,10 @@ describe('Stateful', _ => {
 
         class Child extends Configurable.mixin(Stateful) {
             static configurable = {
+                props: {
+                    abc: 123
+                },
+
                 woot: class {
                     value = null;
 
@@ -34,7 +38,10 @@ describe('Stateful', _ => {
                     }
                 },
 
-                stateful: 'woot'
+                stateful: {
+                    abc: true,
+                    woot: true
+                }
             }
         }
 
