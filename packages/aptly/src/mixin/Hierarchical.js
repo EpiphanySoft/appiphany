@@ -30,14 +30,35 @@ const
     };
 
 class Refs {
+    #map = null;
     #owner;
 
     constructor (owner) {
         this.#owner = owner;
-        this.map = null;
+        this.rebuilds = 0;
     }
 
-    descend (node) {
+    get map () {
+        let me = this;
+
+        if (!me.#map) {
+            me.#map = chain();
+            ++me.rebuilds;
+            me.rebuild(me.#owner);
+        }
+
+        return me.#map;
+    }
+
+    invalidate () {
+        this.#map = null;
+    }
+
+    lookup (ref) {
+        return this.map[ref];
+    }
+
+    rebuild (node) {
         let { map } = this,
             child, ref;
 
@@ -53,24 +74,9 @@ class Refs {
             }
 
             if (!child.nexus) {
-                this.descend(child);
+                this.rebuild(child);
             }
         }
-    }
-
-    invalidate () {
-        this.map = null;
-    }
-
-    lookup (ref) {
-        let me = this;
-
-        if (!me.map) {
-            me.map = chain();
-            me.descend(me.#owner);
-        }
-
-        return me.map[ref];
     }
 }
 

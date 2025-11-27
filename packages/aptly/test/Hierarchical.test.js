@@ -1,4 +1,4 @@
-import { Configurable } from "@appiphany/aptly";
+import { clone, Configurable } from '@appiphany/aptly';
 import { Hierarchical } from "@appiphany/aptly/mixin";
 
 import assertly from 'assertly';
@@ -223,5 +223,138 @@ describe('Hierarchical', () => {
         ]);
         expect(b.inherited.foo).to.equal(42);
         expect(c.inherited.foo).to.equal(427);
+    });
+
+    it('should support nexus and refs', () => {
+        let a = new A({ name: 'a', nexus: true });
+        let b = new A({ name: 'b', parent: a });
+        let c = new A({ name: 'c', parent: b, ref: 'cc' });
+        let d = new A({ name: 'd', parent: a, ref: 'dd' });
+        let e = new A({ name: 'e', parent: a, ref: 'ee' });
+
+        let x = new A({ name: 'x', parent: a, nexus: true, ref: 'xx' });
+        let y = new A({ name: 'y', parent: x, ref: 'yy' });
+        let z = new A({ name: 'z', parent: y, ref: 'zz' });
+
+        integrity(a);
+
+        expect(a.dump()).to.equal([
+            'a1',
+            '> b2',
+            '>> c3',
+            '> d4',
+            '> e5',
+            '> x6',
+            '>> y7',
+            '>>> z8'
+        ]);
+
+        expect(clone(a.refs.map)).to.equal({ cc: c, dd: d, ee: e, xx: x });
+        expect(a.refs.rebuilds).to.equal(1);
+        expect(b.inherited.nexus).to.be(a);
+        expect(c.inherited.nexus).to.be(a);
+        expect(d.inherited.nexus).to.be(a);
+        expect(e.inherited.nexus).to.be(a);
+        expect(x.inherited.nexus).to.be(a);
+
+        expect(clone(x.refs.map)).to.equal({ yy: y, zz: z });
+        expect(x.refs.rebuilds).to.equal(1);
+        expect(y.inherited.nexus).to.be(x);
+        expect(z.inherited.nexus).to.be(x);
+
+        b.ref = 'bbb';
+        c.ref = 'ccc';
+        d.ref = 'ddd';
+        e.ref = 'eee';
+        x.ref = 'xxx';
+        y.ref = 'yyy';
+        z.ref = 'zzz';
+
+        expect(clone(a.refs.map)).to.equal({ bbb: b, ccc: c, ddd: d, eee: e, xxx: x });
+        expect(a.refs.rebuilds).to.equal(2);
+        expect(b.inherited.nexus).to.be(a);
+        expect(c.inherited.nexus).to.be(a);
+        expect(d.inherited.nexus).to.be(a);
+        expect(e.inherited.nexus).to.be(a);
+        expect(x.inherited.nexus).to.be(a);
+
+        expect(clone(x.refs.map)).to.equal({ yyy: y, zzz: z });
+        expect(x.refs.rebuilds).to.equal(2);
+        expect(y.inherited.nexus).to.be(x);
+        expect(z.inherited.nexus).to.be(x);
+
+        x.insertChild(b);
+
+        expect(clone(a.refs.map)).to.equal({ ddd: d, eee: e, xxx: x });
+        expect(a.refs.rebuilds).to.equal(3);
+        expect(d.inherited.nexus).to.be(a);
+        expect(e.inherited.nexus).to.be(a);
+        expect(x.inherited.nexus).to.be(a);
+
+        expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, yyy: y, zzz: z });
+        expect(x.refs.rebuilds).to.equal(3);
+        expect(b.inherited.nexus).to.be(x);
+        expect(c.inherited.nexus).to.be(x);
+        expect(y.inherited.nexus).to.be(x);
+        expect(z.inherited.nexus).to.be(x);
+
+        y.ref = 'y!';
+        z.ref = 'z!';
+
+        expect(clone(a.refs.map)).to.equal({ ddd: d, eee: e, xxx: x });
+        expect(a.refs.rebuilds).to.equal(3);
+        expect(d.inherited.nexus).to.be(a);
+        expect(e.inherited.nexus).to.be(a);
+        expect(x.inherited.nexus).to.be(a);
+
+        expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, 'y!': y, 'z!': z });
+        expect(x.refs.rebuilds).to.equal(4);
+        expect(b.inherited.nexus).to.be(x);
+        expect(c.inherited.nexus).to.be(x);
+        expect(y.inherited.nexus).to.be(x);
+        expect(z.inherited.nexus).to.be(x);
+
+        d.ref = 'D';
+        e.ref = 'E';
+        x.ref = 'X';
+
+        expect(clone(a.refs.map)).to.equal({ D: d, E: e, X: x });
+        expect(a.refs.rebuilds).to.equal(4);
+        expect(d.inherited.nexus).to.be(a);
+        expect(e.inherited.nexus).to.be(a);
+        expect(x.inherited.nexus).to.be(a);
+
+        expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, 'y!': y, 'z!': z });
+        expect(x.refs.rebuilds).to.equal(4);
+        expect(b.inherited.nexus).to.be(x);
+        expect(c.inherited.nexus).to.be(x);
+        expect(y.inherited.nexus).to.be(x);
+        expect(z.inherited.nexus).to.be(x);
+
+        e.parent = y;
+
+        expect(clone(a.refs.map)).to.equal({ D: d, X: x });
+        expect(a.refs.rebuilds).to.equal(5);
+        expect(d.inherited.nexus).to.be(a);
+        expect(x.inherited.nexus).to.be(a);
+
+        expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, E: e, 'y!': y, 'z!': z });
+        expect(x.refs.rebuilds).to.equal(5);
+        expect(b.inherited.nexus).to.be(x);
+        expect(c.inherited.nexus).to.be(x);
+        expect(e.inherited.nexus).to.be(x);
+        expect(y.inherited.nexus).to.be(x);
+        expect(z.inherited.nexus).to.be(x);
+
+        expect(a.dump()).to.equal([
+            'a1',
+            '> d4',
+            '> x6',
+            '>> y7',
+            '>>> z8',
+            '>>> e5',
+            '>> b2',
+            '>>> c3',
+        ]);
     });
 });
