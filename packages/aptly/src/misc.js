@@ -778,7 +778,7 @@ export const
         if (isArray(item)) {
             item.forEach(i => remove(array, i));
         }
-        else {
+        else if (array) {
             let i = array.indexOf(item);
 
             i > -1 && array.splice(i, 1);

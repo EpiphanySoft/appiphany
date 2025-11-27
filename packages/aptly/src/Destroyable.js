@@ -66,7 +66,7 @@ export class Destroyable {
 
     cascadeDestroy (obj) {
         let ref = new WeakRef(obj),
-            cascade = (this[cascadeDestroySym] || (this[cascadeDestroySym] = new Set()));
+            cascade = this[cascadeDestroySym] ??= new Set();
 
         cascade.add(ref);
 
