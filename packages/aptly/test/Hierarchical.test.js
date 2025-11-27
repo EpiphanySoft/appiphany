@@ -257,10 +257,18 @@ describe('Hierarchical', () => {
         expect(e.inherited.nexus).to.be(a);
         expect(x.inherited.nexus).to.be(a);
 
+        expect(a.lookup('cc')).to.be(c);
+        expect(a.lookup('dd')).to.be(d);
+        expect(a.lookup('ee')).to.be(e);
+        expect(a.lookup('xx')).to.be(x);
+
         expect(clone(x.refs.map)).to.equal({ yy: y, zz: z });
         expect(x.refs.rebuilds).to.equal(1);
         expect(y.inherited.nexus).to.be(x);
         expect(z.inherited.nexus).to.be(x);
+
+        expect(x.lookup('yy')).to.be(y);
+        expect(x.lookup('zz')).to.be(z);
 
         b.ref = 'bbb';
         c.ref = 'ccc';
@@ -278,10 +286,19 @@ describe('Hierarchical', () => {
         expect(e.inherited.nexus).to.be(a);
         expect(x.inherited.nexus).to.be(a);
 
+        expect(a.lookup('bbb')).to.be(b);
+        expect(a.lookup('ccc')).to.be(c);
+        expect(a.lookup('ddd')).to.be(d);
+        expect(a.lookup('eee')).to.be(e);
+        expect(a.lookup('xxx')).to.be(x);
+
         expect(clone(x.refs.map)).to.equal({ yyy: y, zzz: z });
         expect(x.refs.rebuilds).to.equal(2);
         expect(y.inherited.nexus).to.be(x);
         expect(z.inherited.nexus).to.be(x);
+
+        expect(x.lookup('yyy')).to.be(y);
+        expect(x.lookup('zzz')).to.be(z);
 
         x.insertChild(b);
 
@@ -291,12 +308,21 @@ describe('Hierarchical', () => {
         expect(e.inherited.nexus).to.be(a);
         expect(x.inherited.nexus).to.be(a);
 
+        expect(a.lookup('ddd')).to.be(d);
+        expect(a.lookup('eee')).to.be(e);
+        expect(a.lookup('xxx')).to.be(x);
+
         expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, yyy: y, zzz: z });
         expect(x.refs.rebuilds).to.equal(3);
         expect(b.inherited.nexus).to.be(x);
         expect(c.inherited.nexus).to.be(x);
         expect(y.inherited.nexus).to.be(x);
         expect(z.inherited.nexus).to.be(x);
+
+        expect(x.lookup('bbb')).to.be(b);
+        expect(x.lookup('ccc')).to.be(c);
+        expect(x.lookup('yyy')).to.be(y);
+        expect(x.lookup('zzz')).to.be(z);
 
         y.ref = 'y!';
         z.ref = 'z!';
@@ -307,12 +333,21 @@ describe('Hierarchical', () => {
         expect(e.inherited.nexus).to.be(a);
         expect(x.inherited.nexus).to.be(a);
 
+        expect(a.lookup('ddd')).to.be(d);
+        expect(a.lookup('eee')).to.be(e);
+        expect(a.lookup('xxx')).to.be(x);
+
         expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, 'y!': y, 'z!': z });
         expect(x.refs.rebuilds).to.equal(4);
         expect(b.inherited.nexus).to.be(x);
         expect(c.inherited.nexus).to.be(x);
         expect(y.inherited.nexus).to.be(x);
         expect(z.inherited.nexus).to.be(x);
+
+        expect(x.lookup('bbb')).to.be(b);
+        expect(x.lookup('ccc')).to.be(c);
+        expect(x.lookup('y!')).to.be(y);
+        expect(x.lookup('z!')).to.be(z);
 
         d.ref = 'D';
         e.ref = 'E';
@@ -324,12 +359,21 @@ describe('Hierarchical', () => {
         expect(e.inherited.nexus).to.be(a);
         expect(x.inherited.nexus).to.be(a);
 
+        expect(a.lookup('D')).to.be(d);
+        expect(a.lookup('E')).to.be(e);
+        expect(a.lookup('X')).to.be(x);
+
         expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, 'y!': y, 'z!': z });
         expect(x.refs.rebuilds).to.equal(4);
         expect(b.inherited.nexus).to.be(x);
         expect(c.inherited.nexus).to.be(x);
         expect(y.inherited.nexus).to.be(x);
         expect(z.inherited.nexus).to.be(x);
+
+        expect(x.lookup('bbb')).to.be(b);
+        expect(x.lookup('ccc')).to.be(c);
+        expect(x.lookup('y!')).to.be(y);
+        expect(x.lookup('z!')).to.be(z);
 
         e.parent = y;
 
@@ -338,6 +382,9 @@ describe('Hierarchical', () => {
         expect(d.inherited.nexus).to.be(a);
         expect(x.inherited.nexus).to.be(a);
 
+        expect(a.lookup('D')).to.be(d);
+        expect(a.lookup('X')).to.be(x);
+
         expect(clone(x.refs.map)).to.equal({ bbb: b, ccc: c, E: e, 'y!': y, 'z!': z });
         expect(x.refs.rebuilds).to.equal(5);
         expect(b.inherited.nexus).to.be(x);
@@ -345,6 +392,12 @@ describe('Hierarchical', () => {
         expect(e.inherited.nexus).to.be(x);
         expect(y.inherited.nexus).to.be(x);
         expect(z.inherited.nexus).to.be(x);
+
+        expect(x.lookup('bbb')).to.be(b);
+        expect(x.lookup('ccc')).to.be(c);
+        expect(x.lookup('E')).to.be(e);
+        expect(x.lookup('y!')).to.be(y);
+        expect(x.lookup('z!')).to.be(z);
 
         expect(a.dump()).to.equal([
             'a1',
