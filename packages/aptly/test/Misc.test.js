@@ -8,7 +8,6 @@ import {
     decapitalize,
     filter,
     groupBy,
-    ignore,
     isObject,
     iterateGroups,
     keys,

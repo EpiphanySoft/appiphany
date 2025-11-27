@@ -1,4 +1,4 @@
-import { decapitalize, ignore, chain, applyTo, panik, quoteWrap, Destroyable, isObject }
+import { decapitalize, nop, chain, applyTo, panik, quoteWrap, Destroyable, isObject }
     from '@appiphany/aptly';
 // import { Logger } from '@/util/Logger';
 
@@ -45,7 +45,7 @@ export class MetaClass {
 
             Object.entries(cls.declarable).forEach(([name, fn]) => {
                 const
-                    prior = declarable[name]?.fn || ignore,
+                    prior = declarable[name]?.fn || nop,
                     declFn = (cls, value) => fn(cls, value, prior);
 
                 // declarables are processed as getters that replace the value and call
@@ -190,7 +190,7 @@ export class Declarable extends Destroyable {
         }
 
         for (decl of declarables) {
-            ignore(cls[decl]);  // trigger the getters
+            nop(cls[decl]);  // trigger the getters
         }
 
         for (method in contract) {

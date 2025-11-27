@@ -1,4 +1,4 @@
-import { applyTo, isAsync, isFunction, nop, SKIP, thenable } from "@appiphany/aptly";
+import { applyTo, isAsync, isFunction, nopify, SKIP, thenable } from "@appiphany/aptly";
 
 const
     cascadeDestroySym = Symbol('cascadeDestroy'),
@@ -79,7 +79,7 @@ export class Destroyable {
             obj;
 
         if (!me.destroyed) {
-            nop(me, 'destroy');
+            nopify(me, 'destroy');
 
             me.destroyed = me.destructing = true;
             me.destruct();

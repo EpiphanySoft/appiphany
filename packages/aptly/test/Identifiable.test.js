@@ -1,4 +1,4 @@
-import { Configurable, Config, applyTo, clone, ignore } from '@appiphany/aptly';
+import { Configurable } from '@appiphany/aptly';
 import { Identifiable } from '@appiphany/aptly/mixin';
 
 import assertly from 'assertly';

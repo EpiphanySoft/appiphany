@@ -1,19 +1,28 @@
-import { applyTo, chain, remove, Destroyable } from '@appiphany/aptly';
+import { Destroyable, applyTo, chain, hasOwn, nop, remove, destroy } from '@appiphany/aptly';
 
 const
-    NOP = () => {},
-    SPECIALS = 'id,once,this'.split(','),
     canon = chain(),
     addCanon = s => canon[s] = s,
     canonicalize = type => canon[type] ??= addCanon(type.toLowerCase()),
     { defineProperty } = Reflect,
     { now } = performance,
-    removeEntry = ([h, entry]) => h.remove(entry),
-    getOptions = (on, me) => {
-        let options = {},
+    FIRING_SYM = Symbol('firing'),
+    SORTED_SYM = Symbol('sorted'),
+    defaultHandlerOptions = applyTo(chain(), {
+        delay: null,
+        once: false,
+        priority: 0,
+        ttl: null
+    }),
+    defaultListenOptions = applyTo(chain(defaultHandlerOptions), {
+        id: null,
+        this: null
+    }),
+    getOptions = (defaults, on, me) => {
+        let options = chain(defaults),
             key;
 
-        for (key of SPECIALS) {
+        for (key in defaults) {
             if (on && key in on) {
                 options[key] = on[key];
             }
@@ -25,17 +34,20 @@ const
 
         return options;
     },
-    unify = (id, entries, listeners) => () => {
-        let ent = entries, lst = listeners;
+    prioritySort = (a, b) => b.priority - a.priority, // => [..., -1, 0, 1, 2, 3, ...]
+    unify = (id, handlers, listener) => () => {
+        let hnd = handlers, lst = listener;
 
-        entries = listeners = null;
+        handlers = listener = null;  // nerf future calls
 
-        ent?.forEach(removeEntry);
+        destroy(hnd);
         lst?.set(id, null);
     };
 
-
-class Event {
+/**
+ * This class represents an event that has been fired.
+ */
+export class Event {
     constructor (sender, options) {
         let me = this;
 
@@ -74,34 +86,66 @@ class Event {
 }
 
 /**
- * This class tracks handlers for a particular event type.
+ * This class tracks handlers for a particular event type and dispatches events to them.
  */
-class Handlers {
+class Dispatcher {
     constructor (type) {
         // this.owner = owner;
+        let handlers = [];
+
+        handlers[FIRING_SYM] = 0;
+        handlers[SORTED_SYM] = true;
+
         this.type = type;
-        this.entries = [];
-        this.firing = null;
+        this.handlers = handlers;
     }
 
-    add (descr, options) {
-        let entries = this.mutate();
+    add (handlerOptions, listenOptions) {
+        if (typeof handlerOptions === 'function') {
+            handlerOptions = { fn: handlerOptions };
+        }
 
-        // TODO
+        let handlers = this.mutate(),
+            key, handler;
+
+        handlerOptions = getOptions(defaultHandlerOptions, handlerOptions);
+
+        for (key in listenOptions) {
+            // if (explicit listen-level option
+            //  AND not explicit handler-level
+            //  AND it's a handler-level option)
+            if (hasOwn(listenOptions, key) && !hasOwn(handlerOptions, key) && key in handlerOptions) {
+                handlerOptions[key] = listenOptions[key];
+            }
+        }
+
+        handler = new Handler(this, handlerOptions);
+        handlers.push(handler);
+
+        if (handlers.length > 1 && prioritySort(handlers.at(-2), handlers.at(-1)) > 0) {
+            // just added an entry not in sorted order
+            handlers[SORTED_SYM] = false;
+        }
+
+        return handler;
     }
 
     fire (ev) {
         let me = this,
-            { entries } = me,
-            recursed = me.firing === entries,
-            entry;
+            { handlers } = me,
+            handler;
 
-        if (entries.length) {
-            me.firing = entries;
+        if (handlers.length) {
+            if (!handlers[SORTED_SYM]) {
+                handlers.sort(prioritySort);
+                handlers[SORTED_SYM] = true;
+            }
+
+            ++handlers[FIRING_SYM];
 
             try {
-                for (entry of entries) {
-                    // TODO
+                for (handler of handlers) {
+                    handler.fire(ev);
 
                     if (ev.stopped) {
                         break;
@@ -109,32 +153,55 @@ class Handlers {
                 }
             }
             finally {
-                if (me.firing === entries && !recursed) {
-                    me.firing = null;
-                }
+                --handlers[FIRING_SYM];
             }
         }
     }
 
     mutate () {
         let me = this,
-            { entries } = me;
+            { handlers } = me,
+            was = handlers;
 
-        if (entries && me.firing === entries) {
-            me.entries = entries = entries.slice();
-            // since we are currently firing using the old entries, and we've cloned the
-            // entries array, we need to clear the firing state so that a nested fire()
-            // call will protect the cloned entries.
-            me.firing = null;
+        if (handlers?.[FIRING_SYM]) {
+            me.handlers = handlers = handlers.slice();
+            handlers[FIRING_SYM] = 0;
+            handlers[SORTED_SYM] = was[SORTED_SYM];  // copy current sorted state
         }
 
-        return entries;
+        return handlers;
     }
 
-    remove (entry) {
-        let entries = this.mutate();
+    remove (handler) {
+        let handlers = this.mutate();
 
-        remove(entries, entry);
+        remove(handlers, handler);
+    }
+}
+
+/**
+ * This class represents a handler to call when an event is fired/dispatched. It is responsible for
+ * invoking the handler function and optionally delaying its invocation.
+ */
+class Handler {
+    constructor (dispatcher, options) {
+        this.dispatcher = dispatcher;
+
+        applyTo(this, options);
+    }
+
+    destroy () {
+        let { dispatcher } = this;
+
+        if (dispatcher) {
+            this.dispatcher = null;
+
+            dispatcher.remove(this);
+        }
+    }
+
+    fire (ev) {
+        // TODO
     }
 }
 
@@ -149,19 +216,25 @@ class Handlers {
  *      bar.listen({
  *          this: foo
  *      })
+ *
+ *      // since foo (the listener) is !== bar:
+ *      // - foo gains an unlisten() method
+ *      // - foo gets an expando Listener object
+ *      // - foo's listen() activity is tracked using this Listener object
+ *      // - the Listener is destroyed when foo is destroyed via foo.cascadeDestroy()
  */
-class Listeners extends Destroyable {
+class Listener extends Destroyable {
     static SYM = Symbol('listeners');
 
-    static from (options, me) {
+    static from (listenOptions, me) {
         let listeners = null;
 
-        // don't create a Listeners object when listening to yourself
-        if (options.this !== me) {
-            listeners = Listeners.get(options.this);
+        // don't create a Listener object when listening to yourself
+        if (listenOptions.this !== me) {
+            listeners = Listener.get(listenOptions.this);
 
-            if (!options.id) {
-                options.id = listeners.nextId();
+            if (!listenOptions.id) {
+                listenOptions.id = listeners.nextId();
             }
         }
 
@@ -169,7 +242,7 @@ class Listeners extends Destroyable {
     }
 
     static get (owner) {
-        return owner && (owner[Listeners.SYM] ??= new Listeners(owner));
+        return owner && (owner[Listener.SYM] ??= new Listener(owner));
     }
 
     constructor (owner) {
@@ -180,7 +253,7 @@ class Listeners extends Destroyable {
         me.idSeed = 0;
         me.listeners = chain();
 
-        owner[Listeners.SYM] = me;
+        owner[Listener.SYM] = me;
         owner.cascadeDestroy(me);
 
         defineProperty(owner, 'unlisten', { value: id => me.un(id) });
@@ -223,6 +296,9 @@ class Listeners extends Destroyable {
     }
 }
 
+/**
+ *
+ */
 export const Eventable = Base => class Eventable extends Base {
     static configurable = {
         on: class {
@@ -233,8 +309,8 @@ export const Eventable = Base => class Eventable extends Base {
                 if (Array.isArray(on)) {
                     on.forEach(o => me.listen(o));
                 }
-                else if (on) {
-                    me.listen(on);
+                else {
+                    on && me.listen(on);
                 }
             }
 
@@ -250,12 +326,12 @@ export const Eventable = Base => class Eventable extends Base {
         }
     };
 
-    #handlers = null;
+    #dispatchers = null;
 
     fire (ev) {
         ev = new Event(this, ev);
 
-        this.#handlers?.[ev.type]?.fire(ev);
+        this.#dispatchers?.[ev.type]?.fire(ev);
 
         ev.finish();
 
@@ -264,26 +340,26 @@ export const Eventable = Base => class Eventable extends Base {
 
     listen (on) {
         let me = this,
-            handlers = me.#handlers ??= chain(),
-            options = getOptions(on, me),
-            listeners = Listeners.from(options, me),  // listeners ==> options.id is set
-            entries, entry, h, type, un;
+            dispatchers = me.#dispatchers ??= chain(),
+            listenOptions = getOptions(defaultListenOptions, on, me),
+            listener = Listener.from(listenOptions, me),  // listeners ==> listenOptions.id is set
+            dispatcher, handler, handlers, type, un;
 
         for (type in on) {
-            if (!SPECIALS.includes(type)) {
-                type = canonicalize(type);
-                h = handlers[type] ??= new Handlers(type);
+            handler = on[type];
+            type = canonicalize(type);
 
-                entry = h.add(on[type], options);
-                (entries ??= []).push([h, entry]);
+            if (!(type in defaultListenOptions)) {
+                dispatcher = dispatchers[type] ??= new Dispatcher(type);
+                (handlers ??= []).push(dispatcher.add(handler, listenOptions));
             }
         }
 
-        if (entries) {
-            un = unify(options.id, entries, listeners);
-            listeners?.set(options.id, un);
+        if (handlers) {
+            un = unify(listenOptions.id, handlers, listener);
+            listener?.set(listenOptions.id, un);
         }
 
-        return un || NOP;
+        return un || nop;
     }
 }

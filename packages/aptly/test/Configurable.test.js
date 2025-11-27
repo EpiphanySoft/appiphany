@@ -1,4 +1,4 @@
-import { Configurable, Config, applyTo, clone, ignore } from '@appiphany/aptly';
+import { Configurable, Config, applyTo, clone, nop } from '@appiphany/aptly';
 import { Identifiable } from '@appiphany/aptly/mixin';
 
 import assertly from 'assertly';
@@ -123,11 +123,11 @@ describe('Configurable', () => {
         class Foo extends Configurable {
             static declarable = {
                 foo(cls, v) {
-                    ignore(cls.bar);
+                    nop(cls.bar);
                     log.push(['foo', v]);
                 },
                 bar(cls, v) {
-                    ignore(cls.baz);
+                    nop(cls.baz);
                     log.push(['bar', v]);
                 },
                 baz(cls, v) {

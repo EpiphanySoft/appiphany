@@ -424,8 +424,6 @@ export const
         return ret;
     },
 
-    ignore = () => {},
-
     Is = Object.freeze({
         browser: typeof window !== 'undefined' && window?.document != null,
         nodejs: typeof process !== 'undefined' && process.versions?.node != null
@@ -666,9 +664,10 @@ export const
     // TODO what was the issue w/sort()?
     naturalSortFn = (a, b) => (a < b) ? -1 : (b < a) ? 1 : 0,
 
-    nop = (object, method, options) => defineProperty(object, method, {
+    nop = () => {},
+    nopify = (object, method, options) => defineProperty(object, method, {
         ...options,
-        value: ignore
+        value: nop
     }),
 
     panik = (msg, opts) => {
