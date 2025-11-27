@@ -37,7 +37,10 @@ window.v = Component.create({
                 },
                 btn: {
                     type: 'button',
-                    text: 'Click me!'
+                    text: 'Click me!',
+                    on: {
+                        click: 'onClickMe'
+                    }
                 }
             }
         }
