@@ -1,9 +1,12 @@
-import { panik, Config, chain } from '@appiphany/aptly';
+import { panik, Config, chain, applyTo } from '@appiphany/aptly';
 
 const
     insertingSym = Symbol('inserting'),
     { create: chainProto, getPrototypeOf: getProto, setPrototypeOf: setProto } = Object,
-    createInheritable = p => chainProto(chainProto(p?.inheritable || null)),
+    root = applyTo(chainProto(null), {
+        hierarchyGeneration: 0
+    }),
+    createInheritable = p => chainProto(chainProto(p?.inheritable || root)),
     typeMatcher = type => {
         type = type || '';
 
@@ -51,7 +54,10 @@ class Refs {
     }
 
     invalidate () {
-        this.#map = null;
+        if (this.#map) {
+            this.#map = null;
+            ++root.hierarchyGeneration;
+        }
     }
 
     lookup (ref) {

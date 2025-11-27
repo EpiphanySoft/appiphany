@@ -105,7 +105,7 @@ describe('StateProvider', _ => {
 
         it('should basically work', async () => {
             let storage = createStorage({
-                'derp-bar': '{"urp":427}',
+                'herp-bar': '{"urp":427}',
                 'woot-foo': '{"bar":[42]}'
             });
 
@@ -120,7 +120,7 @@ describe('StateProvider', _ => {
             await provider._flush.timer.flushed;
 
             expect(storage.data).to.equal({
-                'derp-bar': '{"urp":427}',
+                'herp-bar': '{"urp":427}',
                 'woot-foo': '{"woot":"xyz"}'
             });
 
@@ -131,7 +131,7 @@ describe('StateProvider', _ => {
             await provider._flush.timer.flushed;
 
             expect(storage.data).to.equal({
-                'derp-bar': '{"urp":427}'
+                'herp-bar': '{"urp":427}'
             });
         });
     });

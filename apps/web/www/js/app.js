@@ -23,13 +23,13 @@ window.v = Component.create({
             cls: 'woot',
             items: {
                 foo: {
-                    cls: 'derp',
+                    cls: 'herp',
                     html: 'Woot!!!',
                     style: { color: 'yellow' }
                 },
                 bar: {
                     cls: 'woot',
-                    html: 'derp!',
+                    html: 'herp!',
                     style: 'color: lime; fontSize: 2em',
                     bind: {
                         html: p => p.woot?.toUpperCase()

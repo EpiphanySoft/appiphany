@@ -182,7 +182,7 @@ describe('Misc', () => {
             throw new Error('B');
         };
 
-        const derp = () => {
+        const herp = () => {
             try {
                 foo();
             }
@@ -197,7 +197,7 @@ describe('Misc', () => {
         };
 
         try {
-            derp();
+            herp();
         }
         catch (e) {
             log.push(e.toString());
@@ -277,23 +277,23 @@ describe('Misc', () => {
     });
 
     it('map(object)', () => {
-        let o = { v: { derp: 42 }};
+        let o = { v: { herp: 42 }};
 
         // w/o a mapping fn, object->array acts like Object.entries() but w/o hasOwn
         expect(map(o, 'array')).to.equal([
-            ['v', { derp: 42 }]
+            ['v', { herp: 42 }]
         ]);
 
         expect(map(o,
                 (it, key) => merge(it, { foo: 'woot', key: `$${key}` })
         )).to.equal({
-            v: { key: '$v', derp: 42, foo: 'woot' }
+            v: { key: '$v', herp: 42, foo: 'woot' }
         });
 
         expect(map(o,
                 (it, key) => [key.toUpperCase(), merge(it, { foo: 'woot', key })]
         )).to.equal({
-            V: { key: 'v', derp: 42, foo: 'woot' }
+            V: { key: 'v', herp: 42, foo: 'woot' }
         });
 
         expect(map(

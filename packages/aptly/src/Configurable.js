@@ -295,7 +295,7 @@ export class Configurable extends Declarable {
                     proto = val.prototype;
 
                     if (hasOwn(config, 'value')) {
-                        // value = 'derp' on class def
+                        // value = 'herp' on class def
                         val = config.value;
                         delete config.value;
                     }

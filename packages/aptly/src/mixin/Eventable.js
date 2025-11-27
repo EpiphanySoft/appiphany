@@ -1,9 +1,6 @@
-import { Destroyable, applyTo, chain, hasOwn, nop, remove, destroy } from '@appiphany/aptly';
+import { Destroyable, Event, applyTo, chain, hasOwn, nop, remove, destroy, panik, derp } from '@appiphany/aptly';
 
 const
-    canon = chain(),
-    addCanon = s => canon[s] = s,
-    canonicalize = type => canon[type] ??= addCanon(type.toLowerCase()),
     { defineProperty } = Reflect,
     { now } = performance,
     FIRING_SYM = Symbol('firing'),
@@ -45,59 +42,21 @@ const
     };
 
 /**
- * This class represents an event that has been fired.
- */
-export class Event {
-    constructor (sender, options) {
-        let me = this;
-
-        me.target = sender;
-
-        if (typeof options === 'string') {
-            me.type = options;
-        }
-        else {
-            applyTo(me, options);
-        }
-
-        me.sender = sender;
-        me.stopped = false;
-        me.t0 = now();
-        me.t1 = 0;
-        me.type = canonicalize(me.type);
-    }
-
-    get done () {
-        return !!this.t1;
-    }
-
-    get duration () {
-        return (this.t1 || now()) - this.t0;
-    }
-
-    finish () {
-        this.t1 = this.t1 || now();
-    }
-
-    stop () {
-        this.finish();
-        this.stopped = true;
-    }
-}
-
-/**
  * This class tracks handlers for a particular event type and dispatches events to them.
  */
 class Dispatcher {
-    constructor (type) {
-        // this.owner = owner;
-        let handlers = [];
+    constructor (owner, type) {
+        let me = this,
+            handlers = [];
 
+        // stash these on the array itself so they are automatically swapped with new
+        // values whenever we need to clone the array for mutation during fire().
         handlers[FIRING_SYM] = 0;
         handlers[SORTED_SYM] = true;
 
-        this.type = type;
-        this.handlers = handlers;
+        me.handlers = handlers;
+        me.owner = owner;
+        me.type = type;
     }
 
     add (handlerOptions, listenOptions) {
@@ -119,7 +78,7 @@ class Dispatcher {
             }
         }
 
-        handler = new Handler(this, handlerOptions);
+        handler = new Handler(this, handlerOptions, listenOptions);
         handlers.push(handler);
 
         if (handlers.length > 1 && prioritySort(handlers.at(-2), handlers.at(-1)) > 0) {
@@ -184,10 +143,30 @@ class Dispatcher {
  * invoking the handler function and optionally delaying its invocation.
  */
 class Handler {
-    constructor (dispatcher, options) {
-        this.dispatcher = dispatcher;
+    constructor (dispatcher, options, listenOptions) {
+        let me = this,
+            { fn } = options,
+            { this: that } = listenOptions,
+            fire;
 
-        applyTo(this, options);
+        applyTo(me, options);
+
+        me.dispatcher = dispatcher;
+
+        fire = me.wrap(that, fn);
+
+        if (me.once) {
+            fire = me.wrapOnce(fire);
+        }
+
+        // TODO delay
+
+        if (me.ttl) {
+            me.expires = now() + me.ttl;
+            fire = me.wrapExpiration(fire);
+        }
+
+        me.fire = fire;
     }
 
     destroy () {
@@ -200,8 +179,77 @@ class Handler {
         }
     }
 
-    fire (ev) {
-        // TODO
+    wrap (that, fn) {
+        let fire;
+
+        if (typeof fn === 'function') {
+            fire = (...args) => fn.apply(that, args);
+        }
+        else if (that && typeof that === 'object') {
+            if (!that[fn]) {
+                panik(`No such method "${fn}" on ${that.constructor.name}`);
+            }
+
+            fire = (...args) => !that.destroyed && that[fn](...args);
+        }
+        else {
+            fire = this.wrapDynamic(that, fn);
+        }
+
+        return fire;
+    }
+
+    wrapDynamic (that, fn) {
+        let { owner } = this.dispatcher,
+            { inherited } = owner,
+            gen, name, target;
+
+        if (fn.includes('.')) {
+            [that, fn] = fn.split('.', 2);
+        }
+
+        name = that ? `${that}.${fn}` : fn;
+
+        return (...args) => {
+            if (!owner.destroyed) {
+                if (!target || target.destroyed || gen !== inherited?.hierarchyGeneration) {
+                    target = owner.resolveController(that, fn);
+
+                    if (!target?.[fn]) {
+                        return derp(`Controller method not found "${name}" from ${owner.id}`);
+                    }
+
+                    gen = inherited?.hierarchyGeneration;
+                }
+
+                !target.destroyed && target[fn](...args);
+            }
+        };
+    }
+
+    wrapExpiration (fn) {
+        return (...args) => {
+            if (now() < this.expires) {
+                fn(...args);
+            }
+            else {
+                this.destroy();
+            }
+        };
+    }
+
+    wrapOnce (fn) {
+        let called;
+
+        return (...args) => {
+            if (!called) {
+                called = true;  // protect against reentrancy
+
+                fn(...args);
+
+                this.destroy();
+            }
+        };
     }
 }
 
@@ -347,10 +395,10 @@ export const Eventable = Base => class Eventable extends Base {
 
         for (type in on) {
             handler = on[type];
-            type = canonicalize(type);
+            type = Event.canonicalize(type);
 
             if (!(type in defaultListenOptions)) {
-                dispatcher = dispatchers[type] ??= new Dispatcher(type);
+                dispatcher = dispatchers[type] ??= new Dispatcher(me, type);
                 (handlers ??= []).push(dispatcher.add(handler, listenOptions));
             }
         }
@@ -361,5 +409,9 @@ export const Eventable = Base => class Eventable extends Base {
         }
 
         return un || nop;
+    }
+
+    resolveController (that, method) {
+        // TODO
     }
 }

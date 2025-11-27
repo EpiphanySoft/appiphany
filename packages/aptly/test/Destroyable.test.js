@@ -258,19 +258,19 @@ describe('Destroyable', () => {
             expect(() => {
                 res.with(r => {
                     log.push(`woot ${ r.x }`);
-                    panik('derp');
+                    panik('herp');
                 },
                 r => {
                     log.push(`otherwise ${r.x}`);
                 });
-            }).to.throw('derp');
+            }).to.throw('herp');
 
             expect(res.withEntered).to.be(true);
-            expect(res.withError.message).to.equal('derp');
+            expect(res.withError.message).to.equal('herp');
             expect(log).to.equal([
                 '>> enter 42',
                 'woot 42',
-                '<< exit 42: derp',
+                '<< exit 42: herp',
                 'destruct 42'
             ]);
         });
@@ -301,18 +301,18 @@ describe('Destroyable', () => {
 
             res.with({ throw: false }, r => {
                 log.push(`woot ${ r.x }`);
-                panik('derp');
+                panik('herp');
             },
             r => {
                 log.push(`otherwise ${r.x}`);
             });
 
             expect(res.withEntered).to.be(true);
-            expect(res.withError.message).to.equal('derp');
+            expect(res.withError.message).to.equal('herp');
             expect(log).to.equal([
                 '>> enter 42',
                 'woot 42',
-                '<< exit 42: derp',
+                '<< exit 42: herp',
                 'destruct 42'
             ]);
         });
@@ -454,7 +454,7 @@ describe('Destroyable', () => {
                 await res.with(async r => {
                     log.push(`>> woot ${r.x}`);
                     await sleep(1);
-                    panik('derp');
+                    panik('herp');
                 },
                 async r => {
                     log.push(`>> otherwise ${r.x}`);
@@ -467,14 +467,14 @@ describe('Destroyable', () => {
             }
 
             expect(res.withEntered).to.be(true);
-            expect(ex.message).to.equal('derp');
-            expect(res.withError.message).to.equal('derp');
+            expect(ex.message).to.equal('herp');
+            expect(res.withError.message).to.equal('herp');
             expect(log).to.equal([
                 '>> enter 42',
                 '<< enter 42',
                 '>> woot 42',
-                '>> exit 42: derp',
-                '<< exit 42: derp',
+                '>> exit 42: herp',
+                '<< exit 42: herp',
                 'destruct 42'
             ]);
         });
@@ -510,7 +510,7 @@ describe('Destroyable', () => {
             await res.with({ throw: false }, async r => {
                 log.push(`>> woot ${r.x}`);
                 await sleep(1);
-                panik('derp');
+                panik('herp');
             },
             async r => {
                 log.push(`>> otherwise ${r.x}`);
@@ -519,13 +519,13 @@ describe('Destroyable', () => {
             });
 
             expect(res.withEntered).to.be(true);
-            expect(res.withError.message).to.equal('derp');
+            expect(res.withError.message).to.equal('herp');
             expect(log).to.equal([
                 '>> enter 42',
                 '<< enter 42',
                 '>> woot 42',
-                '>> exit 42: derp',
-                '<< exit 42: derp',
+                '>> exit 42: herp',
+                '<< exit 42: herp',
                 'destruct 42'
             ]);
         });

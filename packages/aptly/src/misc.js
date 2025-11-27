@@ -670,6 +670,10 @@ export const
         value: nop
     }),
 
+    derp = msg => {
+        console.warn(msg);
+    },
+
     panik = (msg, opts) => {
         throw new Error(msg, opts);  // ex: opts = { cause: new Error('cause') }
     },

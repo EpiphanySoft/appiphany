@@ -73,25 +73,25 @@ describe('Delayable', () => {
 
         class Foo extends Configurable.mixin(Delayable) {
             static delayable = {
-                derp: 'asap'
+                herp: 'asap'
             };
 
-            derp (arg) {
+            herp (arg) {
                 log.push(arg);
             }
         }
 
         let foo = Foo.new();
 
-        expect(foo.derp.timer).to.be.a(Timer.types.asap);
-        expect(foo.derp.timer.pending).to.be(false);
+        expect(foo.herp.timer).to.be.a(Timer.types.asap);
+        expect(foo.herp.timer.pending).to.be(false);
 
-        let promise = foo.derp(42);
+        let promise = foo.herp(42);
 
         expect(thenable(promise)).to.be(true);
         expect(log).to.equal([]);
 
-        expect(foo.derp.timer.pending).to.be(true);
+        expect(foo.herp.timer.pending).to.be(true);
 
         let ok = await promise;
 

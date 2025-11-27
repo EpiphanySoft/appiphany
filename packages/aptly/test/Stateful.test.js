@@ -19,8 +19,8 @@ describe('Stateful', _ => {
         class Owner extends Configurable.mixin(Stateful) {
             static configurable = {
                 childState: true,
-                derp: null,
-                stateful: 'derp'
+                herp: null,
+                stateful: 'herp'
             }
         }
 
@@ -47,7 +47,7 @@ describe('Stateful', _ => {
 
         let storage = createStorage({
             'woot-foo': JSON.stringify({
-                derp: 'foobar',
+                herp: 'foobar',
                 childState: {
                     kiddo: {
                         woot: 427
@@ -62,7 +62,7 @@ describe('Stateful', _ => {
             stateProvider: provider
         });
 
-        expect(owner.derp).to.equal('foobar');
+        expect(owner.herp).to.equal('foobar');
 
         let child = Child.new({
             parent: owner,
@@ -86,7 +86,7 @@ describe('Stateful', _ => {
         expect(provider._flush.timer.pending).to.be(false);
         expect(provider2._flush.timer.pending).to.be(true);
 
-        owner.derp = 'barfoo';
+        owner.herp = 'barfoo';
         expect(provider._flush.timer.pending).to.be(true);
         expect(provider2._flush.timer.pending).to.be(true);
 
@@ -100,7 +100,7 @@ describe('Stateful', _ => {
 
         expect(storage.data).to.equal({
             'woot-foo': JSON.stringify({
-                derp: 'barfoo',
+                herp: 'barfoo',
                 childState: {
                     kiddo: {
                         woot: 314

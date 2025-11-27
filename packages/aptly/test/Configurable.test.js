@@ -9,17 +9,17 @@ describe('Configurable', () => {
     it('basically works', () => {
         class Foo extends Configurable {
             static proto = {
-                derp: 42
+                herp: 42
             };
         }
 
         let foo = new Foo();
 
-        expect(foo.derp).to.equal(42);
+        expect(foo.herp).to.equal(42);
 
         let foo2 = new Foo();
 
-        expect(foo2.derp).to.equal(42);
+        expect(foo2.herp).to.equal(42);
 
         expect(foo.$meta).to.be(foo2.$meta);
     });
@@ -27,55 +27,55 @@ describe('Configurable', () => {
     it('handles arrays', () => {
         class Foo extends Configurable {
             static configurable = {
-                derp: class {
+                herp: class {
                     array = true;
                 }
             };
         }
 
         let a = [1, 2, 3];
-        let foo = new Foo({ derp: a });
+        let foo = new Foo({ herp: a });
 
-        expect(foo.derp).to.equal(a);
+        expect(foo.herp).to.equal(a);
 
-        foo.derp = a.slice();
+        foo.herp = a.slice();
 
-        expect(foo.derp).to.be(a);
+        expect(foo.herp).to.be(a);
     });
 
     it('handles flags', () => {
         class Foo extends Configurable {
             static configurable = {
-                derp: class extends Config.Flags {
+                herp: class extends Config.Flags {
                     //
                 }
             };
         }
 
         let a = { a: true, b: true };
-        let foo = new Foo({ derp: a });
+        let foo = new Foo({ herp: a });
 
-        expect(foo.derp).to.equal(a);
+        expect(foo.herp).to.equal(a);
 
-        foo.derp = { b: true, a: true };
+        foo.herp = { b: true, a: true };
 
-        expect(foo.derp).to.be(a);
+        expect(foo.herp).to.be(a);
 
-        foo.derp = 'a,b';
+        foo.herp = 'a,b';
 
-        expect(foo.derp).to.be(a);
+        expect(foo.herp).to.be(a);
 
-        foo.derp = ['a', 'b'];
+        foo.herp = ['a', 'b'];
 
-        expect(foo.derp).to.be(a);
+        expect(foo.herp).to.be(a);
 
-        foo.derp = 'a,b,-c';
+        foo.herp = 'a,b,-c';
 
-        expect(foo.derp).to.equal({ a: true, b: true, c: false });
+        expect(foo.herp).to.equal({ a: true, b: true, c: false });
 
-        foo.derp = ['x', 'y'];
+        foo.herp = ['x', 'y'];
 
-        expect(foo.derp).to.equal({ x: true, y: true });
+        expect(foo.herp).to.equal({ x: true, y: true });
     });
 
     it('className', () => {
@@ -107,14 +107,14 @@ describe('Configurable', () => {
 
         expect(Bar.isA('bar')).to.be(true);
         expect(Bar.isA('bar')).to.be(true);
-        expect(Bar.isA('bar', 'derp')).to.be(true);
+        expect(Bar.isA('bar', 'herp')).to.be(true);
 
         expect(clone(Baz.is)).to.equal({
             bar: true
         });
 
         expect(Baz.isA('bar')).to.be(true);
-        expect(Baz.isA('derp')).to.be(false);
+        expect(Baz.isA('herp')).to.be(false);
     });
 
     it('declarable', () => {
@@ -213,9 +213,9 @@ describe('Configurable', () => {
 
             expect(() => {
                 inst = new Bar({
-                    derp: 42
+                    herp: 42
                 });
-            }).to.throw('No such property "derp" in class Bar');
+            }).to.throw('No such property "herp" in class Bar');
         });
     });
 
@@ -231,7 +231,7 @@ describe('Configurable', () => {
 
                             apply(instance, value, was, firstTime) {
                                 log.push(['A.foo.apply', was, value, firstTime]);
-                                instance.derp = value;
+                                instance.herp = value;
                                 return value * 10;
                             }
 
@@ -282,7 +282,7 @@ describe('Configurable', () => {
 
                 expect(a.foo).to.equal(420);
                 expect(a.bar).to.equal(321);
-                expect(a.derp).to.equal(42);
+                expect(a.herp).to.equal(42);
                 expect(a.zip === null).to.be(true);
 
                 expect(log).to.equal([
@@ -310,7 +310,7 @@ describe('Configurable', () => {
 
                 expect(b.foo).to.equal(427);
                 expect(b.bar).to.equal(123);
-                expect(b.derp).to.equal(42);
+                expect(b.herp).to.equal(42);
                 expect(b.zap).to.equal(234);
                 expect(b.zip === null).to.be(true);
 
@@ -318,7 +318,7 @@ describe('Configurable', () => {
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 427, 12, false],
@@ -356,20 +356,20 @@ describe('Configurable', () => {
 
                 expect(b.foo).to.equal(427);
                 expect(b.bar).to.equal(123);
-                expect(b.derp).to.equal(42);
+                expect(b.herp).to.equal(42);
                 expect(b.zap).to.equal(234);
                 expect(b.zip === null).to.be(true);
 
                 expect(a.foo).to.equal(320);
                 expect(a.bar).to.equal(321);
-                expect(a.derp).to.equal(32);
+                expect(a.herp).to.equal(32);
                 expect(a.zip === null).to.be(true);
 
                 log.length = 0;
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 427, 12, false],
@@ -385,7 +385,7 @@ describe('Configurable', () => {
                 a.foo = 21;
 
                 expect(a.foo).to.equal(210);
-                expect(a.derp).to.equal(21);
+                expect(a.herp).to.equal(21);
 
                 expect(log).to.equal([
                     ['A.foo.apply', 320, 21, false],
@@ -418,12 +418,12 @@ describe('Configurable', () => {
 
                 expect(a.foo).to.equal(320);
                 expect(a.bar).to.equal(321);
-                expect(a.derp).to.equal(32);
+                expect(a.herp).to.equal(32);
                 expect(a.zip === null).to.be(true);
 
                 expect(b.foo).to.equal(427);
                 expect(b.bar).to.equal(123);
-                expect(b.derp).to.equal(42);
+                expect(b.herp).to.equal(42);
                 expect(b.zap).to.equal(234);
                 expect(b.zip === null).to.be(true);
 
@@ -431,7 +431,7 @@ describe('Configurable', () => {
                 a.foo = 21;
 
                 expect(a.foo).to.equal(210);
-                expect(a.derp).to.equal(21);
+                expect(a.herp).to.equal(21);
 
                 expect(log).to.equal([
                     ['A.foo.apply', 320, 21, false],
@@ -442,7 +442,7 @@ describe('Configurable', () => {
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 427, 12, false],
@@ -468,7 +468,7 @@ describe('Configurable', () => {
 
                             apply(instance, value, was, firstTime) {
                                 log.push(['A.foo.apply', was, value, firstTime]);
-                                instance.derp = value;
+                                instance.herp = value;
                                 return value * 10;
                             }
 
@@ -532,7 +532,7 @@ describe('Configurable', () => {
 
                 expect(a.bar).to.equal(321);
                 expect(a.zip == null).to.be(true);
-                expect(a.derp).to.equal(314);
+                expect(a.herp).to.equal(314);
             });
 
             it('instantiate derived class', () => {
@@ -563,13 +563,13 @@ describe('Configurable', () => {
 
                 expect(b.bar).to.equal(123);
                 expect(b.zip == null).to.be(true);
-                expect(b.derp).to.equal(42);
+                expect(b.herp).to.equal(42);
 
                 log.length = 0;
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 427, 12, false],
@@ -610,7 +610,7 @@ describe('Configurable', () => {
 
                 expect(b.bar).to.equal(123);
                 expect(b.zip == null).to.be(true);
-                expect(b.derp).to.equal(42);
+                expect(b.herp).to.equal(42);
 
                 log.length = 0;
 
@@ -634,13 +634,13 @@ describe('Configurable', () => {
 
                 expect(a.bar).to.equal(321);
                 expect(a.zip == null).to.be(true);
-                expect(a.derp).to.equal(314);
+                expect(a.herp).to.equal(314);
 
                 log.length = 0;
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 427, 12, false],
@@ -656,7 +656,7 @@ describe('Configurable', () => {
                 a.foo = 31;
 
                 expect(a.foo).to.equal(310);
-                expect(a.derp).to.equal(31);
+                expect(a.herp).to.equal(31);
 
                 expect(log).to.equal([
                     ['A.foo.apply', 3140, 31, false],
@@ -687,7 +687,7 @@ describe('Configurable', () => {
 
                 expect(a.bar).to.equal(321);
                 expect(a.zip == null).to.be(true);
-                expect(a.derp).to.equal(314);
+                expect(a.herp).to.equal(314);
 
                 log.length = 0;
 
@@ -716,13 +716,13 @@ describe('Configurable', () => {
 
                 expect(b.bar).to.equal(123);
                 expect(b.zip == null).to.be(true);
-                expect(b.derp).to.equal(42);
+                expect(b.herp).to.equal(42);
 
                 log.length = 0;
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 427, 12, false],
@@ -749,7 +749,7 @@ describe('Configurable', () => {
 
                             apply(instance, value, was, firstTime) {
                                 log.push(['A.foo.apply', was, value, firstTime]);
-                                instance.derp = value;
+                                instance.herp = value;
                                 return (value == null) ? value : (value * 10);
                             }
 
@@ -764,7 +764,7 @@ describe('Configurable', () => {
 
                             apply(instance, value, was, firstTime) {
                                 log.push(['A.bar.apply', was, value, firstTime]);
-                                instance.derp = value;
+                                instance.herp = value;
                                 return (value == null) ? value : (value * 100);
                             }
 
@@ -859,7 +859,7 @@ describe('Configurable', () => {
 
                 expect(a.bar).to.equal(42700);
                 expect(a.zip == null).to.be(true);
-                expect(a.derp).to.equal(42);
+                expect(a.herp).to.equal(42);
 
                 log.length = 0;
 
@@ -899,13 +899,13 @@ describe('Configurable', () => {
 
                 expect(b.bar).to.equal(4203);
                 expect(b.zip == null).to.be(true);
-                expect(b.derp).to.equal(427);
+                expect(b.herp).to.equal(427);
 
                 log.length = 0;
                 b.foo = 12;
 
                 expect(b.foo).to.equal(127);
-                expect(b.derp).to.equal(12);
+                expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
                     ['> B.foo.apply', 4277, 12, false],

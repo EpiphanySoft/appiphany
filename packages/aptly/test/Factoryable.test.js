@@ -9,7 +9,7 @@ describe('Factoryable', () => {
     const setup = () => {
         class Foo extends Configurable.mixin(Factoryable) {
             static type = 'auto';
-            static aliases = 'derp';
+            static aliases = 'herp';
 
             static factory = {
                 defaultType: 'auto'
@@ -57,12 +57,12 @@ describe('Factoryable', () => {
 
         expect(clone(Foo.is)).to.equal({
             auto: true,
-            derp: true
+            herp: true
         });
 
         expect(clone(Bar.is)).to.equal({
             auto: true,
-            derp: true,
+            herp: true,
             bar: true,
             woot: true
         });

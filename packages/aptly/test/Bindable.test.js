@@ -55,7 +55,7 @@ describe('Bindable', () => {
         ]);
 
         expect(() => {
-            inst.props.derp = 0;
+            inst.props.herp = 0;
         }).to.throw();
 
         inst.effects = {
@@ -148,23 +148,23 @@ describe('Bindable', () => {
             }
         }
 
-        class Derp extends Bar {
+        class Herp extends Bar {
             static configurable = {
                 props: {
-                    derp: props => {
-                        log.out('get derp');
+                    herp: props => {
+                        log.out('get herp');
                         return props.bar * 3;
                     }
                 }
             }
         }
 
-        class Woot extends Derp {
+        class Woot extends Herp {
             static configurable = {
                 props: {
                     woot: props => {
                         log.out('get woot');
-                        return props.derp * 5;
+                        return props.herp * 5;
                     }
                 }
             }
@@ -180,9 +180,9 @@ describe('Bindable', () => {
         expect(inst.props.woot).to.be(2 * 10 * 3 * 5);
         expect(log.get()).to.equal([
             'get woot',
-            'get derp'
+            'get herp'
         ]);
-        expect(inst.props.derp).to.be(2 * 10 * 3);
+        expect(inst.props.herp).to.be(2 * 10 * 3);
         expect(log.get()).to.equal([]);
 
     });
@@ -209,25 +209,25 @@ describe('Bindable', () => {
             }
         }
 
-        class Derp extends Configurable.mixin(Bindable) {
+        class Herp extends Configurable.mixin(Bindable) {
             static configurable = {
                 props: {
-                    derp: 3
+                    herp: 3
                 }
             }
         }
 
-        class Woot extends Derp {
+        class Woot extends Herp {
             static configurable = {
                 bind: {
                     'foo<': 'woot',
-                    'foo>': 'derp'
+                    'foo>': 'herp'
                 },
 
                 props: {
                     woot () {
                         log.out(`get woot ${this.id}`);
-                        return this.props.bar * this.props.derp * 5;
+                        return this.props.bar * this.props.herp * 5;
                     }
                 }
             }
@@ -245,7 +245,7 @@ describe('Bindable', () => {
             'get woot 123',
             'get bar'
         ]);
-        expect(inst.props.derp).to.be(3);
+        expect(inst.props.herp).to.be(3);
         expect(inst.props.bar).to.be(20);
         expect(log.get()).to.equal([]);
 
@@ -260,7 +260,7 @@ describe('Bindable', () => {
             'get woot 234',
             'get bar'
         ]);
-        expect(inst.props.derp).to.be(3);
+        expect(inst.props.herp).to.be(3);
         expect(inst.props.bar).to.be(210);
         expect(log.get()).to.equal([]);
     });
@@ -280,11 +280,11 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                derp: class {
+                herp: class {
                     value = null;
 
                     update (me, value) {
-                         log.out(`set derp ${value}`);
+                         log.out(`set herp ${value}`);
                      }
                 },
 
@@ -305,7 +305,7 @@ describe('Bindable', () => {
                 },
 
                 bind: {
-                    derp: 'bar',    // formula bind, can only be one-way (read)
+                    herp: 'bar',    // formula bind, can only be one-way (read)
                     woot: '~foo',   // value bind, default is read ('~' makes it two-way)
                     wop: 'wip'      // value bind, default is read
                 },
@@ -328,7 +328,7 @@ describe('Bindable', () => {
 
         expect(log.get()).to.equal([
             'get bar 321',
-            'set derp 15',
+            'set herp 15',
             'set woot 3',
             'set wop 42'
         ]);
@@ -337,7 +337,7 @@ describe('Bindable', () => {
         expect(inst.props.bar).to.be(3 * 5);
         expect(inst.props.wip).to.be(42);
 
-        expect(inst.derp).to.be(3 * 5);
+        expect(inst.herp).to.be(3 * 5);
         expect(inst.woot).to.be(3);
         expect(inst.wop).to.be(42);
 
@@ -353,13 +353,13 @@ describe('Bindable', () => {
 
         expect(log.get()).to.equal([
             'get bar 432',
-            'set derp 50',
+            'set herp 50',
             'set woot 10'
         ]);
         expect(inst.scheduler.pending).to.be(false);
         expect(inst.scheduler.cycles).to.be(1);
 
-        expect(inst.derp).to.be(50);
+        expect(inst.herp).to.be(50);
         expect(inst.woot).to.be(10);
         expect(inst.wop).to.be(42);
 
@@ -378,7 +378,7 @@ describe('Bindable', () => {
         expect(inst.scheduler.pending).to.be(false);
         expect(inst.scheduler.cycles).to.be(2);
 
-        expect(inst.derp).to.be(50);
+        expect(inst.herp).to.be(50);
         expect(inst.woot).to.be(10);
         expect(inst.wop).to.be(427);
     });
@@ -499,8 +499,8 @@ describe('Bindable', () => {
         }).to.throw('Cannot set property wop');
 
         expect(() => {
-            inst = new Parent({ parent: root, dip: 42, derp: 10 });
-        }).to.throw('No such property "derp" in class Parent');
+            inst = new Parent({ parent: root, dip: 42, herp: 10 });
+        }).to.throw('No such property "herp" in class Parent');
     });
 
     it('should handle shadowed and internal props correctly', async() => {
