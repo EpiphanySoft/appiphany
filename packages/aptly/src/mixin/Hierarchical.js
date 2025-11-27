@@ -1,8 +1,8 @@
-import { panik } from '../misc.js';
+import { panik, Config, chain } from '@appiphany/aptly';
 
 const
     insertingSym = Symbol('inserting'),
-    { create: chainProto, defineProperty, getPrototypeOf: getProto, setPrototypeOf: setProto } = Object,
+    { create: chainProto, getPrototypeOf: getProto, setPrototypeOf: setProto } = Object,
     createInheritable = p => chainProto(chainProto(p?.inheritable || null)),
     typeMatcher = type => {
         type = type || '';
@@ -28,6 +28,51 @@ const
 
         return _ => true;
     };
+
+class Refs {
+    #owner;
+
+    constructor (owner) {
+        this.#owner = owner;
+        this.map = null;
+    }
+
+    descend (node) {
+        let { map } = this,
+            child, ref;
+
+        for (child of node.childrenByType('*')) {
+            ref = child.ref;
+
+            if (ref) {
+                if (map[ref]) {
+                    panik(`Duplicate ref '${ref}'`);
+                }
+
+                map[ref] = child;
+            }
+
+            if (!child.nexus) {
+                this.descend(child);
+            }
+        }
+    }
+
+    invalidate () {
+        this.map = null;
+    }
+
+    lookup (ref) {
+        let me = this;
+
+        if (!me.map) {
+            me.map = chain();
+            me.descend(me.#owner);
+        }
+
+        return me.map[ref];
+    }
+}
 
 /**
  * Hierarchical objects are objects that can have parent/child relationships with other
@@ -77,10 +122,28 @@ const
  */
 export const Hierarchical = Base => class Hierarchical extends Base {
     static configurable = {
+        nexus: class extends Config.Bool {
+            update (me, nexus) {
+                let { inheritable } = me;
+
+                if (nexus) {
+                    me.refs = new Refs(me);
+                    inheritable.nexus = me;
+                }
+                else {
+                    delete inheritable.nexus;
+                }
+
+                // either way, we are changing visibility of refs below this node
+                // to the upper nexus
+                me.inherited.nexus?.refs.invalidate();
+            }
+        },
+
         parent: class {
             value = null;
 
-            apply(me, parent) {
+            apply (me, parent) {
                 for (let up = parent; up; up = up.parent) {
                     if (up === me) {
                         panik('parent cannot be a child of itself');
@@ -90,17 +153,27 @@ export const Hierarchical = Base => class Hierarchical extends Base {
                 return parent;
             }
 
-            update(me, parent, was) {
+            update (me, parent, was) {
                 was?._unlinkChild(me);
 
-                let inherited = me.inherited,
+                let { inherited } = me,
                     inheritable = parent?.inheritable;
 
                 if (getProto(inherited) !== inheritable) {
+                    inherited.nexus?.refs.invalidate();  // invalid our old nexus
                     setProto(inherited, inheritable);
+                    inherited.nexus?.refs.invalidate();  // invalid our new nexus
                 }
 
                 !me[insertingSym] && parent?.insertChild(me);
+            }
+        },
+
+        ref: class {
+            value = null;
+
+            update (me) {
+                me.inherited.nexus?.refs.invalidate();
             }
         }
     };
@@ -115,13 +188,18 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         _inherited: null,
         childCount: 0,
         nextSib: null,
-        prevSib: null
+        prevSib: null,
+        refs: null
     };
 
     destruct () {
-        this.parent?._unlinkChild(this);
+        let me = this,
+            child;
 
-        for (let child of this.childrenByType('*')) {
+        me.inherited.nexus?.refs.invalidate();
+        me.parent?._unlinkChild(me);
+
+        for (child of me.childrenByType('*')) {
             child.destroy();
         }
 
@@ -227,6 +305,12 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         }
 
         return null;
+    }
+
+    lookup (ref) {
+        let refs = this.refs || this.inherited.nexus?.refs;
+
+        return refs?.lookup(ref);
     }
 
     up (type) {

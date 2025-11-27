@@ -125,7 +125,7 @@ export class Component extends Widget.mixin(Factoryable) {
                             item.parent = me;
                             item.ref = ref;
 
-                            item = Component.factory.reconfigure(existingItem, item);
+                            item = Component.reconfigure(existingItem, item);
                         }
 
                         if (item === existingItem) {

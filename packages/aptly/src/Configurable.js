@@ -215,13 +215,21 @@ applyTo(Config.prototype, {
     update: null
 });
 
-const
-    wordRe = /,|\s+/;
+class Bool extends Config {
+    value = null;
+    default = false;
+
+    apply (instance, v) {
+        return !!v;
+    }
+}
 
 class Flags extends Config {
+    static wordRe = /,|\s+/;
+
     apply (instance, v, was) {
         if (typeof v === 'string') {
-            v = v.split(wordRe).filter(s => s);
+            v = v.split(Flags.wordRe).filter(s => s);
         }
 
         if (Array.isArray(v)) {
@@ -259,6 +267,7 @@ class Flags extends Config {
     }
 }
 
+Config.Bool = Bool;
 Config.Flags = Flags;
 
 //=======================================================================================
@@ -372,9 +381,6 @@ export class Configurable extends Declarable {
                     else {
                         panik(`No such property "${k}" in class ${meta.name}`);
                     }
-                    // else {
-                    //     target[k] = (v && target[k]) ? mergeCfg(target[k], v) : v;
-                    // }
                 }
             }
         }
