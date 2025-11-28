@@ -134,6 +134,17 @@ class Refs {
  */
 export const Hierarchical = Base => class Hierarchical extends Base {
     static configurable = {
+        /**
+         * @config {Boolean|String}
+         * @default false
+         * When set to a truthy value, this node will be published to the `inheritable`
+         * information object using the name `'nexus'`. This allows other nodes below
+         * this one to access the information using `inherited.nexus`.
+         *
+         * This node itself may be part of a nexus defined at higher levels, in which case
+         * the nexus to which this node belongs is found as `inherited.nexus` (the inherited
+         * info object for this node).
+         */
         nexus: class extends Config.Bool {
             update (me, nexus) {
                 let { inheritable } = me;

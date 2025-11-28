@@ -3,7 +3,9 @@ import { applyTo, chain } from '@appiphany/aptly';
 const
     canon = chain(),
     addCanon = s => canon[s] = s,
-    { now } = performance;
+    now = () => performance.now();
+
+let idSeed = 0;
 
 /**
  * This class represents an event that has been fired by an Eventable.
@@ -14,17 +16,24 @@ export class Event {
     }
 
     constructor (sender, options) {
-        let me = this;
+        let me = this,
+            prior = null;
 
         me.target = sender;
 
-        if (typeof options === 'string') {
+        if (options instanceof Event) {
+            prior = options;
+            me.type = prior.type;
+        }
+        else if (typeof options === 'string') {
             me.type = options;
         }
         else {
             applyTo(me, options);
         }
 
+        me.id = ++idSeed;
+        me.prior = prior;
         me.sender = sender;
         me.stopped = false;
         me.t0 = now();
@@ -45,7 +54,11 @@ export class Event {
     }
 
     stop () {
-        this.finish();
-        this.stopped = true;
+        if (!this.stopped) {
+            this.stopped = true;
+            this.finish();
+
+            this.prior?.stop();
+        }
     }
 }
