@@ -75,8 +75,8 @@ export const Eventable = Base => class Eventable extends Base {
 
     #dispatchers = null;
 
-    fire (ev) {
-        ev = new Event(this, ev);
+    fire (ev, extra) {
+        ev = new Event(this, ev, extra);
 
         this.#dispatchers?.[ev.type]?.fire(ev);
 

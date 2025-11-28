@@ -16,7 +16,7 @@ class Bindings extends Destroyable {
     // = {
     //      config: Signal.formula + {
     //          prop: 'foo',
-    //          twoWay: true,
+    //          flow: true,
     //          update: v => { ... }
     //      }
     //  }
@@ -46,7 +46,7 @@ class Bindings extends Destroyable {
     add (configName, prop, was) {
         let owner = this.#owner,
             { props } = owner,
-            sig, twoWay;
+            flow, sig, specialFlow;
 
         if (typeof prop === 'function') {
             if (was?.calc === prop) {
@@ -58,24 +58,31 @@ class Bindings extends Destroyable {
             sig.calc = prop;
         }
         else {
-            // config: 'prop'   one-way
+            // config: 'prop'   one-way (prop sets config)
             // config: '~prop'  two-way
-            twoWay = prop[0] === '~';
-            prop = twoWay ? prop.slice(1) : prop;
+            // config: '>prop'  one-way (config sets prop)
+            flow = prop[0];
+            flow = (specialFlow = flow === '~' || flow === '>') ? flow : '<';
+            prop = specialFlow ? prop.slice(1) : prop;
 
-            if (was && was.name === prop && was.twoWay === twoWay) {
+            if (was && was.name === prop && was.flow === flow) {
                 return null;
             }
 
             sig = Signal.formula(() => props[prop], { name: prop });
 
-            sig.twoWay = twoWay;
-            sig.update = twoWay && (v => props[prop] = v);
+            sig.flow = flow;
+            sig.update = flow !== '<' && (v => props[prop] = v);
         }
 
         sig.configName = configName;
 
-        owner[configName] = sig.get();
+        if (sig.flow === '>') {
+            sig.update(owner[configName]);
+        }
+        else {
+            owner[configName] = sig.get();
+        }
 
         return sig;
     }
@@ -453,6 +460,14 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         else {
             delete pub.$scheduler;
         }
+    }
+
+    onConfigChange (name, value, was) {
+        let sig = this._bindings?.map[name];
+
+        sig?.update?.(value);
+
+        super.onConfigChange(name, value, was);
     }
 
     //----------------------------------------------------------------------------------------

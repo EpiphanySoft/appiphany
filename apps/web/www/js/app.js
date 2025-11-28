@@ -8,14 +8,17 @@ window.Viewport = Viewport;
 window.v = Component.create({
     type: 'viewport',
     props: {
-        woot: 'light'
+        woot: null
+    },
+    bind: {
+        theme: '>woot'
     },
     stateProvider: {
         type: 'storage',
         storage: localStorage
     },
     stateful: {
-        woot: true,
+        // woot: true
         theme: true
     },
     items: {
@@ -39,7 +42,10 @@ window.v = Component.create({
                     type: 'button',
                     text: 'Click me!',
                     on: {
-                        click: 'onClickMe'
+                        click: 'viewport.toggleTheme'
+                        // click: e => {
+                        //     debugger;
+                        // }
                     }
                 }
             }

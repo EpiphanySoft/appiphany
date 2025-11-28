@@ -5,6 +5,8 @@ export class Viewport extends Component {
     static type = 'viewport';
 
     static configurable = {
+        nexus: 'viewport',
+
         renderTo: ['adopt', document.body],
 
         theme: class {
@@ -22,6 +24,10 @@ export class Viewport extends Component {
             }
         }
     };
+
+    toggleTheme () {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    }
 }
 
 Viewport.initClass();

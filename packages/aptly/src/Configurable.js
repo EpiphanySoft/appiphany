@@ -114,7 +114,7 @@ export class Config {
 
             me.update?.(instance, v, was, firstTime);
 
-            instance.initialized && !instance.onConfigChange.$nop && instance.onConfigChange(me.name);
+            instance.initialized && !instance.onConfigChange.$nop && instance.onConfigChange(me.name, v, was);
         }
     }
 

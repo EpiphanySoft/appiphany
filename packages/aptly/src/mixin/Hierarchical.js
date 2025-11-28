@@ -145,7 +145,7 @@ export const Hierarchical = Base => class Hierarchical extends Base {
          * the nexus to which this node belongs is found as `inherited.nexus` (the inherited
          * info object for this node).
          */
-        nexus: class extends Config.Bool {
+        nexus: class {
             update (me, nexus) {
                 let { inheritable } = me;
 

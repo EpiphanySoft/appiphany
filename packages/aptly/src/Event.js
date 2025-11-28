@@ -1,4 +1,4 @@
-import { applyTo, chain } from '@appiphany/aptly';
+import { applyTo, chain, isObject } from '@appiphany/aptly';
 
 const
     canon = chain(),
@@ -15,7 +15,7 @@ export class Event {
         return canon[type] ??= addCanon(type.toLowerCase());
     }
 
-    constructor (sender, options) {
+    constructor (sender, options, extra) {
         let me = this,
             prior = null;
 
@@ -30,6 +30,13 @@ export class Event {
         }
         else {
             applyTo(me, options);
+        }
+
+        if (isObject(extra)) {
+            applyTo(me, extra);
+        }
+        else if (typeof extra.preventDefault === 'function') {
+            me.browserEvent = extra;
         }
 
         me.id = ++idSeed;
