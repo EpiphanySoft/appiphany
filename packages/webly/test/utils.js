@@ -1,21 +1,21 @@
 
 export const
     logger = () => {
-        let log = [];
-
-        return {
-            get length () {
-                return log.length;
-            },
-            get () {
-                let ret = log;
-                log = [];
-                return ret;
-            },
-            out (s) {
-                log.push(s);
-            }
+        const log = s => {
+            log.items.push(s);
         };
+
+        log.items = [];
+
+        Reflect.defineProperty(log, 'size', { get: () => log.items.length });
+
+        log.get = () => {
+            let ret = log.items;
+            log.items = [];
+            return ret;
+        };
+
+        return log;
     },
     sleep = ms => new Promise(resolve => setTimeout(() => resolve(), ms)),
     stall = () => Promise.resolve(),

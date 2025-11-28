@@ -28,7 +28,7 @@ describe('Bindable', () => {
                     foo: 21,
 
                     bar: props => {
-                        log.out('get bar');
+                        log('get bar');
                         return props.foo * 10;
                     }
                 }
@@ -60,9 +60,9 @@ describe('Bindable', () => {
 
         inst.effects = {
             woot () {
-                log.out('>> effect woot');
-                log.out(`bar=${this.props.bar}`);
-                log.out('<< effect woot');
+                log('>> effect woot');
+                log(`bar=${this.props.bar}`);
+                log('<< effect woot');
             }
         };
 
@@ -74,7 +74,7 @@ describe('Bindable', () => {
 
         inst.props.foo = 427;
 
-        await until(() => log.length > 0);
+        await until(() => log.size > 0);
 
         expect(log.get()).to.equal([
             '>> effect woot',
@@ -99,7 +99,7 @@ describe('Bindable', () => {
             static configurable = {
                 props: {
                     bar: props => {
-                        log.out('get bar');
+                        log('get bar');
                         return props.foo * 10;
                     }
                 }
@@ -141,7 +141,7 @@ describe('Bindable', () => {
             static configurable = {
                 props: {
                     bar: props => {
-                        log.out('get bar');
+                        log('get bar');
                         return props.foo * 10;
                     }
                 }
@@ -152,7 +152,7 @@ describe('Bindable', () => {
             static configurable = {
                 props: {
                     herp: props => {
-                        log.out('get herp');
+                        log('get herp');
                         return props.bar * 3;
                     }
                 }
@@ -163,7 +163,7 @@ describe('Bindable', () => {
             static configurable = {
                 props: {
                     woot: props => {
-                        log.out('get woot');
+                        log('get woot');
                         return props.herp * 5;
                     }
                 }
@@ -202,7 +202,7 @@ describe('Bindable', () => {
             static configurable = {
                 props: {
                     bar: props => {
-                        log.out('get bar');
+                        log('get bar');
                         return props.foo * 10;
                     }
                 }
@@ -226,7 +226,7 @@ describe('Bindable', () => {
 
                 props: {
                     woot () {
-                        log.out(`get woot ${this.id}`);
+                        log(`get woot ${this.id}`);
                         return this.props.bar * this.props.herp * 5;
                     }
                 }
@@ -284,7 +284,7 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.out(`set herp ${value}`);
+                         log(`set herp ${value}`);
                      }
                 },
 
@@ -292,7 +292,7 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.out(`set woot ${value}`);
+                         log(`set woot ${value}`);
                      }
                 },
 
@@ -300,7 +300,7 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.out(`set wop ${value}`);
+                         log(`set wop ${value}`);
                      }
                 },
 
@@ -312,7 +312,7 @@ describe('Bindable', () => {
 
                 props: {
                     bar () {
-                        log.out(`get bar ${this.id}`);
+                        log(`get bar ${this.id}`);
                         return this.props.foo * 5;
                     }
                 }
@@ -348,7 +348,7 @@ describe('Bindable', () => {
         expect(log.get()).to.equal([
         ]);
 
-        await until(() => log.length === 3);
+        await until(() => log.size === 3);
         await sleep(20);
 
         expect(log.get()).to.equal([
@@ -369,7 +369,7 @@ describe('Bindable', () => {
         expect(log.get()).to.equal([
         ]);
 
-        await until(() => log.length === 1);
+        await until(() => log.size === 1);
         await sleep(20);
 
         expect(log.get()).to.equal([
@@ -401,13 +401,13 @@ describe('Bindable', () => {
                     value = null;
 
                     update (me, value) {
-                         log.out(`set woot ${value}`);
+                         log(`set woot ${value}`);
                      }
                 },
 
                 bind: {
                     woot: props => {
-                        log.out('calc woot');
+                        log('calc woot');
                         return props.foo * 5;
                     }
                 }
@@ -433,7 +433,7 @@ describe('Bindable', () => {
         expect(log.get()).to.equal([
         ]);
 
-        await until(() => log.length === 2);
+        await until(() => log.size === 2);
         await sleep(20);
 
         expect(log.get()).to.equal([

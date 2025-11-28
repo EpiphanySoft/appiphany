@@ -19,7 +19,7 @@ describe('Eventable', () => {
                 static configurable = {
                     on: {
                         click: ev => {
-                            log.out(ev.type);
+                            log(ev.type);
                             ev.woot = 123;
                         }
                     }
@@ -44,7 +44,7 @@ describe('Eventable', () => {
                 };
 
                 onClick (ev) {
-                    log.out(ev.type);
+                    log(ev.type);
                     ev.woot = this.id;
                 }
             }

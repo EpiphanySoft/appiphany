@@ -38,8 +38,7 @@ describe('Scheduler', () => {
 
         expect(logged()).to.equal([]);
 
-        await until(() =>
-            log.length === 2);
+        await until(() => log.length === 2);
 
         expect(scheduler.cycles).to.equal(3);
         expect(logged()).to.equal([
