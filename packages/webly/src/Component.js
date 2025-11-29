@@ -59,12 +59,13 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     static configurable = {
-        $props: {
-            cls: null,
-            html: null,
-            style: null,
-            tag: 'div'
-        },
+        cls: null,
+
+        html: null,
+
+        style: null,
+
+        tag: 'div',
 
         /**
          * The default `renderTarget` for items that do not specify their own `renderTarget`.
@@ -264,7 +265,7 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     render () {
-        let { cls, html, style, tag } = this.props;
+        let { cls, html, style, tag } = this;
 
         return {
             tag,
