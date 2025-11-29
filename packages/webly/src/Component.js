@@ -10,6 +10,7 @@ const
         before: 'before',
         after: 'after'
     },
+    ignoredComposeConfigs = ['props', 'renderTarget'],
     gatherRefs = (refs, ref, spec) => {
         //  spec = {
         //      specs: {
@@ -157,12 +158,6 @@ export class Component extends Widget.mixin(Factoryable) {
 
                 return same ? was : items;
             }
-
-            update (me) {
-                if (me.initialized) {
-                    me.recompose(true);
-                }
-            }
         },
 
         /**
@@ -202,16 +197,13 @@ export class Component extends Widget.mixin(Factoryable) {
             apply (me, value) {
                 return value ? (Array.isArray(value) ? value : ['append', value]) : [];
             }
-
-            update (me) {
-                me.recompose(true);
-            }
         }
     };
 
     #composer = null;
     #dom = null;
     #recomposer = null;
+    #renderConfigs = null;
     #renderToUsed = false;
     #renderWatcher = null;
     #watcherNotified = false;
@@ -263,14 +255,22 @@ export class Component extends Widget.mixin(Factoryable) {
         }
     }
 
+    onConfigChange (name, value, was) {
+        super.onConfigChange(name, value, was);
+
+        if (this.initialized && this.#renderConfigs?.includes(name)) {
+            this.recompose(true);
+        }
+    }
+
     render () {
-        let { props } = this;
+        let { cls, html, style, tag } = this.props;
 
         return {
-            tag: props.tag,
-            class: props.cls,
-            html: props.html,
-            style: props.style
+            tag,
+            html,
+            class: clone(cls),
+            style: clone(style)
         };
     }
 
@@ -291,21 +291,31 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     recompose (full) {
-        let { id } = this,
-            dom = this.#dom,
-            [renderToUsed, mode, renderTo] = this.#getRenderPlan(),
+        let me = this,
+            { id } = me,
+            dom = me.#dom,
+            [renderToUsed, mode, renderTo] = me.#getRenderPlan(),
             adopt = mode === 'adopt',
-            composer = this.#composer
-                ??= Signal.formula(this.compose.bind(this), { name: `composer@${id}` }),
-            watcher = this.#renderWatcher,
-            spec;
+            composer = me.#composer ??=
+                Signal.formula(() => me.compose(), { name: `composer@${id}` }),
+            watcher = me.#renderWatcher,
+            configsUsed, spec;
 
         full && composer.invalidate();
 
+        me.hookGetConfig = name =>
+            !ignoredComposeConfigs.includes(name) && ((configsUsed ??= {})[name] = true);
+
         spec = composer.get();
 
+        delete me.hookGetConfig;
+
+        if (configsUsed) {
+            me.#renderConfigs = Object.keys(configsUsed);
+        }
+
         if (!spec) {
-            this.#unrender();
+            me.#unrender();
         }
         else {
             spec.id = id;
@@ -315,7 +325,7 @@ export class Component extends Widget.mixin(Factoryable) {
             }
 
             if (!dom) {
-                this.#dom = dom = new Dom(adopt ? renderTo : null, this);
+                me.#dom = dom = new Dom(adopt ? renderTo : null, me);
             }
             else if (dom.adopted !== adopt) {
                 panik('Cannot change between adopted and rendered element');
@@ -327,14 +337,14 @@ export class Component extends Widget.mixin(Factoryable) {
             dom.update(spec);
 
             if (!watcher) {
-                this.#renderWatcher = watcher = Signal.watch(() => {
-                    this.#watcherNotified = true;
-                    this.recomposeSoon();
+                me.#renderWatcher = watcher = Signal.watch(() => {
+                    me.#watcherNotified = true;
+                    me.recomposeSoon();
                 });
 
                 watcher.watch(composer);
 
-                this.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
+                me.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
             }
         }
     }

@@ -7,35 +7,22 @@ window.Viewport = Viewport;
 
 window.v = Component.create({
     type: 'viewport',
-    props: {
-        woot: null
-    },
-    bind: {
-        theme: '>woot'
-    },
-    stateProvider: {
-        type: 'storage',
-        storage: localStorage
-    },
-    stateful: {
-        // woot: true
-        theme: true
-    },
+
     items: {
         foo: {
             cls: 'woot',
             items: {
-                foo: {
+                herp: {
                     cls: 'herp',
                     html: 'Woot!!!',
                     style: { color: 'yellow' }
                 },
-                bar: {
+                woot: {
                     cls: 'woot',
                     html: 'herp!',
                     style: 'color: lime; fontSize: 2em',
                     bind: {
-                        html: p => p.woot?.toUpperCase()
+                        html: p => p.theme?.toUpperCase()
                     }
                 },
                 btn: {
@@ -43,9 +30,7 @@ window.v = Component.create({
                     text: 'Click me!',
                     on: {
                         click: 'viewport.toggleTheme'
-                        // click: e => {
-                        //     debugger;
-                        // }
+                        // click: e => { debugger; }
                     }
                 }
             }

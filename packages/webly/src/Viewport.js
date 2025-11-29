@@ -7,26 +7,44 @@ export class Viewport extends Component {
     static configurable = {
         nexus: 'viewport',
 
-        renderTo: ['adopt', document.body],
+        props: {
+            theme: 'light'
+        },
 
-        theme: class {
-            value = '';
+        effects: {
+            theme (props) {
+                let { theme } = props,
+                    { themes } = this,
+                    classes = Object.fromEntries(themes.map(t => [`theme-${t}`, t === theme]));
 
-            update (me, theme) {
-                theme ??= 'dark';
-
-                let dark = theme !== 'light';
-
-                Dom.docRoot.setClasses({
-                    'theme-dark': dark,
-                    'theme-light': !dark
-                })
+                Dom.docRoot.setClasses(classes);
             }
-        }
+        },
+
+        stateful: {
+            theme: true
+        },
+
+        stateProvider: {
+            type: 'storage',
+            storage: localStorage
+        },
+
+        themes: [
+            'light',
+            'dark'
+        ],
+
+        renderTo: ['adopt', document.body]
     };
 
     toggleTheme () {
-        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        let { props, themes } = this,
+            { theme } = props;
+
+        theme = (themes.indexOf(theme) + 1) % themes.length;
+
+        props.theme = themes[theme];
     }
 }
 

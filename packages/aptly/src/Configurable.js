@@ -150,6 +150,8 @@ export class Config {
 
         return config._accessor || (config._accessor = {
             get() {
+                this.hookGetConfig?.(config.name, config);
+
                 return this.$meta.configs[config.name].get(this);
             },
 
@@ -338,6 +340,8 @@ export class Configurable extends Declarable {
 
     static proto = {
         configuring: null,
+
+        hookGetConfig: null,
 
         initialConfig: null,  // config object passed to constructor
         instanceConfig: null  // fully populated config object
@@ -553,7 +557,7 @@ export class Configurable extends Declarable {
         return this[name];
     }
 
-    onConfigChange (name) {
+    onConfigChange (name, value, was) {
         // template method
     }
 

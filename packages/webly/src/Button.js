@@ -12,12 +12,14 @@ export class Button extends Component {
             },
             tag: 'button',
             text: null
-        }
+        },
+
+        level: null  // info, success, warning, danger
     };
 
     render () {
-        let { props } = this,
-            { text } = props,
+        let { level, props } = this,
+            { text, theme } = props,
             ret = super.render();
 
         if (text) {
@@ -25,6 +27,10 @@ export class Button extends Component {
         }
 
         merge(ret, {
+            class: {
+                [`is-${level}`]: !!level,
+                [`is-${theme}`]: true,
+            },
             listeners: {
                 click: 'onClick'
             }

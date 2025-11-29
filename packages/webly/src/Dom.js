@@ -86,20 +86,21 @@ export class Dom {
     static key = '$dom';
 
     static specialProps = {
-        tag   : 1,  // the tagName
-        html  : 1,
-        owner : 1,
-        text  : 1,
-        ref   : 1,
-        specs : 1,
+        tag      : 1,  // the tagName
+        html     : 1,
+        owner    : 1,
+        listeners: 1,
+        text     : 1,
+        ref      : 1,
+        specs    : 1,
 
-        class : 1,
-        data  : 1,
-        style : 1,
+        class    : 1,
+        data     : 1,
+        style    : 1,
 
-        after : 1,
-        before: 1,
-        parent: 1
+        after    : 1,
+        before   : 1,
+        parent   : 1
     };
 
     static get body () {

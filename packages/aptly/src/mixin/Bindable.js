@@ -181,7 +181,7 @@ class Effects extends Destroyable {
 
         signal = Signal.formula(() => {
             cleanup?.();
-            cleanup = !owner.destroyed && fn.call(owner);
+            cleanup = !owner.destroyed && fn.call(owner, owner.props);
         }, { name });
 
         un = () => {

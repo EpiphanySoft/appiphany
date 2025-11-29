@@ -165,11 +165,13 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         return state;
     }
 
-    onConfigChange (name) {
+    onConfigChange (name, value, was) {
         let me = this;
 
         if (me.initialized && me.stateId && me.stateful?.[name]) {
             me.stateDirty = true;
         }
+
+        super.onConfigChange(name, value, was);
     }
 }
