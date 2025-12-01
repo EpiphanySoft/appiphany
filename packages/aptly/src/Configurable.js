@@ -1,5 +1,7 @@
-import { clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo,
-         Declarable }
+import {
+    clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo,
+    Declarable, remove
+}
     from '@appiphany/aptly';
 
 
@@ -97,7 +99,7 @@ export class Config {
         let me = this,
             { prop } = me,
             was = instance[prop],
-            firstTime = !hasOwn(instance, prop),
+            firstTime = !hasOwn(instance, prop) || instance.configuring?.firstTime,
             handled, applied;
 
         if (me.apply) {
@@ -113,8 +115,11 @@ export class Config {
             instance[prop] = v;
 
             me.update?.(instance, v, was, firstTime);
+            handled = true;
+        }
 
-            instance.initialized && !instance.onConfigChange.$nop && instance.onConfigChange(me.name, v, was);
+        if (handled && !firstTime) {
+            instance.onConfigChange(me.name, v, was);
         }
     }
 
@@ -557,8 +562,17 @@ export class Configurable extends Declarable {
         return this[name];
     }
 
+    #configWatchers = null;
+
     onConfigChange (name, value, was) {
-        // template method
+        let watchers = this.#configWatchers?.[name],
+            fn;
+
+        if (watchers) {
+            for (fn of watchers) {
+                fn(name, value, was);
+            }
+        }
     }
 
     peekConfig (name) {
@@ -592,9 +606,41 @@ export class Configurable extends Declarable {
 
         return configsUsed;
     }
-}
 
-Configurable.prototype.onConfigChange.$nop = true;
+    watchConfigs (fn, configs) {
+        let watching,
+            watcher = configs => {
+                if (Array.isArray(configs)) {
+                    configs = Object.fromEntries(configs.map(c => [c, true]));
+                }
+
+                let was = watching,
+                    configName;
+
+                watching = configs;
+
+                if (watching) {
+                    for (configName in watching) {
+                        if (!was?.[configName]) {
+                            ((this.#configWatchers ??= chain())[configName] ??= []).push(fn);
+                        }
+                    }
+                }
+
+                if (was) {
+                    for (configName in was) {
+                        if (!watching?.[configName]) {
+                            remove(this.#configWatchers[configName], fn);
+                        }
+                    }
+                }
+            };
+
+        configs && watcher(configs);
+
+        return watcher;
+    }
+}
 
 // Cannot use declarables because there are static getters for these:
 applyTo(Configurable.$meta, { // this calls Configurable.initClass()

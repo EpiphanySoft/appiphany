@@ -5,8 +5,7 @@ import { Hierarchical } from '@appiphany/aptly/mixin';
 const
     getProto = o => o ? Object.getPrototypeOf(o) : null,
     getParentProps = p => getProto(p?.props),
-    createProps = p => Object.create(Object.create(getParentProps(p))),
-    invalidateSignal = signal => signal.invalidate();
+    createProps = p => Object.create(Object.create(getParentProps(p)));
 
 
 class Bindings extends Destroyable {
@@ -74,23 +73,23 @@ class Bindings extends Destroyable {
             sig = Signal.formula(() => props[prop], { name: prop });
 
             sig.flow = flow;
-            sig.update = flow !== '<' && (v => props[prop] = v);
+
+            if (flow !== '<') {
+                sig.configWatch = owner.watchConfigs((_, v) => props[prop] = v, [configName]);
+            }
+            // sig.update = flow !== '<' && (v => props[prop] = v);
         }
 
         sig.configName = configName;
 
         if (sig.flow === '>') {
-            sig.update(owner[configName]);
+            props[prop] = owner[configName];
         }
         else {
             owner[configName] = sig.get();
         }
 
         return sig;
-    }
-
-    onConfigChange (name, value) {
-        this.#map[name]?.update?.(value);
     }
 
     update (bind) {
@@ -153,7 +152,6 @@ class Bindings extends Destroyable {
 class Effects extends Destroyable {
     static idSeed = 0;
 
-    #configEffects = chain();
     #effects = chain();
     #handler;
     #owner;
@@ -184,22 +182,23 @@ class Effects extends Destroyable {
             effects = me.#effects,
             owner = me.#owner,
             watcher = me.#watcher,
-            cleanup, configsUsed, signal, un;
+            cleanup, configWatch, signal, un;
 
         signal = Signal.formula(() => {
             cleanup?.();
             cleanup = null;
 
-            configsUsed = me.#trackSignalConfigs(signal, configsUsed,
-                !owner.destroyed && owner.trackUsedConfigs(() => {
-                    cleanup = fn.call(owner, owner.props);
-                }));
+            configWatch ??= owner.watchConfigs(() => signal.invalidate());
+
+            configWatch(!owner.destroyed && owner.trackUsedConfigs(() => {
+                cleanup = fn.call(owner, owner.props);
+            }));
         }, { name });
 
         un = () => {
-            configsUsed && me.#trackSignalConfigs(signal, configsUsed);
+            configWatch?.();
             cleanup?.();
-            configsUsed = cleanup = null;
+            configWatch = cleanup = null;
             delete effects[name];
             watcher.unwatch(signal);
         };
@@ -233,10 +232,6 @@ class Effects extends Destroyable {
         return () => uns.forEach(un => un());
     }
 
-    onConfigChange (name) {
-        this.#configEffects[name]?.forEach(invalidateSignal);
-    }
-
     remove (name) {
         this.#effects[name]?.();
     }
@@ -258,28 +253,6 @@ class Effects extends Destroyable {
 
             watcher.watch();
         }
-    }
-
-    #trackSignalConfigs (signal, configsUsedBefore, configsUsedAfter) {
-        let configName;
-
-        if (configsUsedAfter) {
-            for (configName in configsUsedAfter) {
-                if (!configsUsedBefore?.[configName]) {
-                    (this.#configEffects[configName] ??= []).push(signal);
-                }
-            }
-        }
-
-        if (configsUsedBefore) {
-            for (configName in configsUsedBefore) {
-                if (!configsUsedAfter?.[configName]) {
-                    remove(this.#configEffects[configName], signal);
-                }
-            }
-        }
-
-        return configsUsedAfter;
     }
 }
 
@@ -425,8 +398,8 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
                     set (v) {
                         this.$props[name] = v;
 
-                        if (this.initialized !== false && !this.onConfigChange?.$nop) {
-                            this.onConfigChange?.(name);
+                        if (this.initialized !== false) {
+                            this.onConfigChange(name);
                         }
                     }
                 };
@@ -500,13 +473,6 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         else {
             delete pub.$scheduler;
         }
-    }
-
-    onConfigChange (name, value, was) {
-        this._bindings?.onConfigChange(name, value);
-        this._effects?.onConfigChange(name);
-
-        super.onConfigChange(name, value, was);
     }
 
     //----------------------------------------------------------------------------------------
