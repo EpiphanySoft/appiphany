@@ -578,6 +578,20 @@ export class Configurable extends Declarable {
             return (v == null || typeof v === 'function') ? SKIP : [k, jsonify(v)];
         });
     }
+
+    trackUsedConfigs (fn, excludeConfigs) {
+        let me = this,
+            configsUsed = null;
+
+        me.hookGetConfig = name =>
+            !excludeConfigs?.[name] && ((configsUsed ??= {})[name] = true);
+
+        fn();
+
+        delete me.hookGetConfig;
+
+        return configsUsed;
+    }
 }
 
 Configurable.prototype.onConfigChange.$nop = true;

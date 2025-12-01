@@ -86,21 +86,21 @@ export class Dom {
     static key = '$dom';
 
     static specialProps = {
-        tag      : 1,  // the tagName
-        html     : 1,
-        owner    : 1,
-        listeners: 1,
-        text     : 1,
-        ref      : 1,
-        specs    : 1,
+        tag   : 1,  // the tagName
+        html  : 1,
+        on    : 1,
+        owner : 1,
+        text  : 1,
+        ref   : 1,
+        specs : 1,
 
-        class    : 1,
-        data     : 1,
-        style    : 1,
+        class : 1,
+        data  : 1,
+        style : 1,
 
-        after    : 1,
-        before   : 1,
-        parent   : 1
+        after : 1,
+        before: 1,
+        parent: 1
     };
 
     static get body () {
@@ -396,7 +396,7 @@ export class Dom {
      */
     update (spec, context) {
         let { el, spec: was } = this,
-            { after, before, parent, listeners, class: cls, tag, html, text, data, ref, specs, style }
+            { after, before, parent, on: listeners, class: cls, tag, html, text, data, ref, specs, style }
                 = (spec ??= {});
 
         // unwrap any Dom instances
@@ -463,7 +463,7 @@ export class Dom {
             this._updateSubTree(Dom.canonicalizeSpecs(specs), context);
         }
 
-        if (!isEqual(listeners, was.listeners)) {
+        if (!isEqual(listeners, was.on)) {
             this.#ownerListeners?.();
             this.#ownerListeners = listeners ? this.on(listeners) : null;
         }

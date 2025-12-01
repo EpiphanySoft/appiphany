@@ -1,4 +1,4 @@
-import { chain, panik, Widget, Signal, isObject, clone } from '@appiphany/aptly';
+import { chain, panik, Widget, Signal, isObject, clone, merge } from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 import { Dom } from '@appiphany/webly';
 
@@ -10,7 +10,7 @@ const
         before: 'before',
         after: 'after'
     },
-    ignoredComposeConfigs = ['props', 'renderTarget'],
+    ignoredComposeConfigs = { props: 1, renderTarget: 1 },
     gatherRefs = (refs, ref, spec) => {
         //  spec = {
         //      specs: {
@@ -201,6 +201,12 @@ export class Component extends Widget.mixin(Factoryable) {
         }
     };
 
+    static shardable = {
+        render (a, b) {
+            return merge(a, b);
+        }
+    };
+
     #composer = null;
     #dom = null;
     #recomposer = null;
@@ -259,7 +265,7 @@ export class Component extends Widget.mixin(Factoryable) {
     onConfigChange (name, value, was) {
         super.onConfigChange(name, value, was);
 
-        if (this.initialized && this.#renderConfigs?.includes(name)) {
+        if (this.initialized && this.#renderConfigs?.[name]) {
             this.recompose(true);
         }
     }
@@ -304,15 +310,12 @@ export class Component extends Widget.mixin(Factoryable) {
 
         full && composer.invalidate();
 
-        me.hookGetConfig = name =>
-            !ignoredComposeConfigs.includes(name) && ((configsUsed ??= {})[name] = true);
-
-        spec = composer.get();
-
-        delete me.hookGetConfig;
+        configsUsed = me.trackUsedConfigs(() => {
+            spec = composer.get();
+        });
 
         if (configsUsed) {
-            me.#renderConfigs = Object.keys(configsUsed);
+            me.#renderConfigs = configsUsed;
         }
 
         if (!spec) {

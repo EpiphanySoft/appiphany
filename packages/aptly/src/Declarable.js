@@ -5,9 +5,33 @@ import { decapitalize, nop, chain, applyTo, panik, quoteWrap, Destroyable, isObj
 const
     { freeze, getOwnPropertyDescriptor, hasOwn } = Object,
     { defineProperty } = Reflect,
+    EMPTY_ARRAY = freeze([]),
     EMPTY_OBJECT = freeze({}),
+    extendersSym = Symbol('extenders'),
     metaSym = Symbol('metaClass'),
-    mixinIdSym = Symbol('mixinId');
+    mixinIdSym = Symbol('mixinId'),
+    decodeShard = (name, shard) => {
+        let t = typeof shard;
+
+        if (t === 'function') {
+            shard = {
+                reducer: shard
+            };
+        }
+        else if (!(shard && t === 'object')) {
+            shard = {};
+        }
+        // else {
+        //     shard = {
+        //         reducer: (a, b) => ...,
+        //         reverse: false
+        //     }
+        // }
+
+        shard.name = name;
+
+        return shard;
+    };
 
 let nextMixinId = 0;
 
@@ -27,6 +51,7 @@ export class MetaClass {
         // use of cls properties prior to this point is likely wrong.
         me.super = zuper = me.superclass?.$meta || null;
         me.contract = chain(zuper?.contract || null);
+        me.extenders = zuper?.extenders || EMPTY_ARRAY;
 
         cls[metaSym] = me;
 
@@ -90,9 +115,41 @@ export class MetaClass {
 
         if (!ret && create) {
             me[name] = ret = chain(me.super?.getInherited(name) || null);
+            ret[metaSym] = me;
         }
 
         return ret;
+    }
+
+    getShards (name) {
+        let me = this,
+            shards = me.shards?.[name],
+            proto;
+
+        if (!shards) {
+            proto = me.class.prototype;
+            shards = me.super?.getShards(name) || EMPTY_ARRAY;
+
+            if (hasOwn(proto, name)) {
+                shards = shards.concat(proto[name]);
+            }
+
+            (me.shards ??= chain())[name] = shards;
+        }
+
+        return shards;
+    }
+
+    onExtend (fn) {
+        let me = this,
+            { extenders } = me;
+
+        if (extenders[extendersSym] !== me) {
+            me.extenders = extenders = extenders.slice();
+            extenders[extendersSym] = me;
+        }
+
+        extenders.push(fn);
     }
 }
 
@@ -129,6 +186,71 @@ export class Declarable extends Destroyable {
 
         proto (cls, properties) {
             applyTo(cls.prototype, properties);
+        },
+
+        shardable (cls, shardable) {
+            let meta = cls.$meta,
+                proto = cls.prototype,
+                shards = meta.getInherited('shards');
+
+            if (Array.isArray(shardable)) {
+                shardable = Object.fromEntries(shardable.map(s => [s, {}]));
+            }
+
+            Object.entries(shardable).forEach(([name, shard]) => {
+                if (shards[name]) {
+                    panik(`Shard already declared in class ${meta.name}: ${name}`);
+                }
+
+                shard = decodeShard(name, shard);
+
+                let reducer = shard.reducer,
+                    descriptor = {
+                        value (...args) {
+                            let shards = this.$meta.getInherited('shards')[name],
+                                fn, r, ret;
+
+                            for (fn of shards) {
+                                r = fn.apply(this, args);
+                                ret = (!reducer || fn === shards[0]) ? r : reducer(ret, r);
+                            }
+
+                            return ret;
+                        }
+                    };
+
+                descriptor.value.shard = shard;
+
+                shards[name] = [];
+
+                if (hasOwn(proto, name)) {
+                    shards[name].push(proto[name]);
+                }
+
+                // Put the shard method on the prototype (replacing the original method)
+                defineProperty(proto, name, descriptor);
+            });
+
+            // Watch all derived classes for overrides of the shardable methods. If they exist,
+            // they need to be gathered in the "shards" object and removed from the prototype to
+            // expose the original shard fn from the base class (added above).
+            cls.$meta.onExtend(derived => {
+                if (derived !== cls) {
+                    let shards = derived.$meta.getInherited('shards'),
+                        proto = derived.prototype,
+                        fn, s;
+
+                    for (s in shardable) {
+                        if (hasOwn(proto, s)) {
+                            fn = proto[s];    // get the new method
+                            delete proto[s];  // expose the shard method
+
+                            shards[s] = shards[s].slice();
+                            shards[s][proto[s].shard.reverse ? 'shift' : 'push'](fn);
+                        }
+                    }
+                }
+            });
         }
     };
 
@@ -180,7 +302,7 @@ export class Declarable extends Destroyable {
         let cls = this,
             { contract, declarable } = meta,
             declarables = [],
-            decl, fn, fnI, intfName, method, missing;
+            decl, extender, fn, fnI, intfName, method, missing;
 
         for (decl in declarable) {
             if (hasOwn(cls, decl) && !getOwnPropertyDescriptor(cls, decl).get) {
@@ -208,8 +330,11 @@ export class Declarable extends Destroyable {
         }
 
         if (missing) {
-            meta.abstract =
-                `Cannot instantiate class with abstract methods (${missing.join(', ')})`;
+            meta.abstract = `Cannot instantiate class with abstract methods (${missing.join(', ')})`;
+        }
+
+        for (extender of meta.extenders) {
+            extender(cls);
         }
     }
 

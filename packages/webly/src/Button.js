@@ -31,28 +31,26 @@ export class Button extends Component {
         let { fullwidth, level, loading, inverted, outlined, props, rounded, selected, size, text }
                 = this,
             { theme } = props,
-            ret = super.render();
+            ret = {
+                class: {
+                    'is-fullwidth' : !!fullwidth,
+                    'is-inverted'  : !!inverted,
+                    'is-loading'   : !!loading,
+                    'is-outlined'  : !!outlined,
+                    'is-rounded'   : !!rounded,
+                    'is-selected'  : !!selected,
+                    [`is-${level}`]: !!level,
+                    [`is-${size}`] : !!size,
+                    [`is-${theme}`]: true,
+                },
+                on: {
+                    click: 'onClick'
+                }
+            };
 
         if (text) {
             ret.html = xss(text);
         }
-
-        merge(ret, {
-            class: {
-                'is-fullwidth' : !!fullwidth,
-                'is-inverted'  : !!inverted,
-                'is-loading'   : !!loading,
-                'is-outlined'  : !!outlined,
-                'is-rounded'   : !!rounded,
-                'is-selected'  : !!selected,
-                [`is-${level}`]: !!level,
-                [`is-${size}`] : !!size,
-                [`is-${theme}`]: true,
-            },
-            listeners: {
-                click: 'onClick'
-            }
-        });
 
         return ret;
     }
