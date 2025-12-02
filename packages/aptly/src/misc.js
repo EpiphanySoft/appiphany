@@ -597,6 +597,19 @@ export const
         return ret;
     },
 
+    values = obj => {
+        let ret = [],
+            k;
+
+        if (obj) {
+            for (k in obj) {
+                ret.push(obj[k]);
+            }
+        }
+
+        return ret;
+    },
+
     map = (input, fn, as) => {
         if (!input) {
             return input;

@@ -309,6 +309,10 @@ export class Dom {
         return className(el) === 'Window';
     }
 
+    static onReady (fn) {
+        Dom.getDoc().addEventListener('DOMContentLoaded', fn);
+    }
+
     //------------------------------------------------------------------------------------------
 
     #listeners = null;

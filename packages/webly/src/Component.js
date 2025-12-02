@@ -41,7 +41,7 @@ const
 
 export class Component extends Widget.mixin(Factoryable) {
     static type = 'component';
-    static expando = ['ref'];
+    static expando = ['ref', 'tab', 'zone'];
     static factory = {
         defaultType: 'component'
     };
@@ -359,7 +359,7 @@ export class Component extends Widget.mixin(Factoryable) {
     recomposeSoon () {
         let recomposer = this.#recomposer ??= () => this.#recomposeNow();
 
-        console.log(`invalidated ${this.id}`);
+        // console.log(`invalidated ${this.id}`);
         this.scheduler.add(recomposer);
     }
 
