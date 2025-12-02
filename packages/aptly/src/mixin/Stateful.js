@@ -2,7 +2,8 @@ import { Config, isObject, StateProvider } from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
-    EMPTY_OBJECT = Object.freeze({});
+    EMPTY_OBJECT = Object.freeze({}),
+    stateWatchSym = Symbol('stateWatch');
 
 
 export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) {
@@ -91,7 +92,7 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
                     }
                 }
 
-                id && instance.watchStatefulProps?.(value);
+                instance.watchStatefulConfigs(value);
             }
         },
 
@@ -165,13 +166,16 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         return state;
     }
 
-    onConfigChange (name, value, was) {
-        let me = this;
+    watchStatefulConfigs (stateful) {
+        let me = this,
+            { stateId, [stateWatchSym]: configWatcher } = me;
 
-        if (me.initialized && me.stateId && me.stateful?.[name]) {
-            me.stateDirty = true;
+        if (!configWatcher && stateful) {
+            me[stateWatchSym] = configWatcher = me.watchConfigs(_ => me.stateDirty = true);
         }
 
-        super.onConfigChange(name, value, was);
+        configWatcher?.(stateful);
+
+        stateId && me.watchStatefulProps?.(stateful);
     }
 }

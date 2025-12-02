@@ -35,7 +35,7 @@ export class Event {
         if (isObject(extra)) {
             applyTo(me, extra);
         }
-        else if (typeof extra.preventDefault === 'function') {
+        else if (typeof extra?.preventDefault === 'function') {
             me.browserEvent = extra;
         }
 

@@ -9,6 +9,7 @@ const
     { hasOwn } = Object,
     { defineProperty } = Reflect,
     configDataSym = Symbol('configuring'),
+    configWatchersSym = Symbol('configWatchers'),
     EXPANDO_ANY = applyTo(chain(), { '*': true }),
     EXPANDO_NONE = chain(),
     makeExpando = (expando, parentExpando) => {
@@ -99,7 +100,7 @@ export class Config {
         let me = this,
             { prop } = me,
             was = instance[prop],
-            firstTime = !hasOwn(instance, prop) || instance.configuring?.firstTime,
+            firstTime = !(hasOwn(instance, prop) && !instance.configuring?.firstTime),
             handled, applied;
 
         if (me.apply) {
@@ -562,10 +563,8 @@ export class Configurable extends Declarable {
         return this[name];
     }
 
-    #configWatchers = null;
-
     onConfigChange (name, value, was) {
-        let watchers = this.#configWatchers?.[name],
+        let watchers = this[configWatchersSym]?.[name],
             fn;
 
         if (watchers) {
@@ -595,16 +594,18 @@ export class Configurable extends Declarable {
 
     trackUsedConfigs (fn, excludeConfigs) {
         let me = this,
-            configsUsed = null;
+            used = null;
 
-        me.hookGetConfig = name =>
-            !excludeConfigs?.[name] && ((configsUsed ??= {})[name] = true);
+        me.hookGetConfig = name => !excludeConfigs?.[name] && ((used ??= {})[name] = true);
 
-        fn();
+        try {
+            fn();
+        }
+        finally {
+            delete me.hookGetConfig;
+        }
 
-        delete me.hookGetConfig;
-
-        return configsUsed;
+        return used;
     }
 
     watchConfigs (fn, configs) {
@@ -622,7 +623,7 @@ export class Configurable extends Declarable {
                 if (watching) {
                     for (configName in watching) {
                         if (!was?.[configName]) {
-                            ((this.#configWatchers ??= chain())[configName] ??= []).push(fn);
+                            ((this[configWatchersSym] ??= chain())[configName] ??= []).push(fn);
                         }
                     }
                 }
@@ -630,7 +631,7 @@ export class Configurable extends Declarable {
                 if (was) {
                     for (configName in was) {
                         if (!watching?.[configName]) {
-                            remove(this.#configWatchers[configName], fn);
+                            remove(this[configWatchersSym][configName], fn);
                         }
                     }
                 }

@@ -210,10 +210,10 @@ export class Component extends Widget.mixin(Factoryable) {
     #composer = null;
     #dom = null;
     #recomposer = null;
-    #renderConfigs = null;
     #renderToUsed = false;
     #renderWatcher = null;
     #watcherNotified = false;
+    #watchRenderConfigs = null;
 
     get dom () {
         return this.#dom;
@@ -262,14 +262,6 @@ export class Component extends Widget.mixin(Factoryable) {
         }
     }
 
-    onConfigChange (name, value, was) {
-        super.onConfigChange(name, value, was);
-
-        if (this.initialized && this.#renderConfigs?.[name]) {
-            this.recompose(true);
-        }
-    }
-
     render () {
         let { cls, html, style, tag } = this;
 
@@ -315,8 +307,10 @@ export class Component extends Widget.mixin(Factoryable) {
         });
 
         if (configsUsed) {
-            me.#renderConfigs = configsUsed;
+            me.#watchRenderConfigs ??= me.watchConfigs(() => me.initialized && me.recompose(true));
         }
+
+        me.#watchRenderConfigs?.(configsUsed);
 
         if (!spec) {
             me.#unrender();
