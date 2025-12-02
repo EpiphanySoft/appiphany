@@ -310,7 +310,7 @@ export class Component extends Widget.mixin(Factoryable) {
             me.#watchRenderConfigs ??= me.watchConfigs(() => me.initialized && me.recompose(true));
         }
 
-        me.#watchRenderConfigs?.(configsUsed);
+        (configsUsed || full) && me.#watchRenderConfigs?.(configsUsed);
 
         if (!spec) {
             me.#unrender();

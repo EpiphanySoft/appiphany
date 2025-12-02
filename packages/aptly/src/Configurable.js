@@ -621,6 +621,9 @@ export class Configurable extends Declarable {
                 watching = configs;
 
                 if (watching) {
+                    // let w = Object.keys(watching).filter(k => !was?.[k]);
+                    // w.length && console.log(`${this.id} watching configs: ${w.join(',')}`)
+
                     for (configName in watching) {
                         if (!was?.[configName]) {
                             ((this[configWatchersSym] ??= chain())[configName] ??= []).push(fn);
@@ -629,6 +632,9 @@ export class Configurable extends Declarable {
                 }
 
                 if (was) {
+                    // let u = Object.keys(was).filter(k => !watching?.[k]);
+                    // u.length && console.log(`${this.id} unwatching configs: ${u.join(',')}`);
+
                     for (configName in was) {
                         if (!watching?.[configName]) {
                             remove(this[configWatchersSym][configName], fn);

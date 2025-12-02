@@ -9,6 +9,7 @@
       <w>shardable</w>
       <w>signalable</w>
       <w>unrender</w>
+      <w>unwatching</w>
     </words>
   </dictionary>
 </component>
