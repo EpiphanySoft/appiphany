@@ -99,9 +99,11 @@ describe('Configurable', () => {
         expect(Baz.className).to.equal('Baz');
 
         expect(clone(Foo.is)).to.equal({
+            configurable: true
         });
 
         expect(clone(Bar.is)).to.equal({
+            configurable: true,
             bar: true
         });
 
@@ -110,6 +112,7 @@ describe('Configurable', () => {
         expect(Bar.isA('bar', 'herp')).to.be(true);
 
         expect(clone(Baz.is)).to.equal({
+            configurable: true,
             bar: true
         });
 

@@ -281,6 +281,25 @@ Config.Flags = Flags;
 //=======================================================================================
 
 export class Configurable extends Declarable {
+    static abstract = true;
+    static className = 'Configurable';
+
+    /**
+     * Set to true on a class to allow instanceConfig to add properties that are not
+     * declared as configurable.
+     * @type {Object}
+     */
+    static expando = EXPANDO_NONE;
+
+    static proto = {
+        configuring: null,
+
+        hookGetConfig: null,
+
+        initialConfig: null,  // config object passed to constructor
+        instanceConfig: null  // fully populated config object
+    };
+
     static declarable = {
         configurable(cls, configs) {
             let meta = cls.$meta,
@@ -335,22 +354,6 @@ export class Configurable extends Declarable {
                 configValues[name] = val;
             }
         }
-    };
-
-    /**
-     * Set to true on a class to allow instanceConfig to add properties that are not
-     * declared as configurable.
-     * @type {Object}
-     */
-    static expando = EXPANDO_NONE;
-
-    static proto = {
-        configuring: null,
-
-        hookGetConfig: null,
-
-        initialConfig: null,  // config object passed to constructor
-        instanceConfig: null  // fully populated config object
     };
 
     static classInit(meta) {
@@ -592,11 +595,25 @@ export class Configurable extends Declarable {
         });
     }
 
-    trackUsedConfigs (fn, excludeConfigs) {
+    /**
+     * Invokes the given function and returns a map of the configs that were accessed during
+     * the function execution.
+     *
+     * The configs used are returned as keys of an object. The value of each key is true. An
+     * object is used to efficiently deduplicate the result.
+     *
+     * This object is suitable for passing to `watchConfigs()` to watch for changes to the
+     * accessed configs.
+     *
+     * @param {Function} fn
+     * @param {Object} [exclude] An object whose keys are config names to exclude from the result.
+     * @return {Object}
+     */
+    monitorConfigs (fn, exclude) {
         let me = this,
             used = null;
 
-        me.hookGetConfig = name => !excludeConfigs?.[name] && ((used ??= {})[name] = true);
+        me.hookGetConfig = name => !exclude?.[name] && ((used ??= {})[name] = true);
 
         try {
             fn();
@@ -608,13 +625,18 @@ export class Configurable extends Declarable {
         return used;
     }
 
+    /**
+     * Returns a function that can be called to watch for changes to the given configs.
+     * THe `configs` can be passed in this call or to the returned function at any time.
+     * Calling the returned function adds or removes configs from the watch list.
+     * @param {Function} fn The function to call when a watched config changes
+     * @param {Object} [configs] The configs to watch for changes. The keys of the object
+     * with truthy values are the names of the configs to watch.
+     * @returns {Function}
+     */
     watchConfigs (fn, configs) {
         let watching,
             watcher = configs => {
-                if (Array.isArray(configs)) {
-                    configs = Object.fromEntries(configs.map(c => [c, true]));
-                }
-
                 let was = watching,
                     configName;
 
@@ -649,8 +671,4 @@ export class Configurable extends Declarable {
     }
 }
 
-// Cannot use declarables because there are static getters for these:
-applyTo(Configurable.$meta, { // this calls Configurable.initClass()
-    name: 'Configurable',
-    abstract: true
-});
+Configurable.initClass();

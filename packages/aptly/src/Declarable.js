@@ -235,19 +235,17 @@ export class Declarable extends Destroyable {
             // they need to be gathered in the "shards" object and removed from the prototype to
             // expose the original shard fn from the base class (added above).
             cls.$meta.onExtend(derived => {
-                if (derived !== cls) {
-                    let shards = derived.$meta.getInherited('shards'),
-                        proto = derived.prototype,
-                        fn, s;
+                let shards = derived.$meta.getInherited('shards'),
+                    proto = derived.prototype,
+                    fn, s;
 
-                    for (s in shardable) {
-                        if (hasOwn(proto, s)) {
-                            fn = proto[s];    // get the new method
-                            delete proto[s];  // expose the shard method
+                for (s in shardable) {
+                    if (hasOwn(proto, s)) {
+                        fn = proto[s];    // get the new method
+                        delete proto[s];  // expose the shard method
 
-                            shards[s] = shards[s].slice();
-                            shards[s][proto[s].shard.reverse ? 'shift' : 'push'](fn);
-                        }
+                        shards[s] = shards[s].slice();
+                        shards[s][proto[s].shard.reverse ? 'shift' : 'push'](fn);
                     }
                 }
             });
@@ -300,7 +298,9 @@ export class Declarable extends Destroyable {
 
     static classInit (meta) {
         let cls = this,
-            { contract, declarable } = meta,
+            // get extenders before processing declarables to ensure we only get those
+            // from our super class, not any added by this class.
+            { contract, declarable, extenders } = meta,
             declarables = [],
             decl, extender, fn, fnI, intfName, method, missing;
 
@@ -333,7 +333,7 @@ export class Declarable extends Destroyable {
             meta.abstract = `Cannot instantiate class with abstract methods (${missing.join(', ')})`;
         }
 
-        for (extender of meta.extenders) {
+        for (extender of extenders) {
             extender(cls);
         }
     }

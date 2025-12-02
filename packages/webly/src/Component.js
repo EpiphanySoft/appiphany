@@ -302,7 +302,7 @@ export class Component extends Widget.mixin(Factoryable) {
 
         full && composer.invalidate();
 
-        configsUsed = me.trackUsedConfigs(() => {
+        configsUsed = me.monitorConfigs(() => {
             spec = composer.get();
         });
 

@@ -56,11 +56,13 @@ describe('Factoryable', () => {
         const [Foo, Bar] = setup();
 
         expect(clone(Foo.is)).to.equal({
+            configurable: true,
             auto: true,
             herp: true
         });
 
         expect(clone(Bar.is)).to.equal({
+            configurable: true,
             auto: true,
             herp: true,
             bar: true,

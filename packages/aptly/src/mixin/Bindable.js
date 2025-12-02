@@ -75,7 +75,7 @@ class Bindings extends Destroyable {
             sig.flow = flow;
 
             if (flow !== '<') {
-                sig.configWatch = owner.watchConfigs((_, v) => props[prop] = v, [configName]);
+                sig.configWatch = owner.watchConfigs((_, v) => props[prop] = v, { [configName]: 1 });
             }
             // sig.update = flow !== '<' && (v => props[prop] = v);
         }
@@ -190,7 +190,7 @@ class Effects extends Destroyable {
 
             configWatch ??= owner.watchConfigs(() => signal.invalidate());
 
-            configWatch(!owner.destroyed && owner.trackUsedConfigs(() => {
+            configWatch(!owner.destroyed && owner.monitorConfigs(() => {
                 cleanup = fn.call(owner, owner.props);
             }));
         }, { name });
