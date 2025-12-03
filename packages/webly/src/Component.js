@@ -13,9 +13,9 @@ const
     ignoredComposeConfigs = { props: 1, renderTarget: 1 },
     gatherRefs = (refs, ref, spec) => {
         //  spec = {
-        //      specs: {
+        //      children: {
         //          body: {
-        //              specs: {
+        //              children: {
         //                  inner: {
         //                  }
         //              }
@@ -28,9 +28,9 @@ const
                 refs[ref] = spec;
             }
 
-            if (spec.specs) {
-                for (ref in spec.specs) {
-                    gatherRefs(refs, ref, spec.specs[ref]);
+            if (spec.children) {
+                for (ref in spec.children) {
+                    gatherRefs(refs, ref, spec.children[ref]);
                 }
             }
         }
@@ -60,6 +60,8 @@ export class Component extends Widget.mixin(Factoryable) {
 
     static configurable = {
         cls: null,
+
+        docked: null,
 
         html: null,
 
@@ -229,7 +231,7 @@ export class Component extends Widget.mixin(Factoryable) {
         let spec = this.render(),
             items = this.items,
             { itemRenderTarget } = this,
-            it, ref, refs, renderTarget, specs;
+            it, ref, refs, renderTarget, children;
 
         if (items) {
             refs = gatherRefs({}, 'root', spec);
@@ -237,16 +239,19 @@ export class Component extends Widget.mixin(Factoryable) {
 
             for (ref in items) {
                 it = items[ref];
-                renderTarget = refs[it.renderTarget || itemRenderTarget];
 
-                if (renderTarget) {
-                    specs = renderTarget.specs ??= [];
+                if (!it.docked) {
+                    renderTarget = refs[it.renderTarget || itemRenderTarget];
 
-                    if (!Array.isArray(specs)) {
-                        renderTarget.specs = specs = Dom.canonicalizeSpecs(specs);
+                    if (renderTarget) {
+                        children = renderTarget.children ??= [];
+
+                        if (!Array.isArray(children)) {
+                            renderTarget.children = children = Dom.canonicalizeSpecs(children);
+                        }
+
+                        children.push(it.dom);
                     }
-
-                    specs.push(it.dom);
                 }
             }
         }

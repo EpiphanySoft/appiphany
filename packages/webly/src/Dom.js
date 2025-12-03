@@ -86,21 +86,21 @@ export class Dom {
     static key = '$dom';
 
     static specialProps = {
-        tag   : 1,  // the tagName
-        html  : 1,
-        on    : 1,
-        owner : 1,
-        text  : 1,
-        ref   : 1,
-        specs : 1,
+        tag      : 1,  // the tagName
+        html     : 1,
+        on       : 1,
+        owner    : 1,
+        text     : 1,
+        ref      : 1,
+        children : 1,
 
-        class : 1,
-        data  : 1,
-        style : 1,
+        class    : 1,
+        data     : 1,
+        style    : 1,
 
-        after : 1,
-        before: 1,
-        parent: 1
+        after    : 1,
+        before   : 1,
+        parent   : 1
     };
 
     static get body () {
@@ -344,6 +344,16 @@ export class Dom {
         this.#ownerListeners = null;
     }
 
+    create (tag) {
+        let el = Dom.getDoc().createElement(tag);
+
+        el[Dom.key] = this;
+
+        this.el = el;
+
+        return el;
+    }
+
     on (listener) {
         listener = Event.canonicalizeListener(listener, this.owner);
 
@@ -392,16 +402,17 @@ export class Dom {
      *      html: '',
      *      text: '',
      *
-     *      specs: []
+     *      children: []
      *
      *      // other
      *      href: '',
      *  }
      */
     update (spec, context) {
-        let { el, spec: was } = this,
-            { after, before, parent, on: listeners, class: cls, tag, html, text, data, ref, specs, style }
-                = (spec ??= {});
+        let me = this,
+            { el, spec: was } = me,
+            { after, before, children, parent, tag, html, text, data, ref, style,
+              on: listeners, class: cls } = (spec ??= {});
 
         // unwrap any Dom instances
         after = after?.el || after;
@@ -411,9 +422,9 @@ export class Dom {
         tag = tag || 'div';
 
         context = context || {
-            owner: this.owner,
+            owner: me.owner,
             refs: chain(),
-            root: this
+            root: me
         };
 
         if (!was) {
@@ -424,10 +435,10 @@ export class Dom {
         }
 
         if (!el) {
-            this.el = el = Dom.getDoc().createElement(tag);
+            me.create(tag);
         }
-        else if (!this.adopted && el.tagName !== tag.toUpperCase()) {
-            el.replaceWith(this.el = el = Dom.getDoc().createElement(tag));
+        else if (!me.adopted && el.tagName !== tag.toUpperCase()) {
+            el.replaceWith(el = me.create(tag));
         }
 
         if (before) {
@@ -446,34 +457,34 @@ export class Dom {
             parent.appendChild(el);
         }
 
-        ref && context?.refs && (context.refs[ref] = this);
+        ref && context?.refs && (context.refs[ref] = me);
 
-        this._updateAttrs(spec, was);
-        this._updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
-        this._updateData(data, was.data);
-        this._updateStyle(style, was.style);
+        me._updateAttrs(spec, was);
+        me._updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
+        me._updateData(data, was.data);
+        me._updateStyle(style, was.style);
 
         if (text != null) {
             if (text !== was.text) {
-                this._updateText(text);
+                me._updateText(text);
             }
         }
         else if (html != null) {
             if (html !== was.html) {
-                this._updateHtml(html);
+                me._updateHtml(html);
             }
         }
-        else if (specs) {
-            this._updateSubTree(Dom.canonicalizeSpecs(specs), context);
+        else if (children) {
+            me._updateSubTree(Dom.canonicalizeSpecs(children), context);
         }
 
         if (!isEqual(listeners, was.on)) {
-            this.#ownerListeners?.();
-            this.#ownerListeners = listeners ? this.on(listeners) : null;
+            me.#ownerListeners?.();
+            me.#ownerListeners = listeners ? me.on(listeners) : null;
         }
 
-        this.ref  = ref;
-        this.spec = spec;
+        me.ref  = ref;
+        me.spec = spec;
     }
 
     _updateAttrs (attrs, was) {
@@ -674,3 +685,5 @@ export class Dom {
         }
     }
 }
+
+globalThis.Dom = Dom;

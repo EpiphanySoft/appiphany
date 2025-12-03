@@ -621,10 +621,8 @@ export const
         }
 
         let object = isObject(input),  // input type
-            array, it, k, key, m, ret,
-            mapIt = () => {
-                k = key;
-
+            array, it, key, m, ret,
+            mapIt = (it, k) => {
                 if (fn) {
                     m = fn(it, key);
 
@@ -654,8 +652,7 @@ export const
             ret = array ? [] : {};
 
             for (key in input) {
-                it = input[key];
-                mapIt();
+                mapIt(input[key], key);
             }
         }
         else {
@@ -664,8 +661,7 @@ export const
             key = 0;
 
             for (it of input) {
-                mapIt();
-                ++key;
+                mapIt(it, key++);
             }
         }
 

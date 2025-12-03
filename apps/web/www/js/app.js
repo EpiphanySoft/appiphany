@@ -1,4 +1,4 @@
-import { Dom, Component, Nav, Viewport } from '@appiphany/webly';
+import { Dom, Component, Container, Viewport } from '@appiphany/webly';
 
 
 window.Dom = Dom;
@@ -11,38 +11,44 @@ Dom.onReady(() => {
 
         items: {
             foo: {
-                type: Nav,
+                type: Container,
                 cls: 'woot',
 
-                bar: {
-                    items: {
-                        btn: {
-                            type: 'button',
-                            text: 'Click me!',
-                            zone: 'end',
-                            on: {
-                                click: 'viewport.toggleTheme'
-                                // click: e => { debugger; }
-                            }
-                        }
-                    }
-                },
+                // bar: {
+                //     items: {
+                //         btn: {
+                //             type: 'button',
+                //             text: 'Click me!',
+                //             zone: 'end',
+                //             on: {
+                //                 click: 'viewport.toggleTheme'
+                //                 // click: e => { debugger; }
+                //             }
+                //         }
+                //     }
+                // },
 
                 items: {
+                    zip: {
+                        html: 'Body zip',
+                    },
+
                     herp: {
                         cls: 'herp',
-                        html: 'Woot!!!',
+                        docked: 'top',
+                        html: 'Top Woot!!!',
                         tab: 'Herp',
                         style: { color: 'yellow' }
                     },
 
                     woot: {
                         cls: 'woot',
-                        html: 'herp!',
+                        docked: 'left',
+                        html: 'Left herp!',
                         tab: 'Woot',
                         style: 'color: lime; fontSize: 2em',
                         bind: {
-                            html: p => p.theme?.toUpperCase()
+                            html: p => `Left ${p.theme?.toUpperCase()}`
                         }
                     }
                 }

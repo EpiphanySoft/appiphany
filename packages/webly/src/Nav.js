@@ -1,12 +1,15 @@
-import { keys, values } from '@appiphany/aptly';
-import { Component } from '@appiphany/webly';
+import { map, SKIP } from '@appiphany/aptly';
+import { Component, Container } from '@appiphany/webly';
 
 const
-    hasTab = it => it.tab,
-    getTab = it => {
+    mapTab = it => {
         let { tab } = it;
 
         debugger;
+        if (!tab) {
+            return SKIP;
+        }
+
         if (typeof tab === 'string') {
             tab = {
                 html: tab
@@ -65,7 +68,10 @@ export class Navbar extends Component {
 
 Navbar.initClass();
 
-export class Nav extends Component {
+/**
+ *
+ */
+export class Nav extends Container {
     static type = 'nav';
 
     static configurable = {
@@ -85,7 +91,7 @@ export class Nav extends Component {
 
         items: class {
             update (instance, value) {
-                instance.props.tabs = value ? values(value).filter(hasTab).map(getTab) : [];
+                instance.props.tabs = value ? map(value, mapTab, 'array') : [];
             }
         },
 

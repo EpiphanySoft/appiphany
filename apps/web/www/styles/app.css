@@ -1,6 +1,26 @@
 @import "bulma/bulma.css";
 
-/*body {*/
-/*    background-color: #000;*/
-/*    color: red;*/
-/*}*/
+.x-component:not(.x-viewport) {
+    display: inline-flex;
+    overflow: hidden;
+}
+
+.x-box-h, .x-box-v {
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    position: relative;
+}
+
+.x-box-h {
+    flex-flow: row nowrap;
+}
+
+.x-box-v {
+    flex-flow: column nowrap;
+}
+
+.x-box-body {
+    flex: 1 1 auto;
+    overflow: hidden;
+}
