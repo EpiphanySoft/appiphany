@@ -23,9 +23,9 @@ export class Container extends Component {
 
     render () {
         let body = this.renderBody(),
-            items = this.items;
+            items = this.getItems(true);
 
-        if (items) {
+        if (items.length) {
             let docked, item, ref, f, flow, // = 'h', 'v'
                 bodyIndex = 0,
                 counter = 0,
@@ -46,30 +46,27 @@ export class Container extends Component {
                     }]
                 ];
 
-            items = values(items).reverse();
+            items.reverse();
 
             for (item of items) {
                 ref = item.ref;
                 docked = item.docked;
+                f = FLOWS[docked];
 
-                if (docked) {
-                    f = FLOWS[docked];
+                if (!flow) {
+                    flow = f;
+                }
+                else if (flow !== f) {
+                    bwrap = wrap(bwrap);
+                    flow = f;
+                    bodyIndex = 0;
+                }
 
-                    if (!flow) {
-                        flow = f;
-                    }
-                    else if (flow !== f) {
-                        bwrap = wrap(bwrap);
-                        flow = f;
-                        bodyIndex = 0;
-                    }
-
-                    if (docked === DOCKS[flow]) {
-                        bwrap.splice(bodyIndex++, 0, [ref, item.dom]);
-                    }
-                    else {
-                        bwrap.push([ref, item.dom]);
-                    }
+                if (docked === DOCKS[flow]) {
+                    bwrap.splice(bodyIndex++, 0, [ref, item.dom]);
+                }
+                else {
+                    bwrap.push([ref, item.dom]);
                 }
             }
 

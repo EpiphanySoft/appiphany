@@ -21,6 +21,16 @@ const
 
 export class NavbarTab extends Component {
     static type = 'navbar-tab';
+
+    static configurable = {
+        cls: {
+            'navbar-item': 1
+        },
+
+        element: {
+            tag: 'a'
+        }
+    }
 }
 
 
@@ -35,32 +45,49 @@ export class Navbar extends Component {
     static configurable = {
         cls: {
             navbar: 1
-        }
+        },
+
+        element: {
+            tag: 'nav',
+            role: 'navigation'
+        },
+
+        burger: class {
+            value = null;
+            default = true;
+        },
+
+        menu: null
     };
 
-    render () {
-        let { props } = this,
-            { tabs } = props,
-            ret = {
-                specs: {}
-                // class: {
-                // },
-                // on: {
-                //     click: 'onClick'
-                // }
-            };
+    getItems (docked) {
+        debugger;
+        let items = super.getItems(docked),
+            tabs;
 
-        return ret;
+        if (!docked) {
+            tabs = this.props.tabs;
+
+            if (tabs) {
+                items = Component.sortItems([...tabs, ...items]);
+            }
+        }
+
+        return items;
     }
 
     // onClick (e) {
     //     this.fire('click', e);
     // }
     render () {
-        let { items, props } = this,
-            { tabs } = props;
+        let items = this.getItems(),
+            { tabs } = this.props;
 
         debugger;
+        if (tabs) {
+            items = Component.sortItems([...tabs, ...items]);
+        }
+
         return {
         };
     }
@@ -77,7 +104,8 @@ export class Nav extends Container {
     static configurable = {
         bar: class {
             value = {
-                type: Navbar
+                type: Navbar,
+                docked: 'top'
             };
 
             apply (instance, value, was) {

@@ -88,6 +88,7 @@ export class Dom {
     static specialProps = {
         tag      : 1,  // the tagName
         html     : 1,
+        aria     : 1,
         on       : 1,
         owner    : 1,
         text     : 1,
@@ -460,6 +461,7 @@ export class Dom {
         ref && context?.refs && (context.refs[ref] = me);
 
         me._updateAttrs(spec, was);
+        me._updateAttrs(spec.aria, was.aria, 'aria-');
         me._updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
         me._updateData(data, was.data);
         me._updateStyle(style, was.style);
@@ -487,29 +489,29 @@ export class Dom {
         me.spec = spec;
     }
 
-    _updateAttrs (attrs, was) {
+    _updateAttrs (attrs, was, prefix = '') {
         let { el } = this,
             name, val;
 
         for (name in attrs) {
-            if (!Dom.specialProps[name]) {
+            if (prefix || !Dom.specialProps[name]) {
                 val = attrs[name];
 
                 if (val !== was[name]) {
                     if (val == null) {
-                       el.removeAttribute(name);
+                       el.removeAttribute(prefix + name);
                     }
                     else {
-                        el.setAttribute(name, val);
+                        el.setAttribute(prefix + name, val);
                     }
                 }
             }
         }
 
         for (name in was) {
-            if (!Dom.specialProps[name]) {
+            if (prefix || !Dom.specialProps[name]) {
                 if (!(name in attrs)) {
-                    el.removeAttribute(name);
+                    el.removeAttribute(prefix + name);
                 }
             }
         }

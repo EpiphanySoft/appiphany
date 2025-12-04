@@ -1,16 +1,17 @@
-import { chain, panik, Widget, Signal, isObject, clone, merge } from '@appiphany/aptly';
+import { chain, panik, Widget, Signal, isObject, clone, merge, EMPTY_ARRAY, EMPTY_OBJECT, values, map }
+    from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 import { Dom } from '@appiphany/webly';
 
 
 const
-    EMPTY_ARRAY = [],
     MODE_MAP = {
         append: 'parent',
         before: 'before',
         after: 'after'
     },
     ignoredComposeConfigs = { props: 1, renderTarget: 1 },
+    orderSortFn = (a, b) => a.order - b.order,
     gatherRefs = (refs, ref, spec) => {
         //  spec = {
         //      children: {
@@ -59,15 +60,30 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     static configurable = {
+        // CSS/HTML
         cls: null,
+        html: null,
+
+        element: {
+            aria: null,
+            style: null,
+            tag: 'div'
+        },
+
+        // General
 
         docked: null,
 
-        html: null,
+        order: class {
+            value = null;
+            default = 0;
 
-        style: null,
+            update (me) {
+                let { parent } = me;
 
-        tag: 'div',
+                parent?.initialized && parent.recompose(true);
+            }
+        },
 
         /**
          * The default `renderTarget` for items that do not specify their own `renderTarget`.
@@ -173,9 +189,7 @@ export class Component extends Widget.mixin(Factoryable) {
             update (me) {
                 let { parent } = me;
 
-                if (parent?.initialized) {
-                    parent.recompose(true);
-                }
+                parent?.initialized && parent.recompose(true);
             }
         },
 
@@ -209,6 +223,12 @@ export class Component extends Widget.mixin(Factoryable) {
         }
     };
 
+    static sortItems (items) {
+        items?.sort(orderSortFn);
+
+        return items;
+    }
+
     #composer = null;
     #dom = null;
     #recomposer = null;
@@ -217,41 +237,48 @@ export class Component extends Widget.mixin(Factoryable) {
     #watcherNotified = false;
     #watchRenderConfigs = null;
 
-    get dom () {
-        return this.#dom;
-    }
-
     destruct () {
         this.#unrender();
 
         super.destruct();
     }
 
+    get dom () {
+        return this.#dom;
+    }
+
+    getItems (docked) {
+        let items = values(this.items || EMPTY_OBJECT);
+
+        if (docked === '*') {
+            items = items.filter(
+                (docked === true) ? i => i.docked : (docked ? i => i.docked === docked : i => !i.docked));
+        }
+
+        return Component.sortItems(items);
+    }
+
     compose () {
         let spec = this.render(),
-            items = this.items,
+            items = this.getItems(),
             { itemRenderTarget } = this,
-            it, ref, refs, renderTarget, children;
+            it, refs, renderTarget, children;
 
         if (items) {
-            refs = gatherRefs({}, 'root', spec);
             itemRenderTarget ??= 'root';
+            refs = gatherRefs({}, 'root', spec);
 
-            for (ref in items) {
-                it = items[ref];
+            for (it of items) {
+                renderTarget = refs[it.renderTarget || itemRenderTarget];
 
-                if (!it.docked) {
-                    renderTarget = refs[it.renderTarget || itemRenderTarget];
+                if (renderTarget) {
+                    children = renderTarget.children ??= [];
 
-                    if (renderTarget) {
-                        children = renderTarget.children ??= [];
-
-                        if (!Array.isArray(children)) {
-                            renderTarget.children = children = Dom.canonicalizeSpecs(children);
-                        }
-
-                        children.push(it.dom);
+                    if (!Array.isArray(children)) {
+                        renderTarget.children = children = Dom.canonicalizeSpecs(children);
                     }
+
+                    children.push(it.#dom);
                 }
             }
         }
@@ -262,17 +289,23 @@ export class Component extends Widget.mixin(Factoryable) {
     initialize() {
         super.initialize();
 
-        if (!this.dom) {
+        if (!this.#dom) {
             this.recompose();
         }
     }
 
     render () {
-        let { cls, html, style, tag } = this;
+        let me = this,
+            { cls, html } = me,
+            { aria, role, style, tag } = me.element;
+
+        aria ??= EMPTY_OBJECT;
 
         return {
             tag,
             html,
+            aria,
+            role,
             class: clone(cls),
             style: clone(style)
         };
@@ -296,8 +329,7 @@ export class Component extends Widget.mixin(Factoryable) {
 
     recompose (full) {
         let me = this,
-            { id } = me,
-            dom = me.#dom,
+            { id, dom } = me,
             [renderToUsed, mode, renderTo] = me.#getRenderPlan(),
             adopt = mode === 'adopt',
             composer = me.#composer ??=

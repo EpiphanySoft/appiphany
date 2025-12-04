@@ -14,7 +14,10 @@ export class Button extends Component {
             button: 1
         },
 
-        tag: 'button',
+        element: {
+            tag: 'button'
+        },
+
         text: null,
 
         fullwidth: null,

@@ -1,5 +1,5 @@
 const
-    { defineProperty, getPrototypeOf } = Object,
+    { defineProperty, freeze, getPrototypeOf } = Object,
     { toString } = Object.prototype,
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncFunction
     AsyncFunction = (async() => {}).constructor,
@@ -25,6 +25,9 @@ const
     xssFn = m => xssMap[m];
 
 export const
+    EMPTY_ARRAY = freeze([]),
+    EMPTY_OBJECT = freeze({}),
+
     decimalRe = /^-?((?:\d+(?:\.\d*)?)|(?:\.\d+))$/,
 
     // camelCase-to-hyphenated:
