@@ -79,7 +79,10 @@ export class Container extends Component {
     }
 
     renderBody () {
+        let { id } = this;
+
         return {
+            id: `${id}-body`,
             class: {
                 'x-body': 1
             }

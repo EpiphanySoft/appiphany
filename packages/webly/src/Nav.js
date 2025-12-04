@@ -43,6 +43,8 @@ export class Navbar extends Component {
     static type = 'navbar';
 
     static configurable = {
+        itemRenderTarget: 'navStart',
+
         cls: {
             navbar: 1
         },
@@ -80,7 +82,8 @@ export class Navbar extends Component {
     //     this.fire('click', e);
     // }
     render () {
-        let items = this.getItems(),
+        let { id, burger, menu } = this.props,
+            items = this.getItems(),
             { tabs } = this.props;
 
         debugger;
@@ -89,6 +92,31 @@ export class Navbar extends Component {
         }
 
         return {
+            brand: {
+                cls: {
+                    'navbar-brand': 1
+                }
+                // brand icon
+                // burger button
+            },
+            body: {
+                id: `${id}-body`,
+                class: {
+                    'navbar-menu': 1
+                },
+                children: {
+                    navStart: {
+                        class: {
+                            'navbar-start': 1
+                        }
+                    },
+                    navEnd: {
+                        class: {
+                            'navbar-end': 1
+                        }
+                    }
+                }
+            }
         };
     }
 }

@@ -1,4 +1,4 @@
-import { Dom, Component, Container, Viewport } from '@appiphany/webly';
+import { Dom, Component, Nav, Viewport } from '@appiphany/webly';
 
 
 window.Dom = Dom;
@@ -11,7 +11,7 @@ Dom.onReady(() => {
 
         items: {
             foo: {
-                type: Container,
+                type: Nav,
                 cls: 'woot',
 
                 // bar: {
@@ -38,7 +38,9 @@ Dom.onReady(() => {
                         docked: 'top',
                         html: 'Top Woot!!!',
                         tab: 'Herp',
-                        style: { color: 'yellow' }
+                        element: {
+                            style: { color: 'yellow' }
+                        }
                     },
 
                     woot: {
@@ -46,7 +48,9 @@ Dom.onReady(() => {
                         docked: 'left',
                         html: 'Left herp!',
                         tab: 'Woot',
-                        style: 'color: lime; fontSize: 2em',
+                        element: {
+                            style: 'color: lime; fontSize: 2em',
+                        },
                         bind: {
                             html: p => `Left ${p.theme?.toUpperCase()}`
                         }
