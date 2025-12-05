@@ -461,7 +461,7 @@ export class Dom {
         ref && context?.refs && (context.refs[ref] = me);
 
         me._updateAttrs(spec, was);
-        me._updateAttrs(spec.aria, was.aria, 'aria-');
+        me._updateAttrs(spec.aria || EMPTY_OBJECT, was.aria || EMPTY_OBJECT, 'aria-');
         me._updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
         me._updateData(data, was.data);
         me._updateStyle(style, was.style);

@@ -47,7 +47,10 @@ Dom.onReady(() => {
                         cls: 'woot',
                         docked: 'left',
                         html: 'Left herp!',
-                        tab: 'Woot',
+                        tab: {
+                            html: 'Woot',
+                            renderTarget: 'navEnd'
+                        },
                         element: {
                             style: 'color: lime; fontSize: 2em',
                         },

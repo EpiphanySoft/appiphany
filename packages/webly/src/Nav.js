@@ -1,23 +1,6 @@
-import { map, SKIP } from '@appiphany/aptly';
-import { Component, Container } from '@appiphany/webly';
+import { values } from '@appiphany/aptly';
+import { Component, Container, ItemsConfig } from '@appiphany/webly';
 
-const
-    mapTab = it => {
-        let { tab } = it;
-
-        debugger;
-        if (!tab) {
-            return SKIP;
-        }
-
-        if (typeof tab === 'string') {
-            tab = {
-                html: tab
-            };
-        }
-
-        return tab;
-    };
 
 export class NavbarTab extends Component {
     static type = 'navbar-tab';
@@ -63,7 +46,6 @@ export class Navbar extends Component {
     };
 
     getItems (docked) {
-        debugger;
         let items = super.getItems(docked),
             tabs;
 
@@ -82,37 +64,47 @@ export class Navbar extends Component {
     //     this.fire('click', e);
     // }
     render () {
-        let { id, burger, menu } = this.props,
-            items = this.getItems(),
-            { tabs } = this.props;
-
-        debugger;
-        if (tabs) {
-            items = Component.sortItems([...tabs, ...items]);
-        }
+        let { id, burger, menu } = this,
+            bodyId = `${id}-body`;
 
         return {
-            brand: {
-                cls: {
-                    'navbar-brand': 1
-                }
-                // brand icon
-                // burger button
-            },
-            body: {
-                id: `${id}-body`,
-                class: {
-                    'navbar-menu': 1
-                },
-                children: {
-                    navStart: {
-                        class: {
-                            'navbar-start': 1
-                        }
+            children: {
+                brand: {
+                    class: {
+                        'navbar-brand': 1
                     },
-                    navEnd: {
-                        class: {
-                            'navbar-end': 1
+                    children: {
+                        // TODO brand icon
+                        burger: burger && {
+                            tag:  'a',
+                            role: 'button',
+                            aria:  { label: 'menu', expanded: false },
+                            class: { 'navbar-burger': 1 },
+                            data:  { target: bodyId },
+                            children: {
+                                s1: { tag: 'span', aria: { hidden: true } },
+                                s2: { tag: 'span', aria: { hidden: true } },
+                                s3: { tag: 'span', aria: { hidden: true } },
+                                s4: { tag: 'span', aria: { hidden: true } }
+                            }
+                        }
+                    }
+                },
+                body: {
+                    id: bodyId,
+                    class: {
+                        'navbar-menu': 1
+                    },
+                    children: {
+                        navStart: {
+                            class: {
+                                'navbar-start': 1
+                            }
+                        },
+                        navEnd: {
+                            class: {
+                                'navbar-end': 1
+                            }
                         }
                     }
                 }
@@ -131,9 +123,11 @@ export class Nav extends Container {
 
     static configurable = {
         bar: class {
+            phase = 'init';
             value = {
                 type: Navbar,
-                docked: 'top'
+                docked: 'top',
+                order: -10
             };
 
             apply (instance, value, was) {
@@ -147,14 +141,58 @@ export class Nav extends Container {
 
         items: class {
             update (instance, value) {
-                instance.props.tabs = value ? map(value, mapTab, 'array') : [];
+                let tabs = null,
+                    it, ref, tab;
+
+                if (value) {
+                    for (ref in value) {
+                        it = value[ref];
+                        tab = it.tab;
+
+                        if (tab) {
+                            if (typeof tab === 'string') {
+                                tab = {
+                                    html: tab
+                                };
+                            }
+
+                            (tabs ??= {})[`${ref}Tab`] = tab;
+                        }
+                    }
+                }
+
+                instance.tabs = tabs;
             }
         },
 
         props: {
             tabs: null
+        },
+
+        tabs: class extends ItemsConfig {
+            getItemDefaults (instance) {
+                return {
+                    type: NavbarTab,
+                    parent: instance
+                };
+            }
+
+            update (instance, value) {
+                instance.props.tabs = value && values(value);
+            }
         }
     };
+
+    getItems (docked) {
+        let items = super.getItems(docked),
+            { bar } = this;
+
+        if (bar && (docked === true || docked === bar.docked)) {
+            items.unshift(bar);
+        }
+
+        return items;
+    }
 }
 
 Nav.initClass();

@@ -1,4 +1,5 @@
-import { chain, panik, Widget, Signal, isObject, clone, merge, EMPTY_ARRAY, EMPTY_OBJECT, values, map }
+import { chain, panik, Widget, Signal, isObject, clone, merge,
+         EMPTY_ARRAY, EMPTY_OBJECT, values, Config }
     from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 import { Dom } from '@appiphany/webly';
@@ -39,6 +40,90 @@ const
         return refs;
     };
 
+
+export class ItemsConfig extends Config {
+    apply (instance, newItems, was) {
+        //  newItems = {
+        //      foo: { type: 'component' },
+        //      bar: { type: 'component' },
+        //  }
+        //
+        let items = {},
+            existingByRef = was && chain(),
+            i = 0,
+            same = true,
+            existingIndex, existingItem, ref, item;
+
+        newItems ??= {};
+
+        if (!isObject(newItems)) {
+            panik('items must be an object');
+        }
+
+        if (was) {
+            for (ref in was) {
+                existingByRef[ref] = [i++, was[ref]];
+            }
+        }
+
+        i = 0;
+
+        for (ref in newItems) {
+            item = newItems[ref];
+
+            if (item) {
+                [existingIndex, existingItem] = existingByRef?.[ref] || EMPTY_ARRAY;
+
+                if (!item.is?.component) {
+                    item = clone(item);
+                    item.parent = instance;
+                    item.ref = ref;
+
+                    item = this.reconfigureItem(instance, existingItem, item);
+                }
+
+                if (item === existingItem) {
+                    // either newItems held an instantiated Component to replace the existingItem,
+                    // or the reconfigure() of the existingItem returned the existingItem (now
+                    // with config changes).
+                    delete existingByRef[ref];
+                }
+                else {
+                    same = false;
+                }
+
+                items[ref] = item;
+
+                if (existingIndex !== i) {
+                    same = false;
+                }
+            }
+
+            ++i;
+        }
+
+        if (existingByRef) {
+            for (ref in existingByRef) {
+                existingByRef[ref].destroy();
+                same = false;
+            }
+        }
+
+        return same ? was : items;
+    }
+
+    getItemDefaults (instance) {
+        return {
+            parent: instance
+        };
+    }
+
+    reconfigureItem (instance, existingItem, item) {
+        return Component.reconfigure(existingItem, item, {
+            defaults: this.getItemDefaults(instance)
+        });
+    }
+}
 
 export class Component extends Widget.mixin(Factoryable) {
     static type = 'component';
@@ -107,76 +192,8 @@ export class Component extends Widget.mixin(Factoryable) {
          * The keys of the object preserve their declaration order, and that order determines their
          * order in the DOM.
          */
-        items: class {
-            apply (me, newItems, was) {
-                //  newItems = {
-                //      foo: { type: 'component' },
-                //      bar: { type: 'component' },
-                //  }
-                //
-                let items = {},
-                    existingByRef = was && chain(),
-                    i = 0,
-                    same = true,
-                    existingIndex, existingItem, ref, item;
-
-                newItems ??= {};
-
-                if (!isObject(newItems)) {
-                    panik('items must be an object');
-                }
-
-                if (was) {
-                    for (ref in was) {
-                        existingByRef[ref] = [i++, was[ref]];
-                    }
-                }
-
-                i = 0;
-
-                for (ref in newItems) {
-                    item = newItems[ref];
-
-                    if (item) {
-                        [existingIndex, existingItem] = existingByRef?.[ref] || EMPTY_ARRAY;
-
-                        if (!item.is?.component) {
-                            item = clone(item);
-                            item.parent = me;
-                            item.ref = ref;
-
-                            item = Component.reconfigure(existingItem, item);
-                        }
-
-                        if (item === existingItem) {
-                            // either newItems held an instantiated Component to replace the existingItem,
-                            // or the reconfigure() of the existingItem returned the existingItem (now
-                            // with config changes).
-                            delete existingByRef[ref];
-                        }
-                        else {
-                            same = false;
-                        }
-
-                        items[ref] = item;
-
-                        if (existingIndex !== i) {
-                            same = false;
-                        }
-                    }
-
-                    ++i;
-                }
-
-                if (existingByRef) {
-                    for (ref in existingByRef) {
-                        existingByRef[ref].destroy();
-                        same = false;
-                    }
-                }
-
-                return same ? was : items;
-            }
+        items: class extends ItemsConfig {
+            value = null;
         },
 
         /**
@@ -186,8 +203,8 @@ export class Component extends Widget.mixin(Factoryable) {
         renderTarget: class {
             value = null;
 
-            update (me) {
-                let { parent } = me;
+            update (instance) {
+                let { parent } = instance;
 
                 parent?.initialized && parent.recompose(true);
             }
@@ -211,7 +228,7 @@ export class Component extends Widget.mixin(Factoryable) {
             value = null;
             phase = 'init';
 
-            apply (me, value) {
+            apply (instance, value) {
                 return value ? (Array.isArray(value) ? value : ['append', value]) : [];
             }
         }
@@ -250,7 +267,7 @@ export class Component extends Widget.mixin(Factoryable) {
     getItems (docked) {
         let items = values(this.items || EMPTY_OBJECT);
 
-        if (docked === '*') {
+        if (docked !== '*') {
             items = items.filter(
                 (docked === true) ? i => i.docked : (docked ? i => i.docked === docked : i => !i.docked));
         }

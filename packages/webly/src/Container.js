@@ -1,5 +1,5 @@
 import { Component } from '@appiphany/webly';
-import { values } from '@appiphany/aptly';
+import { merge, values } from '@appiphany/aptly';
 
 const
     DOCKS = {
@@ -19,6 +19,12 @@ export class Container extends Component {
 
     static configurable = {
         itemRenderTarget: 'body'
+    };
+
+    static shardable = {
+        renderBody (a, b) {
+            return merge(a, b);
+        }
     };
 
     render () {
@@ -63,7 +69,8 @@ export class Container extends Component {
                 }
 
                 if (docked === DOCKS[flow]) {
-                    bwrap.splice(bodyIndex++, 0, [ref, item.dom]);
+                    bwrap.unshift([ref, item.dom]);
+                    ++bodyIndex;
                 }
                 else {
                     bwrap.push([ref, item.dom]);
