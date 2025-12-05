@@ -93,6 +93,7 @@ export class Dom {
         owner    : 1,
         text     : 1,
         ref      : 1,
+        refs     : 1,
         children : 1,
 
         class    : 1,
@@ -424,7 +425,8 @@ export class Dom {
 
         context = context || {
             owner: me.owner,
-            refs: chain(),
+            refs: me.refs,
+            parent: me,
             root: me
         };
 
@@ -458,7 +460,14 @@ export class Dom {
             parent.appendChild(el);
         }
 
-        ref && context?.refs && (context.refs[ref] = me);
+        if (ref) {
+            if (ref[0] === '_' && context.parent) {
+                (context.parent.refs ??= chain())[ref] = me;
+            }
+            else {
+                context?.refs && (context.refs[ref] = me);
+            }
+        }
 
         me._updateAttrs(spec, was);
         me._updateAttrs(spec.aria || EMPTY_OBJECT, was.aria || EMPTY_OBJECT, 'aria-');
@@ -477,6 +486,17 @@ export class Dom {
             }
         }
         else if (children) {
+            if (spec.refs && context.refs !== me.refs) {
+                context = {
+                    ...context,
+                    parent: me,
+                    refs: me.refs ??= chain()
+                };
+            }
+            else if (context.parent !== me) {
+                context = { ...context, parent: me };
+            }
+
             me._updateSubTree(Dom.canonicalizeSpecs(children), context);
         }
 

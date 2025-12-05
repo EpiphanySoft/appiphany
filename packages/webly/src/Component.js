@@ -146,8 +146,14 @@ export class Component extends Widget.mixin(Factoryable) {
 
     static configurable = {
         // CSS/HTML
-        cls: null,
+        cls: class extends Config.Flags {
+            value = null;
+        },
+
+        flex: null,
         html: null,
+        width: null,
+        height: null,
 
         element: {
             aria: null,
@@ -313,18 +319,32 @@ export class Component extends Widget.mixin(Factoryable) {
 
     render () {
         let me = this,
-            { cls, html } = me,
+            { cls, docked, html, flex, width, height } = me,
             { aria, role, style, tag } = me.element;
 
         aria ??= EMPTY_OBJECT;
+        cls = clone(cls);
+        style = clone(style);
+
+        if (docked) {
+            cls[`x-docked-${docked}`] = 1;
+        }
+
+        if (flex != null) {
+            style.flex = flex;
+        }
+
+        if (width != null) {
+            style.width = width;
+        }
+
+        if (height != null) {
+            style.height = height;
+        }
 
         return {
-            tag,
-            html,
-            aria,
-            role,
-            class: clone(cls),
-            style: clone(style)
+            class: cls,
+            tag, html, aria, role, style
         };
     }
 

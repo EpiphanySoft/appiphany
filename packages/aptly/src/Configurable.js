@@ -100,7 +100,7 @@ export class Config {
         let me = this,
             { prop } = me,
             was = instance[prop],
-            firstTime = !(hasOwn(instance, prop) && !instance.configuring?.firstTime),
+            firstTime = !(instance.initialized || hasOwn(instance, prop)) || instance.configuring?.firstTime,
             handled, applied;
 
         if (me.apply) {
@@ -235,9 +235,11 @@ class Bool extends Config {
 class Flags extends Config {
     static wordRe = /,|\s+/;
 
+    delimiter = null;
+
     apply (instance, v, was) {
         if (typeof v === 'string') {
-            v = v.split(Flags.wordRe).filter(s => s);
+            v = v.split(this.delimiter || Flags.wordRe).filter(s => s);
         }
 
         if (Array.isArray(v)) {

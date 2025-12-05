@@ -1,10 +1,21 @@
 @import "bulma/bulma.css";
 
-.x-component:not(.x-viewport) {
-    display: inline-flex;
+body.x-viewport {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+
+.x-component {
     overflow: hidden;
 }
 
+.x-layout-hbox > .x-component,
+.x-layout-auto > .x-component {
+    display: inline flex;
+}
+
+.x-layout-hbox, .x-layout-vbox,
 .x-box-h, .x-box-v {
     display: flex;
     align-items: stretch;
@@ -12,15 +23,19 @@
     position: relative;
 }
 
+.x-layout-hbox,
 .x-box-h {
     flex-flow: row nowrap;
 }
 
+.x-layout-vbox,
 .x-box-v {
     flex-flow: column nowrap;
 }
 
 .x-box-body {
+    display: flex;
     flex: 1 1 auto;
     overflow: hidden;
+    position: relative;
 }

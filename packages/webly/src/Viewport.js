@@ -1,4 +1,4 @@
-import { Component } from '@appiphany/webly';
+import { Component, LayoutConfig } from '@appiphany/webly';
 
 
 export class Viewport extends Component {
@@ -6,6 +6,10 @@ export class Viewport extends Component {
 
     static configurable = {
         nexus: 'viewport',
+
+        layout: class extends LayoutConfig {
+            value = 'vbox';
+        },
 
         props: {
             theme: 'light'
@@ -37,6 +41,16 @@ export class Viewport extends Component {
 
         renderTo: ['adopt', document.body]
     };
+
+    render () {
+        let { layout } = this;
+
+        return {
+            class: {
+                [`x-layout-${layout?.type}`]: !!layout
+            }
+        };
+    }
 
     toggleTheme () {
         let { props, themes } = this,

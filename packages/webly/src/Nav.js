@@ -42,6 +42,8 @@ export class Navbar extends Component {
             default = true;
         },
 
+        burgerized: null,
+
         menu: null
     };
 
@@ -60,12 +62,14 @@ export class Navbar extends Component {
         return items;
     }
 
-    // onClick (e) {
-    //     this.fire('click', e);
-    // }
+    onClickBurger (e) {
+        this.burgerized = !this.burgerized;
+    }
+
     render () {
-        let { id, burger, menu } = this,
-            bodyId = `${id}-body`;
+        let { id, burger, burgerized, menu } = this;
+
+        burgerized = !!burgerized;
 
         return {
             children: {
@@ -79,21 +83,22 @@ export class Navbar extends Component {
                             tag:  'a',
                             role: 'button',
                             aria:  { label: 'menu', expanded: false },
-                            class: { 'navbar-burger': 1 },
-                            data:  { target: bodyId },
+                            class: { 'navbar-burger': 1, 'is-active': burgerized },
+                            on: { click: 'onClickBurger' },
                             children: {
-                                s1: { tag: 'span', aria: { hidden: true } },
-                                s2: { tag: 'span', aria: { hidden: true } },
-                                s3: { tag: 'span', aria: { hidden: true } },
-                                s4: { tag: 'span', aria: { hidden: true } }
+                                _1: { tag: 'span', aria: { hidden: true } },
+                                _2: { tag: 'span', aria: { hidden: true } },
+                                _3: { tag: 'span', aria: { hidden: true } },
+                                _4: { tag: 'span', aria: { hidden: true } }
                             }
                         }
                     }
                 },
                 body: {
-                    id: bodyId,
+                    id: `${id}-body`,
                     class: {
-                        'navbar-menu': 1
+                        'navbar-menu': 1,
+                        'is-active': burgerized
                     },
                     children: {
                         navStart: {

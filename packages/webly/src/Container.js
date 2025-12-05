@@ -1,5 +1,5 @@
+import { Config, merge, values } from '@appiphany/aptly';
 import { Component } from '@appiphany/webly';
-import { merge, values } from '@appiphany/aptly';
 
 const
     DOCKS = {
@@ -14,11 +14,30 @@ const
     },
     toObject = a => Object.fromEntries(a);
 
+
+export class LayoutConfig extends Config {
+    value = 'auto';
+
+    apply (instance, value) {
+        if (typeof value === 'string') {
+            value = { type: value };
+        }
+
+        return value;
+    }
+}
+
+/**
+ * A container component.
+ */
 export class Container extends Component {
     static type = 'container';
 
     static configurable = {
-        itemRenderTarget: 'body'
+        itemRenderTarget: 'body',
+
+        layout: class extends LayoutConfig {
+        }
     };
 
     static shardable = {
@@ -86,12 +105,13 @@ export class Container extends Component {
     }
 
     renderBody () {
-        let { id } = this;
+        let { id, layout } = this;
 
         return {
             id: `${id}-body`,
             class: {
-                'x-body': 1
+                'x-body': 1,
+                [`x-layout-${layout?.type}`]: !!layout
             }
         };
     }
