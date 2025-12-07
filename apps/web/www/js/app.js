@@ -13,6 +13,7 @@ Dom.onReady(() => {
             foo: {
                 type: Nav,
                 cls: 'woot',
+                flex: '1 1 auto',
 
                 // bar: {
                 //     items: {
@@ -29,10 +30,6 @@ Dom.onReady(() => {
                 // },
 
                 items: {
-                    zip: {
-                        html: 'Body zip',
-                    },
-
                     herp: {
                         cls: 'herp',
                         docked: 'top',
@@ -57,6 +54,14 @@ Dom.onReady(() => {
                         bind: {
                             html: p => `Left ${p.theme?.toUpperCase()}`
                         }
+                    },
+
+                    zap: {
+                        html: 'Body zap',
+                    },
+
+                    zip: {
+                        html: 'Body zip',
                     }
                 }
             }

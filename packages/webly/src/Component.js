@@ -132,17 +132,17 @@ export class Component extends Widget.mixin(Factoryable) {
         defaultType: 'component'
     };
 
-    static #idMap = chain();
-
-    static generateAutoId (prefix) {
-        let map = Component.#idMap;
-
-        return map[prefix] = (map[prefix] || 0) + 1;
-    }
-
-    static identifierPrefix () {
-        return this.type;
-    }
+    // static #idMap = chain();
+    //
+    // static generateAutoId (prefix) {
+    //     let map = Component.#idMap;
+    //
+    //     return map[prefix] = (map[prefix] || 0) + 1;
+    // }
+    //
+    // static identifierPrefix () {
+    //     return this.type;
+    // }
 
     static configurable = {
         // CSS/HTML
@@ -331,15 +331,15 @@ export class Component extends Widget.mixin(Factoryable) {
         }
 
         if (flex != null) {
-            style.flex = flex;
+            (style ??= {}).flex = flex;
         }
 
         if (width != null) {
-            style.width = width;
+            (style ??= {}).width = width;
         }
 
         if (height != null) {
-            style.height = height;
+            (style ??= {}).height = height;
         }
 
         return {

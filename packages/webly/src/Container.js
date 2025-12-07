@@ -1,5 +1,5 @@
-import { Config, merge, values } from '@appiphany/aptly';
-import { Component } from '@appiphany/webly';
+import { merge } from '@appiphany/aptly';
+import { Component, LayoutConfig } from '@appiphany/webly';
 
 const
     DOCKS = {
@@ -14,18 +14,6 @@ const
     },
     toObject = a => Object.fromEntries(a);
 
-
-export class LayoutConfig extends Config {
-    value = 'auto';
-
-    apply (instance, value) {
-        if (typeof value === 'string') {
-            value = { type: value };
-        }
-
-        return value;
-    }
-}
 
 /**
  * A container component.

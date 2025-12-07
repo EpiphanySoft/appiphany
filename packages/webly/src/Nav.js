@@ -1,5 +1,5 @@
 import { values } from '@appiphany/aptly';
-import { Component, Container, ItemsConfig } from '@appiphany/webly';
+import { Component, Panel, ItemsConfig } from '@appiphany/webly';
 
 
 export class NavbarTab extends Component {
@@ -123,7 +123,7 @@ Navbar.initClass();
 /**
  *
  */
-export class Nav extends Container {
+export class Nav extends Panel {
     static type = 'nav';
 
     static configurable = {

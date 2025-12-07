@@ -33,6 +33,7 @@ body.x-viewport {
     flex-flow: column nowrap;
 }
 
+.x-body-wrap,
 .x-box-body {
     display: flex;
     flex: 1 1 auto;
