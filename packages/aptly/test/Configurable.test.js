@@ -1,4 +1,4 @@
-import { Configurable, Config, applyTo, clone, nop } from '@appiphany/aptly';
+import { Configurable, Config, applyTo, clone, nop, Signal } from '@appiphany/aptly';
 import { Identifiable } from '@appiphany/aptly/mixin';
 
 import assertly from 'assertly';
@@ -1033,6 +1033,48 @@ describe('Configurable', () => {
         }
 
         let inst = Foo.new({ foo: 42, bar: 427 });
+
+        expect(log).to.equal([]);
+
+        inst.foo = 1;
+
+        expect(log).to.equal([
+            ['foo', 1]
+        ]);
+        log.length = 0;
+
+        inst.configure({ foo: 3, bar: 2 });
+        log.sort((a, b) => a[0].localeCompare(b[0]));
+
+        expect(log).to.equal([
+            ['bar', 2],
+            ['foo', 3]
+        ]);
+    });
+
+    it('signalize', () => {
+        let log = [];
+
+        class Foo extends Configurable {
+            static configurable = {
+                foo: null,
+                bar: null
+            }
+
+            getBar () {
+                return this.bar + this.foo?.getBar();
+            }
+        }
+
+        let inst1 = Foo.new({ bar: 42 });
+        let inst2 = Foo.new({ bar: 427, foo: inst1 });
+
+        let formula = Signal.formula(() => Configurable.signalize(() => inst2.getBar()));
+        let watcher = Signal.watch(() => {
+            debugger;
+        });
+
+        watcher.watch(formula);
 
         expect(log).to.equal([]);
 

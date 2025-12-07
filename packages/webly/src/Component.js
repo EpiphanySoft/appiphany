@@ -1,8 +1,8 @@
 import { chain, panik, Widget, Signal, isObject, clone, merge,
-         EMPTY_ARRAY, EMPTY_OBJECT, values, Config }
+         EMPTY_ARRAY, EMPTY_OBJECT, values, Config, Configurable }
     from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
-import { Dom } from '@appiphany/webly';
+import { Dom, LayoutConfig } from '@appiphany/webly';
 
 
 const
@@ -165,15 +165,11 @@ export class Component extends Widget.mixin(Factoryable) {
 
         docked: null,
 
+        layout: class extends LayoutConfig {},
+
         order: class {
             value = null;
             default = 0;
-
-            update (me) {
-                let { parent } = me;
-
-                parent?.initialized && parent.recompose(true);
-            }
         },
 
         /**
@@ -206,15 +202,7 @@ export class Component extends Widget.mixin(Factoryable) {
          * The ref name of the element to render this component's content into. If not specified,
          * the parent component's `itemRenderTarget` is used.
          */
-        renderTarget: class {
-            value = null;
-
-            update (instance) {
-                let { parent } = instance;
-
-                parent?.initialized && parent.recompose(true);
-            }
-        },
+        renderTarget: null,
 
         /**
          * The element to render to and (optionally) the mode to use.
@@ -258,7 +246,7 @@ export class Component extends Widget.mixin(Factoryable) {
     #renderToUsed = false;
     #renderWatcher = null;
     #watcherNotified = false;
-    #watchRenderConfigs = null;
+    //#watchRenderConfigs = null;
 
     destruct () {
         this.#unrender();
@@ -301,6 +289,7 @@ export class Component extends Widget.mixin(Factoryable) {
                         renderTarget.children = children = Dom.canonicalizeSpecs(children);
                     }
 
+                    if (!it.#dom) debugger;
                     children.push(it.#dom);
                 }
             }
@@ -319,7 +308,7 @@ export class Component extends Widget.mixin(Factoryable) {
 
     render () {
         let me = this,
-            { cls, docked, html, flex, width, height } = me,
+            { cls, docked, html, flex, layout, width, height } = me,
             { aria, role, style, tag } = me.element;
 
         aria ??= EMPTY_OBJECT;
@@ -327,7 +316,7 @@ export class Component extends Widget.mixin(Factoryable) {
         style = clone(style);
 
         if (docked) {
-            cls[`x-docked-${docked}`] = 1;
+            (cls ??= {})[`x-docked-${docked}`] = 1;
         }
 
         if (flex != null) {
@@ -342,10 +331,10 @@ export class Component extends Widget.mixin(Factoryable) {
             (style ??= {}).height = height;
         }
 
-        return {
+        return layout.decorateElement('root', {
             class: cls,
             tag, html, aria, role, style
-        };
+        });
     }
 
     #getRenderPlan () {
@@ -369,22 +358,15 @@ export class Component extends Widget.mixin(Factoryable) {
             { id, dom } = me,
             [renderToUsed, mode, renderTo] = me.#getRenderPlan(),
             adopt = mode === 'adopt',
-            composer = me.#composer ??=
-                Signal.formula(() => me.compose(), { name: `composer@${id}` }),
+            composer = me.#composer ??= Signal.formula(
+                () => Configurable.signalize(() => me.compose(), me.id),
+                { name: `composer@${id}` }),
             watcher = me.#renderWatcher,
-            configsUsed, spec;
+            spec;
 
         full && composer.invalidate();
 
-        configsUsed = me.monitorConfigs(() => {
-            spec = composer.get();
-        });
-
-        if (configsUsed) {
-            me.#watchRenderConfigs ??= me.watchConfigs(() => me.initialized && me.recompose(true));
-        }
-
-        (configsUsed || full) && me.#watchRenderConfigs?.(configsUsed);
+        spec = composer.get();
 
         if (!spec) {
             me.#unrender();

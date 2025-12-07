@@ -1,4 +1,4 @@
-import { Destroyable, Scheduler, Signal, panik, chain, applyTo, remove }
+import { Destroyable, Scheduler, Signal, panik, chain, applyTo, remove, Configurable }
     from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
@@ -182,23 +182,16 @@ class Effects extends Destroyable {
             effects = me.#effects,
             owner = me.#owner,
             watcher = me.#watcher,
-            cleanup, configWatch, signal, un;
+            cleanup, signal, un;
 
         signal = Signal.formula(() => {
             cleanup?.();
-            cleanup = null;
-
-            configWatch ??= owner.watchConfigs(() => signal.invalidate());
-
-            configWatch(!owner.destroyed && owner.monitorConfigs(() => {
-                cleanup = fn.call(owner, owner.props);
-            }));
+            cleanup = Configurable.signalize(() => fn.call(owner, owner.props));
         }, { name });
 
         un = () => {
-            configWatch?.();
             cleanup?.();
-            configWatch = cleanup = null;
+            cleanup = null;
             delete effects[name];
             watcher.unwatch(signal);
         };
@@ -373,6 +366,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         },
 
         $props: class {
+            signalizable = false;
             value = {};
 
             apply (me, props, was) {
@@ -429,6 +423,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         },
 
         props: class {
+            signalizable = false;
             value = {};
 
             apply (me, props, was) {

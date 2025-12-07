@@ -1,5 +1,5 @@
 import { merge } from '@appiphany/aptly';
-import { Component, LayoutConfig } from '@appiphany/webly';
+import { Component } from '@appiphany/webly';
 
 const
     DOCKS = {
@@ -24,7 +24,8 @@ export class Container extends Component {
     static configurable = {
         itemRenderTarget: 'body',
 
-        layout: class extends LayoutConfig {
+        layout: {
+            type: 'auto'
         }
     };
 
@@ -35,8 +36,9 @@ export class Container extends Component {
     };
 
     render () {
-        let body = this.renderBody(),
-            items = this.getItems(true);
+        let me = this,
+            body = me.renderBody(),
+            items = me.getItems(true);
 
         if (items.length) {
             let docked, item, ref, f, flow, // = 'h', 'v'
@@ -95,13 +97,12 @@ export class Container extends Component {
     renderBody () {
         let { id, layout } = this;
 
-        return {
+        return layout.decorateElement('body', {
             id: `${id}-body`,
             class: {
-                'x-body': 1,
-                [`x-layout-${layout?.type}`]: !!layout
+                'x-body': 1
             }
-        };
+        });
     }
 }
 

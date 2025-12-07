@@ -70,6 +70,24 @@ export const
         return target;
     },
 
+    applyMissing = (target, ...sources) => {
+        if (target) {
+            let key, source;
+
+            for (source of sources) {
+                if (source) {
+                    for (key in source) {
+                        if (!(key in target)) {
+                            target[key] = source[key];
+                        }
+                    }
+                }
+            }
+        }
+
+        return target;
+    },
+
     applyTo = (target, ...sources) => {
         if (target) {
             let key, source;

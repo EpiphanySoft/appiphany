@@ -1,6 +1,6 @@
 import {
     clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo,
-    Declarable, remove
+    Declarable, remove, Signal
 }
     from '@appiphany/aptly';
 
@@ -10,6 +10,7 @@ const
     { defineProperty } = Reflect,
     configDataSym = Symbol('configuring'),
     configWatchersSym = Symbol('configWatchers'),
+    signalConfigsSym = Symbol('signalConfigs'),
     EXPANDO_ANY = applyTo(chain(), { '*': true }),
     EXPANDO_NONE = chain(),
     makeExpando = (expando, parentExpando) => {
@@ -152,17 +153,24 @@ export class Config {
     }
 
     getAccessor() {
-        const config = this;
+        const
+            config = this,
+            { name } = config;
 
         return config._accessor || (config._accessor = {
             get() {
-                this.hookGetConfig?.(config.name, config);
+                let me = this,
+                    // the accessor is defined on the class prototype, but we need the Config
+                    // defined by the instance's class:
+                    cfg = me.$meta.configs[name];
 
-                return this.$meta.configs[config.name].get(this);
+                me.hookGetConfig?.(name, cfg);
+
+                return cfg.get(me);
             },
 
             set(v) {
-                this.$meta.configs[config.name].set(this, v);
+                this.$meta.configs[name].set(this, v);
             }
         });
     }
@@ -218,6 +226,7 @@ applyTo(Config.prototype, {
     nullify: false,
     phase: 'ctor',  // in {'ctor', 'get', 'init'}
     priority: 0,
+    signalizable: true,
 
     apply: null,
     update: null
@@ -294,6 +303,7 @@ export class Configurable extends Declarable {
     static expando = EXPANDO_NONE;
 
     static proto = {
+        [signalConfigsSym]: null,
         configuring: null,
 
         hookGetConfig: null,
@@ -401,6 +411,39 @@ export class Configurable extends Declarable {
         }
 
         return target;
+    }
+
+    static signalize (fn /*, observer */) {
+        let proto = Configurable.prototype;
+
+        proto.hookGetConfig && panik('signalization is already active');
+
+        try {
+            proto.hookGetConfig = function (name, config) {
+                if (config.signalizable) {
+                    let me = this,
+                        { prop } = config,
+                        signals = me[signalConfigsSym] ??= chain(),
+                        signal;
+
+                    if (!signals[name]) {
+                        signals[name] = signal = Signal.value(me[prop]);
+                        // console.log(`${observer} watching "${name}" on ${me._id}`);
+
+                        // route i/o to the "_prop" property to a Signal so it can be observed
+                        defineProperty(me, prop, {
+                            get: _ => signal.get(),
+                            set: v => signal.set(v)
+                        });
+                    }
+                }
+            };
+
+            return fn();
+        }
+        finally {
+            delete proto.hookGetConfig;
+        }
     }
 
     static squashConfigs(...configs) {

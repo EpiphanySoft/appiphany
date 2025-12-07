@@ -1,53 +1,44 @@
-import { Config, merge, Widget } from '@appiphany/aptly';
+import { Config, applyMissing, merge, Widget } from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 // import {  } from '@appiphany/webly';
 
 
-export class LayoutConfig extends Config {
-    value = 'auto';
-
-    apply (instance, value) {
-        if (typeof value === 'string') {
-            value = { type: value };
-        }
-
-        return value;
-    }
-}
-
 /**
- * A container component.
+ * A container widget.
  */
 export class Layout extends Widget.mixin(Factoryable) {
-    static type = 'default';
+    static type = 'auto';
 
     static factory = {
-        defaultType: 'default'
+        defaultType: 'auto'
     };
 
     static configurable = {
         classes: {
-            root: {},
-            body: {}
+            // body: {},
+            // root: {}
         }
     };
 
-    decorateElement (ref, spec) {
-        let classes = this.getClasses(ref);
-
-        if (classes) {
-            spec.class = merge(spec.class || {}, classes);
-        }
-
-        return spec;
+    addClasses (spec, classes) {
+        classes && applyMissing(spec.class ??= {}, classes);
     }
 
-    getClasses (ref) {
-        return this.classes?.[ref];
+    decorateElement (ref, spec) {
+        (ref === 'root') && this.addClasses(spec, {
+            [`x-layout-${this.type}`]: 1
+        });
+
+        this.addClasses(spec, this.classes[ref]);
+
+        return spec;
     }
 }
 
 Layout.initClass();
+
+
+//------------------------------------------------------------------------------------------------
 
 export class Box extends Layout {
     static type = 'box';
@@ -58,27 +49,37 @@ export class Box extends Layout {
             default = false;
         },
 
+        classes: {
+            root: {
+                'x-layout-box': 1
+            }
+        },
+
         classesH: {
-            root: {},
-            body: {}
+            body: {
+                'x-box-h': 1
+            },
+            root: {
+                'x-layout-hbox': 1
+            }
         },
 
         classesV: {
-            root: {},
-            body: {}
+            body: {
+                'x-box-v': 1
+            },
+            root: {
+                'x-layout-vbox': 1
+            }
         }
     };
 
-    getClasses (ref) {
-        let { extra } = this[`classes${this.horizontal ? 'H' : 'V'}`];
+    decorateElement (ref, spec) {
+        this.addClasses(spec, this[`classes${this.horizontal ? 'H' : 'V'}`][ref]);
 
-        extra = extra?.[ref] || {};
-
-        return merge(super.getClasses(ref), extra);
+        return super.decorateElement(ref, spec);
     }
 }
-
-Box.initClass();
 
 export class HBox extends Box {
     static type = 'hbox';
@@ -88,10 +89,29 @@ export class HBox extends Box {
     };
 }
 
-HBox.initClass();
-
 export class VBox extends Box {
     static type = 'vbox';
 }
 
+Box.initClass();
+HBox.initClass();
 VBox.initClass();
+
+
+//------------------------------------------------------------------------------------------------
+
+export class LayoutConfig extends Config {
+    value = 'auto';
+
+    apply (instance, value, was) {
+        if (typeof value === 'string') {
+            value = { type: value };
+        }
+
+        return Layout.reconfigure(was, value, {
+            defaults: {
+                parent: instance
+            }
+        });
+    }
+}

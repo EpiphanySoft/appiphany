@@ -3,7 +3,7 @@ import { Component, Panel, ItemsConfig } from '@appiphany/webly';
 
 
 export class NavbarTab extends Component {
-    static type = 'navbar-tab';
+    static type = 'navbarTab';
 
     static configurable = {
         cls: {

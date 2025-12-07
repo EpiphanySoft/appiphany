@@ -185,7 +185,10 @@ export class Declarable extends Destroyable {
         },
 
         proto (cls, properties) {
-            applyTo(cls.prototype, properties);
+            // this is the simplest way to support Symbol keys
+            for (let key of Reflect.ownKeys(properties)) {
+                cls.prototype[key] = properties[key];
+            }
         },
 
         shardable (cls, shardable) {
