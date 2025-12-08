@@ -53,9 +53,13 @@ export class Layout extends Widget.mixin(Factoryable) {
             rt = (renderTarget && renderTarget !== itemRenderTarget) ? renderTarget : 'default',
             key = docked ? `docked-${docked}` : rt;
 
-        me.addClasses(spec, me.childClasses?.[key]);
+        me.decorateChildWith(child, spec, key, me.childClasses?.[key]);
 
         return spec;
+    }
+
+    decorateChildWith (child, spec, key, classes) {
+        this.addClasses(spec, classes);
     }
 
     decorateElement (ref, spec) {
@@ -151,6 +155,20 @@ export class Card extends Layout {
             }
         }
     };
+
+    decorateChildWith (child, spec, key, classes) {
+        super.decorateChildWith(child, spec, key, classes);
+
+        if (key === 'default') {
+            let { index } = child;
+
+            if (index != null) {
+                // console.log(`${child.id}.index = ${index}`);
+            }
+        }
+
+        return spec;
+    }
 }
 
 Card.initClass();

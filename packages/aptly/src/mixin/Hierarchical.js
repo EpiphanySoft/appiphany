@@ -1,4 +1,5 @@
-import { panik, Config, chain, applyTo } from '@appiphany/aptly';
+import { panik, chain, applyTo } from '@appiphany/aptly';
+import { Delayable } from '@appiphany/aptly/mixin';
 
 const
     insertingSym = Symbol('inserting'),
@@ -132,7 +133,7 @@ class Refs {
  *                                                          └──────────────┘
  *
  */
-export const Hierarchical = Base => class Hierarchical extends Base {
+export const Hierarchical = Base => class Hierarchical extends Base.mixin(Delayable) {
     static configurable = {
         /**
          * @config {Boolean|String}
@@ -195,6 +196,10 @@ export const Hierarchical = Base => class Hierarchical extends Base {
                 me.inherited.nexus?.refs.invalidate();
             }
         }
+    };
+
+    static delayable = {
+        _reindexChildren: 'sched'
     };
 
     static hierarchicalType = 'base';
@@ -398,9 +403,24 @@ export const Hierarchical = Base => class Hierarchical extends Base {
             }
 
             ++me.childCount;
+            me._reindexChildren();
         }
         finally {
             child[insertingSym] = false;
+        }
+    }
+
+    _reindexChildren () {
+        // this has to be delayed because it will create an invalidation loop between the
+        // parent/child compose methods
+        let index = 0,
+            child;
+
+        for (child = this._firstChild; child; child = child.nextSib) {
+            if (child.$meta.configs.index) {
+                // console.log(`reindexing child ${child.id}: ${index}`);
+                child.index = index++;
+            }
         }
     }
 
@@ -430,5 +450,6 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         child.nextSib = child.prevSib = null;
 
         --me.childCount;
+        me._reindexChildren();
     }
 }

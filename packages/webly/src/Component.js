@@ -146,14 +146,12 @@ export class Component extends Widget.mixin(Factoryable) {
             tag: 'div'
         },
 
-        // General
+        // Parent-affecting
 
         docked: null,
         ref: null,
         tab: null,
         zone: null,
-
-        layout: class extends LayoutConfig {},
 
         order: class {
             default = 0;
@@ -163,6 +161,16 @@ export class Component extends Widget.mixin(Factoryable) {
          * The default `renderTarget` for items that do not specify their own `renderTarget`.
          */
         itemRenderTarget: null,
+
+        // General
+
+        /**
+         * Set by the parent to a number (0, 1, 2, ...) indicating the index of this component
+         * with respect to its siblings.
+         */
+        index: null,
+
+        layout: class extends LayoutConfig {},
 
         /**
          * A `Component` can container other component. This property is an object mapping ref names to
@@ -261,14 +269,15 @@ export class Component extends Widget.mixin(Factoryable) {
             spec = me.render(),
             items = me.getItems(),
             { itemRenderTarget } = me,
-            it, refs, renderTarget, children;
+            it, ref, refs, renderTarget, children;
 
         if (items) {
             itemRenderTarget ??= 'root';
             refs = gatherRefs({}, 'root', spec);
 
             for (it of items) {
-                renderTarget = refs[it.renderTarget || itemRenderTarget];
+                ref = it.renderTarget || itemRenderTarget;
+                renderTarget = refs[ref];
 
                 if (renderTarget) {
                     children = renderTarget.children ??= [];

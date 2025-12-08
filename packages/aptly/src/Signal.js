@@ -148,7 +148,7 @@ class Formula extends Signal {
 
     invalidate () {
         if (this.#active) {
-            panik('Cannot invalidate a formula while it is recalculating');
+            panik(`Cannot invalidate a formula "${this.name}" while it is recalculating`);
         }
 
         if (!this.#dirty) {
