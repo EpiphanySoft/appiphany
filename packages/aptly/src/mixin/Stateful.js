@@ -11,8 +11,6 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
 
     static configurable = {
         childState: class {
-            value = null;
-
             apply (instance, value) {
                 return (value === true) ? {} : value;
             }
@@ -25,8 +23,6 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         },
 
         childStateProvider: class {
-            value = null;
-
             apply (instance, value, was) {
                 return StateProvider.reconfigure(was, value, {
                     defaults: {
@@ -49,7 +45,6 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         },
 
         stateful: class extends Config.Flags {
-            value = null;
             priority = -999;
 
             apply (instance, value, was) {
@@ -97,7 +92,7 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         },
 
         stateDirty: class {
-            value = null;
+            default = false;
 
             update (instance, dirty) {
                 dirty && instance.stateProvider?.enqueue(instance);
@@ -105,16 +100,12 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         },
 
         stateId: class {
-            value = null;
-
             get (instance) {
-                return instance._stateId ?? instance.id;
+                return instance.$config.stateId ?? instance.id;
             }
         },
 
         stateProvider: class {
-            value = null;
-
             apply (instance, value, was) {
                 return StateProvider.reconfigure(was, value);
             }
@@ -140,7 +131,7 @@ export const Stateful = Base => class Stateful extends Base.mixin(Hierarchical) 
         let me = this,
             { stateful } = me,
             classConfigs = me.$meta.configs,
-            props = me.$props || EMPTY_OBJECT,
+            props = me.props || EMPTY_OBJECT,
             state = null,
             cfg, key, value;
 

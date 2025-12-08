@@ -103,6 +103,7 @@ describe('Stateful', _ => {
                 herp: 'barfoo',
                 childState: {
                     kiddo: {
+                        abc: 123,
                         woot: 314
                     }
                 }
