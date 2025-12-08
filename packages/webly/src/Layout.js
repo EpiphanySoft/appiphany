@@ -20,6 +20,10 @@ export class Layout extends Widget.mixin(Factoryable) {
         }
     };
 
+    static identifierPrefix () {
+        return `layout-${this.type}`;
+    }
+
     addClasses (spec, classes) {
         classes && applyMissing(spec.class ??= {}, classes);
     }

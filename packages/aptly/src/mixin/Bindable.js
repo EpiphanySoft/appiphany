@@ -405,7 +405,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     }
 
     //----------------------------------------------------------------------------------------
-    // props / $props support
+    // props support
 
     declareProp (name, value, props = this.props) {
         let formula = typeof value === 'function',

@@ -127,28 +127,13 @@ export class ItemsConfig extends Config {
 
 export class Component extends Widget.mixin(Factoryable) {
     static type = 'component';
-    static expando = ['ref', 'tab', 'zone'];
     static factory = {
         defaultType: 'component'
     };
 
-    // static #idMap = chain();
-    //
-    // static generateAutoId (prefix) {
-    //     let map = Component.#idMap;
-    //
-    //     return map[prefix] = (map[prefix] || 0) + 1;
-    // }
-    //
-    // static identifierPrefix () {
-    //     return this.type;
-    // }
-
     static configurable = {
         // CSS/HTML
-        cls: class extends Config.Flags {
-            value = null;
-        },
+        cls: class extends Config.Flags {},
 
         flex: null,
         html: null,
@@ -164,11 +149,13 @@ export class Component extends Widget.mixin(Factoryable) {
         // General
 
         docked: null,
+        ref: null,
+        tab: null,
+        zone: null,
 
         layout: class extends LayoutConfig {},
 
         order: class {
-            value = null;
             default = 0;
         },
 
@@ -194,9 +181,7 @@ export class Component extends Widget.mixin(Factoryable) {
          * The keys of the object preserve their declaration order, and that order determines their
          * order in the DOM.
          */
-        items: class extends ItemsConfig {
-            value = null;
-        },
+        items: class extends ItemsConfig {},
 
         /**
          * The ref name of the element to render this component's content into. If not specified,
@@ -219,7 +204,6 @@ export class Component extends Widget.mixin(Factoryable) {
          *
          */
         renderTo: class {
-            value = null;
             phase = 'init';
 
             apply (instance, value) {
@@ -246,7 +230,6 @@ export class Component extends Widget.mixin(Factoryable) {
     #renderToUsed = false;
     #renderWatcher = null;
     #watcherNotified = false;
-    //#watchRenderConfigs = null;
 
     destruct () {
         this.#unrender();
@@ -256,6 +239,10 @@ export class Component extends Widget.mixin(Factoryable) {
 
     get dom () {
         return this.#dom;
+    }
+
+    get el () {
+        return this.#dom?.el;
     }
 
     getItems (docked) {
@@ -289,7 +276,6 @@ export class Component extends Widget.mixin(Factoryable) {
                         renderTarget.children = children = Dom.canonicalizeSpecs(children);
                     }
 
-                    if (!it.#dom) debugger;
                     children.push(it.#dom);
                 }
             }
@@ -396,7 +382,8 @@ export class Component extends Widget.mixin(Factoryable) {
 
                 watcher.watch(composer);
 
-                me.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
+                // me.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
+                dom.el.classList.add(...(me.$meta.css ??= me.$meta.types.map(t => `x-${t}`)));
             }
         }
     }

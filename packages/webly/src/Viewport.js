@@ -7,9 +7,7 @@ export class Viewport extends Component {
     static configurable = {
         nexus: 'viewport',
 
-        layout: class extends LayoutConfig {
-            value = 'vbox';
-        },
+        layout: 'vbox',
 
         props: {
             theme: 'light'
@@ -29,15 +27,9 @@ export class Viewport extends Component {
             theme: true
         },
 
-        stateProvider: {
-            type: 'storage',
-            storage: localStorage
-        },
+        stateProvider: { type: 'storage', storage: localStorage },
 
-        themes: [
-            'light',
-            'dark'
-        ],
+        themes: ['light', 'dark'],
 
         renderTo: ['adopt', document.body]
     };

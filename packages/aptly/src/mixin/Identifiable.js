@@ -8,6 +8,7 @@ export const Identifiable = Base => class Identifiable extends Base {
         id: class {
             value = undefined;
             priority = -1000;
+            signalize = false;
 
             apply (me, v) {
                 let auto = me.autoGenId = v == null,
