@@ -358,9 +358,7 @@ export class Component extends Widget.mixin(Factoryable) {
             { id, dom } = me,
             [renderToUsed, mode, renderTo] = me.#getRenderPlan(),
             adopt = mode === 'adopt',
-            composer = me.#composer ??= Signal.formula(
-                () => Configurable.signalize(() => me.compose(), me.id),
-                { name: `composer@${id}` }),
+            composer = me.#composer ??= Signal.formula(() => me.compose(), { name: `composer@${id}` }),
             watcher = me.#renderWatcher,
             spec;
 

@@ -232,14 +232,14 @@ describe('Configurable', () => {
                         foo: class {
                             value = 123;
 
-                            apply(instance, value, was, firstTime) {
-                                log.push(['A.foo.apply', was, value, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['A.foo.apply', was, value]);
                                 instance.herp = value;
                                 return value * 10;
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['A.foo.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['A.foo.update', was, value]);
                             }
                         },
 
@@ -254,17 +254,17 @@ describe('Configurable', () => {
                 class B extends A {
                     static configurable = {
                         foo: class {
-                            apply(instance, value, was, firstTime) {
-                                log.push(['> B.foo.apply', was, value, firstTime]);
-                                let ret = super.apply(instance, value, was, firstTime);
-                                log.push(['< B.foo.apply', was, value, ret, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['> B.foo.apply', was, value]);
+                                let ret = super.apply(instance, value, was);
+                                log.push(['< B.foo.apply', was, value, ret]);
                                 return ret + 7;
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['> B.foo.update', was, value, firstTime]);
-                                super.update(instance, value, was, firstTime);
-                                log.push(['< B.foo.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['> B.foo.update', was, value]);
+                                super.update(instance, value, was);
+                                log.push(['< B.foo.update', was, value]);
                             }
                         },
 
@@ -289,8 +289,8 @@ describe('Configurable', () => {
                 expect(a.zip === null).to.be(true);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', null, 42, true],
-                    ['A.foo.update', null, 420, true]
+                    ['A.foo.apply', null, 42],
+                    ['A.foo.update', null, 420]
                 ]);
             });
 
@@ -302,13 +302,13 @@ describe('Configurable', () => {
                 });
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', null, 42, true],
-                    ['A.foo.apply', null, 42, true],
-                    ['< B.foo.apply', null, 42, 420, true],
+                    ['> B.foo.apply', null, 42],
+                    ['A.foo.apply', null, 42],
+                    ['< B.foo.apply', null, 42, 420],
 
-                    ['> B.foo.update', null, 427, true],
-                    ['A.foo.update', null, 427, true],
-                    ['< B.foo.update', null, 427, true]
+                    ['> B.foo.update', null, 427],
+                    ['A.foo.update', null, 427],
+                    ['< B.foo.update', null, 427]
                 ]);
 
                 expect(b.foo).to.equal(427);
@@ -324,13 +324,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 427, 12, false],
-                    ['A.foo.apply', 427, 12, false],
-                    ['< B.foo.apply', 427, 12, 120, false],
+                    ['> B.foo.apply', 427, 12],
+                    ['A.foo.apply', 427, 12],
+                    ['< B.foo.apply', 427, 12, 120],
 
-                    ['> B.foo.update', 427, 127, false],
-                    ['A.foo.update', 427, 127, false],
-                    ['< B.foo.update', 427, 127, false]
+                    ['> B.foo.update', 427, 127],
+                    ['A.foo.update', 427, 127],
+                    ['< B.foo.update', 427, 127]
                 ]);
             });
 
@@ -345,16 +345,16 @@ describe('Configurable', () => {
                 });
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', null, 42, true],
-                    ['A.foo.apply', null, 42, true],
-                    ['< B.foo.apply', null, 42, 420, true],
+                    ['> B.foo.apply', null, 42],
+                    ['A.foo.apply', null, 42],
+                    ['< B.foo.apply', null, 42, 420],
 
-                    ['> B.foo.update', null, 427, true],
-                    ['A.foo.update', null, 427, true],
-                    ['< B.foo.update', null, 427, true],
+                    ['> B.foo.update', null, 427],
+                    ['A.foo.update', null, 427],
+                    ['< B.foo.update', null, 427],
 
-                    ['A.foo.apply', null, 32, true],
-                    ['A.foo.update', null, 320, true]
+                    ['A.foo.apply', null, 32],
+                    ['A.foo.update', null, 320]
                 ]);
 
                 expect(b.foo).to.equal(427);
@@ -375,13 +375,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 427, 12, false],
-                    ['A.foo.apply', 427, 12, false],
-                    ['< B.foo.apply', 427, 12, 120, false],
+                    ['> B.foo.apply', 427, 12],
+                    ['A.foo.apply', 427, 12],
+                    ['< B.foo.apply', 427, 12, 120],
 
-                    ['> B.foo.update', 427, 127, false],
-                    ['A.foo.update', 427, 127, false],
-                    ['< B.foo.update', 427, 127, false]
+                    ['> B.foo.update', 427, 127],
+                    ['A.foo.update', 427, 127],
+                    ['< B.foo.update', 427, 127]
                 ]);
 
                 log.length = 0;
@@ -391,8 +391,8 @@ describe('Configurable', () => {
                 expect(a.herp).to.equal(21);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', 320, 21, false],
-                    ['A.foo.update', 320, 210, false]
+                    ['A.foo.apply', 320, 21],
+                    ['A.foo.update', 320, 210]
                 ]);
             });
 
@@ -407,16 +407,16 @@ describe('Configurable', () => {
                 });
 
                 expect(log).to.equal([
-                    ['A.foo.apply', null, 32, true],
-                    ['A.foo.update', null, 320, true],
+                    ['A.foo.apply', null, 32],
+                    ['A.foo.update', null, 320],
 
-                    ['> B.foo.apply', null, 42, true],
-                    ['A.foo.apply', null, 42, true],
-                    ['< B.foo.apply', null, 42, 420, true],
+                    ['> B.foo.apply', null, 42],
+                    ['A.foo.apply', null, 42],
+                    ['< B.foo.apply', null, 42, 420],
 
-                    ['> B.foo.update', null, 427, true],
-                    ['A.foo.update', null, 427, true],
-                    ['< B.foo.update', null, 427, true]
+                    ['> B.foo.update', null, 427],
+                    ['A.foo.update', null, 427],
+                    ['< B.foo.update', null, 427]
                 ]);
 
                 expect(a.foo).to.equal(320);
@@ -437,8 +437,8 @@ describe('Configurable', () => {
                 expect(a.herp).to.equal(21);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', 320, 21, false],
-                    ['A.foo.update', 320, 210, false],
+                    ['A.foo.apply', 320, 21],
+                    ['A.foo.update', 320, 210],
                 ]);
 
                 log.length = 0;
@@ -448,13 +448,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 427, 12, false],
-                    ['A.foo.apply', 427, 12, false],
-                    ['< B.foo.apply', 427, 12, 120, false],
+                    ['> B.foo.apply', 427, 12],
+                    ['A.foo.apply', 427, 12],
+                    ['< B.foo.apply', 427, 12, 120],
 
-                    ['> B.foo.update', 427, 127, false],
-                    ['A.foo.update', 427, 127, false],
-                    ['< B.foo.update', 427, 127, false]
+                    ['> B.foo.update', 427, 127],
+                    ['A.foo.update', 427, 127],
+                    ['< B.foo.update', 427, 127]
                 ]);
             });
         });
@@ -469,14 +469,14 @@ describe('Configurable', () => {
                             value = 123;
                             phase = 'get';
 
-                            apply(instance, value, was, firstTime) {
-                                log.push(['A.foo.apply', was, value, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['A.foo.apply', was, value]);
                                 instance.herp = value;
                                 return value * 10;
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['A.foo.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['A.foo.update', was, value]);
                             }
                         },
 
@@ -491,17 +491,17 @@ describe('Configurable', () => {
                 class B extends A {
                     static configurable = {
                         foo: class {
-                            apply(instance, value, was, firstTime) {
-                                log.push(['> B.foo.apply', was, value, firstTime]);
-                                let ret = super.apply(instance, value, was, firstTime);
-                                log.push(['< B.foo.apply', was, value, ret, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['> B.foo.apply', was, value]);
+                                let ret = super.apply(instance, value, was);
+                                log.push(['< B.foo.apply', was, value, ret]);
                                 return ret + 7;
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['> B.foo.update', was, value, firstTime]);
-                                super.update(instance, value, was, firstTime);
-                                log.push(['< B.foo.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['> B.foo.update', was, value]);
+                                super.update(instance, value, was);
+                                log.push(['< B.foo.update', was, value]);
                             }
                         },
 
@@ -529,8 +529,8 @@ describe('Configurable', () => {
                 expect(a.foo).to.equal(3140);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', null, 314, true],
-                    ['A.foo.update', null, 3140, true],
+                    ['A.foo.apply', null, 314],
+                    ['A.foo.update', null, 3140],
                 ]);
 
                 expect(a.bar).to.equal(321);
@@ -555,13 +555,13 @@ describe('Configurable', () => {
                 expect(b.foo).to.equal(427);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', null, 42, true],
-                    ['A.foo.apply', null, 42, true],
-                    ['< B.foo.apply', null, 42, 420, true],
+                    ['> B.foo.apply', null, 42],
+                    ['A.foo.apply', null, 42],
+                    ['< B.foo.apply', null, 42, 420],
 
-                    ['> B.foo.update', null, 427, true],
-                    ['A.foo.update', null, 427, true],
-                    ['< B.foo.update', null, 427, true]
+                    ['> B.foo.update', null, 427],
+                    ['A.foo.update', null, 427],
+                    ['< B.foo.update', null, 427]
                 ]);
 
                 expect(b.bar).to.equal(123);
@@ -575,13 +575,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 427, 12, false],
-                    ['A.foo.apply', 427, 12, false],
-                    ['< B.foo.apply', 427, 12, 120, false],
+                    ['> B.foo.apply', 427, 12],
+                    ['A.foo.apply', 427, 12],
+                    ['< B.foo.apply', 427, 12, 120],
 
-                    ['> B.foo.update', 427, 127, false],
-                    ['A.foo.update', 427, 127, false],
-                    ['< B.foo.update', 427, 127, false]
+                    ['> B.foo.update', 427, 127],
+                    ['A.foo.update', 427, 127],
+                    ['< B.foo.update', 427, 127]
                 ]);
             });
 
@@ -602,13 +602,13 @@ describe('Configurable', () => {
                 expect(b.foo).to.equal(427);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', null, 42, true],
-                    ['A.foo.apply', null, 42, true],
-                    ['< B.foo.apply', null, 42, 420, true],
+                    ['> B.foo.apply', null, 42],
+                    ['A.foo.apply', null, 42],
+                    ['< B.foo.apply', null, 42, 420],
 
-                    ['> B.foo.update', null, 427, true],
-                    ['A.foo.update', null, 427, true],
-                    ['< B.foo.update', null, 427, true]
+                    ['> B.foo.update', null, 427],
+                    ['A.foo.update', null, 427],
+                    ['< B.foo.update', null, 427]
                 ]);
 
                 expect(b.bar).to.equal(123);
@@ -631,8 +631,8 @@ describe('Configurable', () => {
                 expect(a.foo).to.equal(3140);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', null, 314, true],
-                    ['A.foo.update', null, 3140, true],
+                    ['A.foo.apply', null, 314],
+                    ['A.foo.update', null, 3140],
                 ]);
 
                 expect(a.bar).to.equal(321);
@@ -646,13 +646,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 427, 12, false],
-                    ['A.foo.apply', 427, 12, false],
-                    ['< B.foo.apply', 427, 12, 120, false],
+                    ['> B.foo.apply', 427, 12],
+                    ['A.foo.apply', 427, 12],
+                    ['< B.foo.apply', 427, 12, 120],
 
-                    ['> B.foo.update', 427, 127, false],
-                    ['A.foo.update', 427, 127, false],
-                    ['< B.foo.update', 427, 127, false]
+                    ['> B.foo.update', 427, 127],
+                    ['A.foo.update', 427, 127],
+                    ['< B.foo.update', 427, 127]
                 ]);
 
                 log.length = 0;
@@ -662,8 +662,8 @@ describe('Configurable', () => {
                 expect(a.herp).to.equal(31);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', 3140, 31, false],
-                    ['A.foo.update', 3140, 310, false]
+                    ['A.foo.apply', 3140, 31],
+                    ['A.foo.update', 3140, 310]
                 ]);
             });
 
@@ -684,8 +684,8 @@ describe('Configurable', () => {
                 expect(a.foo).to.equal(3140);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', null, 314, true],
-                    ['A.foo.update', null, 3140, true],
+                    ['A.foo.apply', null, 314],
+                    ['A.foo.update', null, 3140],
                 ]);
 
                 expect(a.bar).to.equal(321);
@@ -708,13 +708,13 @@ describe('Configurable', () => {
                 expect(b.foo).to.equal(427);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', null, 42, true],
-                    ['A.foo.apply', null, 42, true],
-                    ['< B.foo.apply', null, 42, 420, true],
+                    ['> B.foo.apply', null, 42],
+                    ['A.foo.apply', null, 42],
+                    ['< B.foo.apply', null, 42, 420],
 
-                    ['> B.foo.update', null, 427, true],
-                    ['A.foo.update', null, 427, true],
-                    ['< B.foo.update', null, 427, true]
+                    ['> B.foo.update', null, 427],
+                    ['A.foo.update', null, 427],
+                    ['< B.foo.update', null, 427]
                 ]);
 
                 expect(b.bar).to.equal(123);
@@ -728,13 +728,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 427, 12, false],
-                    ['A.foo.apply', 427, 12, false],
-                    ['< B.foo.apply', 427, 12, 120, false],
+                    ['> B.foo.apply', 427, 12],
+                    ['A.foo.apply', 427, 12],
+                    ['< B.foo.apply', 427, 12, 120],
 
-                    ['> B.foo.update', 427, 127, false],
-                    ['A.foo.update', 427, 127, false],
-                    ['< B.foo.update', 427, 127, false]
+                    ['> B.foo.update', 427, 127],
+                    ['A.foo.update', 427, 127],
+                    ['< B.foo.update', 427, 127]
                 ]);
             });
         });
@@ -750,14 +750,14 @@ describe('Configurable', () => {
                             nullify = true;
                             phase = 'get';
 
-                            apply(instance, value, was, firstTime) {
-                                log.push(['A.foo.apply', was, value, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['A.foo.apply', was, value]);
                                 instance.herp = value;
                                 return (value == null) ? value : (value * 10);
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['A.foo.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['A.foo.update', was, value]);
                             }
                         },
 
@@ -765,14 +765,14 @@ describe('Configurable', () => {
                             value = 321;
                             nullify = true;
 
-                            apply(instance, value, was, firstTime) {
-                                log.push(['A.bar.apply', was, value, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['A.bar.apply', was, value]);
                                 instance.herp = value;
                                 return (value == null) ? value : (value * 100);
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['A.bar.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['A.bar.update', was, value]);
                             }
                         },
 
@@ -791,34 +791,34 @@ describe('Configurable', () => {
                 class B extends A {
                     static configurable = {
                         foo: class {
-                            apply(instance, value, was, firstTime) {
-                                log.push(['> B.foo.apply', was, value, firstTime]);
-                                let ret = super.apply(instance, value, was, firstTime);
-                                log.push(['< B.foo.apply', was, value, ret, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['> B.foo.apply', was, value]);
+                                let ret = super.apply(instance, value, was);
+                                log.push(['< B.foo.apply', was, value, ret]);
                                 return (value == null) ? value : (ret + 7);
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['> B.foo.update', was, value, firstTime]);
-                                super.update(instance, value, was, firstTime);
-                                log.push(['< B.foo.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['> B.foo.update', was, value]);
+                                super.update(instance, value, was);
+                                log.push(['< B.foo.update', was, value]);
                             }
                         },
 
                         bar: class {
                             value = 456;
 
-                            apply(instance, value, was, firstTime) {
-                                log.push(['> B.bar.apply', was, value, firstTime]);
-                                let ret = super.apply(instance, value, was, firstTime);
-                                log.push(['< B.bar.apply', was, value, ret, firstTime]);
+                            apply(instance, value, was) {
+                                log.push(['> B.bar.apply', was, value]);
+                                let ret = super.apply(instance, value, was);
+                                log.push(['< B.bar.apply', was, value, ret]);
                                 return (value == null) ? value : (ret + 3);
                             }
 
-                            update(instance, value, was, firstTime) {
-                                log.push(['> B.bar.update', was, value, firstTime]);
-                                super.update(instance, value, was, firstTime);
-                                log.push(['< B.bar.update', was, value, firstTime]);
+                            update(instance, value, was) {
+                                log.push(['> B.bar.update', was, value]);
+                                super.update(instance, value, was);
+                                log.push(['< B.bar.update', was, value]);
                             }
                         }
                     };
@@ -842,8 +842,8 @@ describe('Configurable', () => {
                 });
 
                 expect(log).to.equal([
-                    ['A.bar.apply', null, 427, true],
-                    ['A.bar.update', null, 42700, true]
+                    ['A.bar.apply', null, 427],
+                    ['A.bar.update', null, 42700]
                 ]);
 
                 log.length = 0;
@@ -856,8 +856,8 @@ describe('Configurable', () => {
                 expect(a.foo).to.equal(420);
 
                 expect(log).to.equal([
-                    ['A.foo.apply', null, 42, true],
-                    ['A.foo.update', null, 420, true],
+                    ['A.foo.apply', null, 42],
+                    ['A.foo.update', null, 420],
                 ]);
 
                 expect(a.bar).to.equal(42700);
@@ -872,13 +872,13 @@ describe('Configurable', () => {
                 });
 
                 expect(log).to.equal([
-                    ['> B.bar.apply', null, 42, true],
-                    ['A.bar.apply', null, 42, true],
-                    ['< B.bar.apply', null, 42, 4200, true],
+                    ['> B.bar.apply', null, 42],
+                    ['A.bar.apply', null, 42],
+                    ['< B.bar.apply', null, 42, 4200],
 
-                    ['> B.bar.update', null, 4203, true],
-                    ['A.bar.update', null, 4203, true],
-                    ['< B.bar.update', null, 4203, true]
+                    ['> B.bar.update', null, 4203],
+                    ['A.bar.update', null, 4203],
+                    ['< B.bar.update', null, 4203]
                 ]);
 
                 log.length = 0;
@@ -891,13 +891,13 @@ describe('Configurable', () => {
                 expect(b.foo).to.equal(4277);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', null, 427, true],
-                    ['A.foo.apply', null, 427, true],
-                    ['< B.foo.apply', null, 427, 4270, true],
+                    ['> B.foo.apply', null, 427],
+                    ['A.foo.apply', null, 427],
+                    ['< B.foo.apply', null, 427, 4270],
 
-                    ['> B.foo.update', null, 4277, true],
-                    ['A.foo.update', null, 4277, true],
-                    ['< B.foo.update', null, 4277, true]
+                    ['> B.foo.update', null, 4277],
+                    ['A.foo.update', null, 4277],
+                    ['< B.foo.update', null, 4277]
                 ]);
 
                 expect(b.bar).to.equal(4203);
@@ -911,13 +911,13 @@ describe('Configurable', () => {
                 expect(b.herp).to.equal(12);
 
                 expect(log).to.equal([
-                    ['> B.foo.apply', 4277, 12, false],
-                    ['A.foo.apply', 4277, 12, false],
-                    ['< B.foo.apply', 4277, 12, 120, false],
+                    ['> B.foo.apply', 4277, 12],
+                    ['A.foo.apply', 4277, 12],
+                    ['< B.foo.apply', 4277, 12, 120],
 
-                    ['> B.foo.update', 4277, 127, false],
-                    ['A.foo.update', 4277, 127, false],
-                    ['< B.foo.update', 4277, 127, false]
+                    ['> B.foo.update', 4277, 127],
+                    ['A.foo.update', 4277, 127],
+                    ['< B.foo.update', 4277, 127]
                 ]);
 
                 log.length = 0;
@@ -925,10 +925,10 @@ describe('Configurable', () => {
 
                 expect(log).to.equal([
                     '> A.destruct',
-                    ['A.foo.apply', 420, null, false],
-                    ['A.foo.update', 420, null, false ],
-                    ['A.bar.apply', 42700, null, false],
-                    ['A.bar.update', 42700, null, false ],
+                    ['A.foo.apply', 420, null],
+                    ['A.foo.update', 420, null],
+                    ['A.bar.apply', 42700, null],
+                    ['A.bar.update', 42700, null],
                     '< A.destruct'
                 ]);
 
@@ -947,8 +947,8 @@ describe('Configurable', () => {
                 });
 
                 expect(log).to.equal([
-                    ['A.bar.apply', null, 427, true],
-                    ['A.bar.update', null, 42700, true]
+                    ['A.bar.apply', null, 427],
+                    ['A.bar.update', null, 42700]
                 ]);
 
                 log.length = 0;
@@ -956,8 +956,8 @@ describe('Configurable', () => {
 
                 expect(log).to.equal([
                     '> A.destruct',
-                    ['A.bar.apply', 42700, null, false],
-                    ['A.bar.update', 42700, null, false ],
+                    ['A.bar.apply', 42700, null],
+                    ['A.bar.update', 42700, null],
                     '< A.destruct'
                 ]);
             });
@@ -1056,6 +1056,8 @@ describe('Configurable', () => {
         let log = [];
 
         class Foo extends Configurable {
+            static signalize = true;
+
             static configurable = {
                 foo: null,
                 bar: null
@@ -1069,28 +1071,12 @@ describe('Configurable', () => {
         let inst1 = Foo.new({ bar: 42 });
         let inst2 = Foo.new({ bar: 427, foo: inst1 });
 
-        let formula = Signal.formula(() => Configurable.signalize(() => inst2.getBar()));
-        let watcher = Signal.watch(() => {
-            debugger;
-        });
+        let o = inst2.$config;
+        let o2 = inst2.$config;
 
-        watcher.watch(formula);
+        expect(o).to.be(o2);
 
-        expect(log).to.equal([]);
-
-        inst.foo = 1;
-
-        expect(log).to.equal([
-            ['foo', 1]
-        ]);
-        log.length = 0;
-
-        inst.configure({ foo: 3, bar: 2 });
-        log.sort((a, b) => a[0].localeCompare(b[0]));
-
-        expect(log).to.equal([
-            ['bar', 2],
-            ['foo', 3]
-        ]);
+        let b = inst2.$config.bar;
+        expect(b).to.be(427);
     });
 });

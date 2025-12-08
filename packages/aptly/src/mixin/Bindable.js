@@ -1,11 +1,9 @@
-import { Destroyable, Scheduler, Signal, panik, chain, applyTo, remove, Configurable }
-    from '@appiphany/aptly';
+import { Destroyable, Scheduler, Signal, panik, chain, applyTo } from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
-    getProto = o => o ? Object.getPrototypeOf(o) : null,
-    getParentProps = p => getProto(p?.props),
-    createProps = p => Object.create(Object.create(getParentProps(p)));
+    getParentProps = parent => parent?.props || null,
+    createProps = parent => Object.create(getParentProps(parent));
 
 
 class Bindings extends Destroyable {
@@ -186,7 +184,7 @@ class Effects extends Destroyable {
 
         signal = Signal.formula(() => {
             cleanup?.();
-            cleanup = Configurable.signalize(() => fn.call(owner, owner.props));
+            cleanup = fn.call(owner, owner.props);
         }, { name });
 
         un = () => {
@@ -250,46 +248,40 @@ class Effects extends Destroyable {
 }
 
 /**
- * This mixin adds the ability to define props on a class. Props exist as both published
- * and internal. Props (both internal and published) and are accessed via the `props`
+ * This mixin adds the ability to define props on a class, accessed via the `props`
  * property.
  *
- * Internal props are only available to the instance that declared them.
- *
- * Published props are also available to child instances (connected via their `parent`
- * config).
+ * Props are also available to child instances (connected via their `parent` config).
  *
  * Internally, props are defined using a prototype chain. The following diagram shows how
  * this is implemented:
  *
- *           ╔══════════════╗                      ┌───────────────┐
- *           ║              ║                      │   published   │
- *           ║  instance1   ║    props             │     props     │
- *           ║              ╟─────┐                └──△──────△─────┘
- *           ╚═══════▲══════╝     │                   :      :
- *                   │            │         __proto__ :      :
- *                   │            │                   :      :
- *                   │            │      ┌────────────┴─┐    :
- *                   │            └──────▶   internal   │    :
- *                   │                   │    props     │    :
- *                   │ parent            └──────────────┘    :
- *                   │                                       : __proto__
- *                   │                                       :
- *           ╔═══════╧══════╗                        ┌───────┴───────┐
- *           ║              ║                        │   published   │
- *           ║  instance2   ║    props               │     props     │
- *           ║              ╟─────────┐              └───△───────────┘
- *           ╚══════════════╝         │                  :
- *                                    │        __proto__ :
- *                                    │                  :
- *                                    │     ┌────────────┴─┐
- *                                    └─────▶   internal   │
- *                                          │    props     │
+ *           ╔══════════════╗
+ *           ║              ║
+ *           ║  instance1   ║    props
+ *           ║              ╟─────┐
+ *           ╚═══════▲══════╝     │
+ *                   │            │      ┌──────────────┐
+ *                   │            │      │              │
+ *                   │            └──────▶    props     │
+ *                   │                   │              │
+ *                   │ parent            └──────△───────┘
+ *                   │                          :
+ *                   │                          :
+ *           ╔═══════╧══════╗                   :
+ *           ║              ║                   :
+ *           ║  instance2   ║    props          :
+ *           ║              ╟─────────┐         : __proto__
+ *           ╚══════════════╝         │         :
+ *                                    │     ┌───┴──────────┐
+ *                                    │     │              │
+ *                                    └─────▶    props     │
+ *                                          │              │
  *                                          └──────────────┘
  *
  * Even though props are defined using a prototype chain, they behave like a scope chain.
- * This means that settings a prop declared on a parent instance using a child instance's
- * props will affect the parent instance (and all its children).
+ * This means that setting a prop declared on a parent instance using a child instance's
+ * `props` will affect the parent instance (and all its children).
  *
  * A child instance can hide a parent instance's prop by defining its own prop by the same
  * name. Similar to how an assignment is different than a `let` declaration in a nested
@@ -311,15 +303,16 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
 
     static configurable = {
         parent: class {
-            update (me, parent, was) {
-                super.update(me, parent, was);
+            update (instance, parent, was) {
+                super.update(instance, parent, was);
 
-                let props = me._props;
+                let { props } = instance.$config,
+                    signals;
 
                 if (props) {
-                    Object.setPrototypeOf(getProto(props), getParentProps(parent));
+                    Object.setPrototypeOf(props, getParentProps(parent));
 
-                    let signals = me._signals;
+                    signals = instance._signals;
 
                     if (signals) {
                         for (let name in signals) {
@@ -331,10 +324,8 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         },
 
         bind: class {
-            value = null;
-
-            update (me, bind, was) {
-                me.getConfig('$props');
+            update (instance, bind, was) {
+                instance.getConfig('props');
 
                 bind = applyTo(chain(), bind);
 
@@ -346,12 +337,11 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
                     }
                 }
 
-                me.bindings.update(bind);
+                instance.bindings.update(bind);
             }
         },
 
         effects: class {
-            value = null;
             phase = 'init';
 
             apply (instance, effects, was) {
@@ -365,75 +355,23 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             }
         },
 
-        $props: class {
-            signalizable = false;
-            value = {};
-
-            apply (me, props, was) {
-                if (was) {
-                    panik('$props cannot be reconfigured');
-                }
-
-                let ret = me.getConfig('props');
-
-                me.defineProps(props, true);
-
-                return ret;
-            }
-
-            declProp (proto, name, readonly) {
-                let desc = {
-                    configurable: true,
-
-                    get () {
-                        return this.$props[name];
-                    },
-
-                    set (v) {
-                        this.$props[name] = v;
-
-                        if (this.initialized !== false) {
-                            this.onConfigChange(name);
-                        }
-                    }
-                };
-
-                if (readonly) {
-                    delete desc.set;
-                }
-
-                Object.defineProperty(proto, name, desc);
-            }
-
-            extend (cls, props) {
-                if (props) {
-                    let meta = cls.$meta,
-                        { configs, expando } = meta,
-                        proto = cls.prototype,
-                        key;
-
-                   for (key in props) {
-                       if (!configs[key]) {
-                           expando[key] = true;
-                           this.declProp(proto, key, typeof props[key] === 'function');
-                       }
-                   }
-                }
-            }
-        },
-
         props: class {
-            signalizable = false;
+            signalize = false;
             value = {};
 
-            apply (me, props, was) {
-                if (was) {
-                    panik('props cannot be reconfigured');
+            apply (instance, props, was) {
+                was && panik('props cannot be reconfigured');
+
+                let instProps = createProps(instance.parent),
+                    name;
+
+                for (name in props) {
+                    name !== 'sealed' && instance.declareProp(name, props[name], instProps);
                 }
 
-                me._props = createProps(me.parent);
+                //props.sealed !== false && Object.seal(instProps);
 
-                me.defineProps(props);
+                return instProps;
             }
         }
     };
@@ -451,126 +389,91 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         return this._bindings ??= new Bindings(this);
     }
 
-    get published () {
-        return getProto(this.props);
-    }
-
     get scheduler () {
-        return this.published.$scheduler ?? Scheduler.instance;
+        return this.inheritable.$scheduler ?? Scheduler.instance;
     }
 
-    set scheduler (v) {
-        let pub = this.published;
+    set scheduler (value) {
+        let { inheritable } = this;
 
-        if (v) {
-            pub.$scheduler = v;
+        if (value) {
+            inheritable.$scheduler = value;
         }
         else {
-            delete pub.$scheduler;
+            delete inheritable.$scheduler;
         }
     }
 
     //----------------------------------------------------------------------------------------
     // props / $props support
 
-    defineProps (add, internal) {
-        let me = this,
-            signals = me._signals ??= chain(),
-            props = me.props,  // internal props
-            target = internal ? props : getProto(props),
-            options = {};
+    declareProp (name, value, props = this.props) {
+        let formula = typeof value === 'function',
+            opt = { name },
+            signals = this._signals ??= chain(),
+            sig = formula ? Signal.formula(value.bind(this, props), opt) : Signal.value(value, opt),
+            descriptor = {
+                configurable: true,
+                get: () => sig.get(),
+                set: v => sig.set(v)
+            };
 
-        if (!add) {
-            return;
+        signals[name]?.invalidate();
+        signals[name] = sig;
+
+        if (formula) {
+            delete descriptor.set;
         }
 
-        for (const name in add) {
-            if (name !== 'sealed') {
-                let existing = signals[name],
-                    sig = add[name],  // <<< needs to be declared here to avoid a stale closure
-                    formula = typeof sig === 'function',
-                    property = {
-                        configurable: true,
-
-                        get () {
-                            return sig.get();
-                        },
-
-                        set (v) {
-                            sig.set(v);
-                        }
-                    };
-
-                options.name = name;
-                sig = formula ? Signal.formula(sig.bind(me, props), options) : Signal.value(sig, options);
-                signals[name] = sig;
-                sig.internal = internal;
-
-                if (formula) {
-                    delete property.set;
-                }
-
-                if (existing) {
-                    if (existing.internal) {
-                        delete props[name];
-                    }
-                    else {
-                        delete target[name];
-                    }
-                }
-
-                Object.defineProperty(target, name, property)
-
-                existing?.invalidate();
-            }
-        }
-
-        if (internal && add.sealed !== false) {
-            Object.seal(props);
-        }
+        Object.defineProperty(props, name, descriptor);
     }
 
-    //----------------------------------------------------------------------------------------
-    // Effects
-
-    addEffect (options) {
-        let me = this,
-            { effects } = me,
-            t = typeof options,
-            fn, name;
-
-        if (t === 'function') {
-            fn = options;
-            name = fn.name;
+    declareProps (add, props = this.props) {
+        for (let name in add) {
+            this.declareProp(name, add[name], props);
         }
-        else if (t === 'string') {
-            name = options;
-            fn = (...args) => me[name](...args);
-        }
-        else if (options && t === 'object') {
-            fn = options.fn;
-            name = options.name || fn.name;
-        }
-        else {
-            panik('invalid effect options');
-        }
-
-        name = name || `effect-${++Effects.idSeed}`;
-
-        if (!effects) {
-            me.effects = {};      // create the Effects instance
-            effects = me.effects; // get the new Effects instance
-        }
-
-        return effects.add(name, fn);
-    }
-
-    removeEffect (name) {
-        this.effects?.remove(name);
     }
 
     //----------------------------------------------------------------------------------------
     // Stateful support
+
+    loadStatefulProps (state) {
+        let me = this,
+            { props } = me,
+            signals = me._signals,
+            name, sig, value;
+
+        for (name in state) {
+            sig = signals[name];
+
+            if (sig) {
+                value = state[name];
+                delete state[name];
+
+                props[name] = value;
+            }
+        }
+    }
+
+    watchStatefulProps (stateful) {
+        let me = this,
+            watcher = me.$statefulWatcher ??= Signal.watch(() => me._onStatefulWatcherNotify()),
+            add, name, sig, signals;
+
+        if (stateful) {
+            me.getConfig('props');
+            signals = me._signals;
+
+            for (name in stateful) {
+                sig = signals[name];
+                sig && (add ??= []).push(sig);
+            }
+        }
+
+        watcher.unwatch();
+
+        add && watcher.watch(...add);
+    }
 
     _onStatefulPropChange () {
         if (!this.destroyed) {
@@ -583,49 +486,5 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         if (!this.destroyed) {
             this.scheduler?.add(this.$onStatefulPropSync ??= () => this._onStatefulPropChange());
         }
-    }
-
-    loadStatefulProps (state) {
-        let me = this,
-            name, props, $props, sig, signals, value;
-
-        me.getConfig('$props');
-        signals = me._signals;
-
-        for (name in state) {
-            sig = signals[name];
-
-            if (sig) {
-                value = state[name];
-                delete state[name];
-
-                if (sig.internal) {
-                    ($props ??= me.$props)[name] = value;
-                }
-                else {
-                    (props ??= me.props)[name] = value;
-                }
-            }
-        }
-    }
-
-    watchStatefulProps (stateful) {
-        let me = this,
-            watcher = me.$statefulWatcher ??= Signal.watch(() => me._onStatefulWatcherNotify()),
-            add, name, sig, signals;
-
-        if (stateful) {
-            me.getConfig('$props');
-            signals = me._signals;
-
-            for (name in stateful) {
-                sig = signals[name];
-                sig && (add ??= []).push(sig);
-            }
-        }
-
-        watcher.unwatch();
-
-        add && watcher.watch(...add);
     }
 }

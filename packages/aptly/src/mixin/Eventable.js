@@ -49,15 +49,14 @@ const
 export const Eventable = Base => class Eventable extends Base {
     static configurable = {
         on: class {
-            value = null;
             phase = 'init';
 
-            apply (me, on) {
+            apply (instance, on) {
                 if (Array.isArray(on)) {
-                    on.forEach(o => me.listen(o));
+                    on.forEach(o => instance.listen(o));
                 }
                 else {
-                    on && me.listen(on);
+                    on && instance.listen(on);
                 }
             }
 

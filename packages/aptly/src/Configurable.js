@@ -1,5 +1,5 @@
 import {
-    clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo,
+    clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo, nop,
     Declarable, remove, Signal
 }
     from '@appiphany/aptly';
@@ -10,7 +10,7 @@ const
     { defineProperty } = Reflect,
     configDataSym = Symbol('configuring'),
     configWatchersSym = Symbol('configWatchers'),
-    signalConfigsSym = Symbol('signalConfigs'),
+    storageOwnerSym = Symbol('storageOwner'),
     EXPANDO_ANY = applyTo(chain(), { '*': true }),
     EXPANDO_NONE = chain(),
     makeExpando = (expando, parentExpando) => {
@@ -38,149 +38,42 @@ const
         return ret;
     };
 
+/**
+ * A helper class that defines property accessors for configurable properties. Since these
+ * only depend on the property name, they can be cached.
+ */
+class Accessor {
+    static #cache = chain();
 
-export class Config {
-    static cache = new Map();
-
-    static create(name) {
-        let cfg = new this();
-
-        defineProperty(cfg, 'name', { value: name });
-        defineProperty(cfg, 'prop', { value: '_' + name });
-
-        return cfg;
+    static get (name) {
+        return Accessor.#cache[name] ??= new Accessor(name);
     }
 
-    static get(name) {
-        let config = this.cache.get(name);
-
-        if (!config) {
-            this.cache.set(name, config = Config.create(name));
-        }
-
-        return config;
+    constructor (name) {
+        this.name = name;
+        this.prop = `_${name}`;
     }
 
-    static sorter (a, b) {
-        let v = a.priority - b.priority;
+    config () {
+        const { name } = this;
 
-        if (!v) {
-            v = a.name.localeCompare(b.name);
-        }
-
-        return v;
-    }
-
-    equal(a, b) {
-        let ret = a === b,
-            i, n;
-
-        if (!ret && a && b && this.array && Array.isArray(a) && Array.isArray(b)) {
-            ret = (n = a.length) === b.length;
-
-            if (ret) {
-                for (i = 0; i < n && (ret = a[i] === b[i]); ++i) {
-                    // just loop
-                }
-            }
-            // else fall below and return false
-        }
-
-        return ret;
-    }
-
-    extend(cls, val) {
-        // template
-    }
-
-    get(instance) {
-        return instance[this.prop];
-    }
-
-    set(instance, v) {
-        let me = this,
-            { prop } = me,
-            was = instance[prop],
-            firstTime = !(instance.initialized || hasOwn(instance, prop)) || instance.configuring?.firstTime,
-            handled, applied;
-
-        if (me.apply) {
-            applied = me.apply(instance, v, was, firstTime);
-
-            if (!(handled = (applied === undefined))) {
-                v = applied;
-                was = instance[prop];  // in case _foo was changed by apply()
-            }
-        }
-
-        if (!handled && !me.equal(v, was)) {
-            instance[prop] = v;
-
-            me.update?.(instance, v, was, firstTime);
-            handled = true;
-        }
-
-        if (handled && !firstTime) {
-            instance.onConfigChange(me.name, v, was);
-        }
-    }
-
-    merge(oldValue, newValue) {
-        if (oldValue && newValue && isObject(newValue)) {
-            if (isObject(oldValue)) {
-                newValue = merge(clone(oldValue), newValue);
-            }
-        }
-
-        return newValue;
-    }
-
-    //-----------------------------------------------------------------------------------
-    // Internals
-
-    defineAccessor(target) {
-        let me = this;
-
-        if (me.default !== undefined) {
-            defineProperty(target, me.prop, { value: me.default, writable: true });
-        }
-
-        defineProperty(target, me.name, me.getAccessor());
-    }
-
-    defineInitter(target) {
-        defineProperty(target, this.name, this.getInitter());
-    }
-
-    getAccessor() {
-        const
-            config = this,
-            { name } = config;
-
-        return config._accessor || (config._accessor = {
+        return this._config ??= {
             get() {
-                let me = this,
-                    // the accessor is defined on the class prototype, but we need the Config
-                    // defined by the instance's class:
-                    cfg = me.$meta.configs[name];
-
-                me.hookGetConfig?.(name, cfg);
-
-                return cfg.get(me);
+                return this.$meta.configs[name].get(this);
             },
 
             set(v) {
                 this.$meta.configs[name].set(this, v);
             }
-        });
+        };
     }
 
-    getInitter() {
+    initter () {
         const
             config = this,
             { name } = config;
 
-        return config._initter || (config._initter = {
+        return config._initter ??= {
             configurable: true,
 
             get() {
@@ -199,10 +92,10 @@ export class Config {
 
                 this[name] = v;
             }
-        });
+        };
     }
 
-    removeInitter(target) {
+    removeInitter (target) {
         let { name } = this,
             configData = target[configDataSym];
 
@@ -214,23 +107,180 @@ export class Config {
 
         delete target[name];
     }
+
+    signal () {
+        const { name, prop } = this;
+
+        return this._signal ??= {
+            configurable: true,
+
+            get() {
+                let cfg = this[storageOwnerSym].$meta.configs[name],
+                    value = Signal.value(cfg.default);
+
+                defineProperty(this, prop, { value });
+
+                return value;
+            }
+        };
+    }
+
+    storage () {
+        const { prop } = this;
+
+        return this._storage ??= {
+            get() {
+                return this[prop].get();
+            },
+
+            set(v) {
+                this[prop].set(v);
+            }
+        };
+    }
+
+    defineConfig (target) {
+        defineProperty(target, this.name, this.config());
+    }
+
+    defineInitter (target) {
+        defineProperty(target, this.name, this.initter());
+    }
+
+    defineStorage (target, value, signalize) {
+        let me = this,
+            { name, prop } = me;
+
+        if (signalize) {
+            defineProperty(target, prop, me.signal());
+            defineProperty(target, name, me.storage());
+        }
+        else {
+            target[name] = value;
+        }
+    }
 }
 
-applyTo(Config.prototype, {
-    name: null,
-    prop: null,
+/**
+ * The base class for all configurable properties.
+ */
+export class Config {
+    static cache = new Map();
 
-    array: false,
-    default: null,
-    nullable: true,
-    nullify: false,
-    phase: 'ctor',  // in {'ctor', 'get', 'init'}
-    priority: 0,
-    signalizable: true,
+    static create (name) {
+        let cfg = new this();  // this likely won't call Config.constructor()
 
-    apply: null,
-    update: null
-});
+        cfg.accessor = Accessor.get(name);
+        cfg.name = name;
+
+        return cfg;
+    }
+
+    static get (name) {
+        let { cache} = Config,
+            config = cache.get(name);
+
+        if (!config) {
+            cache.set(name, config = Config.create(name));
+        }
+
+        return config;
+    }
+
+    static sorter (a, b) {
+        let v = a.priority - b.priority;
+
+        if (!v) {
+            v = a.name.localeCompare(b.name);
+        }
+
+        return v;
+    }
+
+    equal (a, b) {
+        let ret = a === b,
+            i, n;
+
+        if (!ret && a && b && this.array && Array.isArray(a) && Array.isArray(b)) {
+            ret = (n = a.length) === b.length;
+
+            if (ret) {
+                for (i = 0; i < n && (ret = a[i] === b[i]); ++i) {
+                    // just loop
+                }
+            }
+            // else fall below and return false
+        }
+
+        return ret;
+    }
+
+    extend (cls, val) {
+        // template
+    }
+
+    get (instance) {
+        return instance.$config[this.name];
+    }
+
+    apply (instance, v) { return v; }  // in case of super.apply()
+    update () {}
+
+    set (instance, v) {
+        let me = this,
+            { $config: storage } = instance,
+            { name } = me,
+            was = storage[name],
+            handled, applied;
+
+        if (!me.apply.$nop) {
+            applied = me.apply(instance, v, was);
+
+            if (!(handled = (applied === undefined))) {
+                v = applied;
+                was = storage[name];  // in case value was changed by apply()
+            }
+        }
+
+        if (!handled && !me.equal(v, was)) {
+            storage[name] = v;
+
+            !me.update.$nop && me.update(instance, v, was);
+            handled = true;
+        }
+
+        if (handled && !instance.configuring?.firstTime) {
+            instance.onConfigChange(name, v, was);
+        }
+    }
+
+    merge (oldValue, newValue) {
+        if (oldValue && newValue && isObject(newValue)) {
+            if (isObject(oldValue)) {
+                newValue = merge(clone(oldValue), newValue);
+            }
+        }
+
+        return newValue;
+    }
+}
+
+(proto => {
+    applyTo(proto, {
+        array: false,
+        default: null,
+        nullable: true,
+        nullify: false,
+        phase: 'ctor',  // in {'ctor', 'get', 'init'}
+        priority: 0,
+        signalize: null
+    });
+
+    proto.apply.$nop = true;
+    proto.update.$nop = true;
+
+})(Config.prototype);
+
 
 class Bool extends Config {
     value = null;
@@ -302,18 +352,16 @@ export class Configurable extends Declarable {
      */
     static expando = EXPANDO_NONE;
 
+    static signalize = false;
+
     static proto = {
-        [signalConfigsSym]: null,
         configuring: null,
-
-        hookGetConfig: null,
-
         initialConfig: null,  // config object passed to constructor
         instanceConfig: null  // fully populated config object
     };
 
     static declarable = {
-        configurable(cls, configs) {
+        configurable (cls, configs) {
             let meta = cls.$meta,
                 classConfigs = meta.configs,
                 configValues = meta.configValues,
@@ -330,6 +378,8 @@ export class Configurable extends Declarable {
                         Object.setPrototypeOf(val.prototype, base.prototype);
                     }
 
+                    // Due to above prototype changes, this won't call the Config constructor:
+                    //  config = new val(name);
                     classConfigs[name] = config = val.create(name);
                     proto = val.prototype;
 
@@ -344,7 +394,6 @@ export class Configurable extends Declarable {
 
                     if (hasOwn(config, 'nullify')) {
                         meta.nullify[name] = config.nullify;
-                        delete config.nullify;
                     }
 
                     applyTo(proto, config);
@@ -360,7 +409,7 @@ export class Configurable extends Declarable {
                     val = config.merge(configValues[name], val);
                 }
                 else {
-                    config.defineAccessor(cls.prototype);
+                    config.accessor.defineConfig(cls.prototype);
                 }
 
                 configValues[name] = val;
@@ -368,7 +417,7 @@ export class Configurable extends Declarable {
         }
     };
 
-    static classInit(meta) {
+    static classInit (meta) {
         let cls = this,
             zuper = meta.super;
 
@@ -382,7 +431,7 @@ export class Configurable extends Declarable {
         meta.requiredConfigs = map(meta.configs, v => v.nullable ? SKIP : v.name, 'array');
     }
 
-    static mergeConfigs(target, ...configs) {
+    static mergeConfigs (target, ...configs) {
         let meta = this.$meta,
             cfgs = meta.configs,
             { expando } = meta,
@@ -413,40 +462,7 @@ export class Configurable extends Declarable {
         return target;
     }
 
-    static signalize (fn /*, observer */) {
-        let proto = Configurable.prototype;
-
-        proto.hookGetConfig && panik('signalization is already active');
-
-        try {
-            proto.hookGetConfig = function (name, config) {
-                if (config.signalizable) {
-                    let me = this,
-                        { prop } = config,
-                        signals = me[signalConfigsSym] ??= chain(),
-                        signal;
-
-                    if (!signals[name]) {
-                        signals[name] = signal = Signal.value(me[prop]);
-                        // console.log(`${observer} watching "${name}" on ${me._id}`);
-
-                        // route i/o to the "_prop" property to a Signal so it can be observed
-                        defineProperty(me, prop, {
-                            get: _ => signal.get(),
-                            set: v => signal.set(v)
-                        });
-                    }
-                }
-            };
-
-            return fn();
-        }
-        finally {
-            delete proto.hookGetConfig;
-        }
-    }
-
-    static squashConfigs(...configs) {
+    static squashConfigs (...configs) {
         let config;
 
         while (configs.length) {
@@ -465,7 +481,34 @@ export class Configurable extends Declarable {
         super(instanceConfig, ...extra);
     }
 
-    construct(instanceConfig) {
+    get $config () {
+        let { $meta: meta } = this,
+            configStorage = meta.configStorage,
+            cfg, classConfigs, ret;
+
+        if (!configStorage) {
+            // Once per class, create a "class" that defines storage for all configs
+            meta.configStorage = configStorage = Object.create(null);
+            classConfigs = meta.configs;
+
+            for (cfg in classConfigs) {
+                cfg = classConfigs[cfg];
+                cfg.accessor.defineStorage(configStorage, cfg.default, cfg.signalize ?? meta.class.signalize);
+            }
+        }
+
+        // Once per instance, create the object to hold the config values
+        ret = Object.create(configStorage);
+        ret[storageOwnerSym] = this;
+
+        // hide this getter from the prototype by defining it on the instance (only get here
+        // once per instance)
+        defineProperty(this, '$config', { value: ret });
+
+        return ret;
+    }
+
+    construct (instanceConfig) {
         let me = this,
             meta = me.$meta,
             config = meta.configValues,
@@ -487,7 +530,7 @@ export class Configurable extends Declarable {
         }
     }
 
-    configure(config) {
+    configure (config) {
         let me = this,
             meta = me.$meta,
             classConfigs = meta.configs,
@@ -519,7 +562,7 @@ export class Configurable extends Declarable {
                         configData.set(name, config[name]);
 
                         cfg = classConfigs[name] || Config.get(name);
-                        cfg.defineInitter(me);
+                        cfg.accessor.defineInitter(me);
 
                         (active ??= []).push(cfg);
                     }
@@ -572,7 +615,7 @@ export class Configurable extends Declarable {
         }
     }
 
-    destruct() {
+    destruct () {
         let me = this,
             { nullify } = me.$meta,
             configData = me[configDataSym],
@@ -623,51 +666,17 @@ export class Configurable extends Declarable {
     }
 
     peekConfig (name) {
-        let { configuring } = this;
+        let data = this.configuring?.data;
 
-        if (configuring?.data.has(name)) {
-            return configuring.data.get(name);
-        }
-
-        return this[Config.get(name).prop];
+        return data?.has(name) ? data.get(name) : this.$config[name];
     }
 
-    toJSON() {
+    toJSON () {
         return map(this.$meta.configs, (v, k) => {
             v = this[k];
 
             return (v == null || typeof v === 'function') ? SKIP : [k, jsonify(v)];
         });
-    }
-
-    /**
-     * Invokes the given function and returns a map of the configs that were accessed during
-     * the function execution.
-     *
-     * The configs used are returned as keys of an object. The value of each key is true. An
-     * object is used to efficiently deduplicate the result.
-     *
-     * This object is suitable for passing to `watchConfigs()` to watch for changes to the
-     * accessed configs.
-     *
-     * @param {Function} fn
-     * @param {Object} [exclude] An object whose keys are config names to exclude from the result.
-     * @return {Object}
-     */
-    monitorConfigs (fn, exclude) {
-        let me = this,
-            used = null;
-
-        me.hookGetConfig = name => !exclude?.[name] && ((used ??= {})[name] = true);
-
-        try {
-            fn();
-        }
-        finally {
-            delete me.hookGetConfig;
-        }
-
-        return used;
     }
 
     /**

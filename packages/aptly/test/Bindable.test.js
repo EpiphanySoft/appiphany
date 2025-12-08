@@ -54,9 +54,10 @@ describe('Bindable', () => {
             'get bar'
         ]);
 
-        expect(() => {
-            inst.props.herp = 0;
-        }).to.throw();
+        // cannot seal props
+        // expect(() => {
+        //     inst.props.herp = 0;
+        // }).to.throw();
 
         inst.effects = {
             woot () {
@@ -227,7 +228,10 @@ describe('Bindable', () => {
                 props: {
                     woot () {
                         log(`get woot ${this.id}`);
-                        return this.props.bar * this.props.herp * 5;
+
+                        let { bar, herp } = this.props;
+
+                        return bar * herp * 5;
                     }
                 }
             }
@@ -447,77 +451,18 @@ describe('Bindable', () => {
         expect(inst.woot).to.be(50);
     });
 
-    it('should make internal props configurable', async() => {
+    it('should handle shadowed props correctly', async() => {
         const root = makeRoot();
 
         class Parent extends Configurable.mixin(Bindable) {
             static configurable = {
-                $props: {
-                    dip: 3, // unique to this instance
-                    dop: 2,
-
-                    wop: props => {
-                        return props.dip * props.dop;
-                    }
-                }
-            }
-        }
-
-        let inst = new Parent({ parent: root, dip: 42 });
-
-        expect(inst.props.dip).to.be(42);
-        expect(inst.props.dop).to.be(2);
-        expect(inst.props.wop).to.be(42 * 2);
-
-        expect(inst.dip).to.be(42);
-        expect(inst.dop).to.be(2);
-        expect(inst.wop).to.be(42 * 2);
-
-        inst = new Parent({ parent: root, dip: 42, dop: 100 });
-
-        expect(inst.props.dip).to.be(42);
-        expect(inst.props.dop).to.be(100);
-        expect(inst.props.wop).to.be(4200);
-
-        expect(inst.dip).to.be(42);
-        expect(inst.dop).to.be(100);
-        expect(inst.wop).to.be(4200);
-
-        inst.props.dip = 99;
-        inst.dop = 1000;
-
-        expect(inst.dip).to.be(99);
-        expect(inst.dop).to.be(1000);
-        expect(inst.wop).to.be(99000);
-
-        expect(() => {
-            inst.wop = 1;
-        }).to.throw('Cannot set property wop');
-
-        expect(() => {
-            inst = new Parent({ parent: root, dip: 42, dop: 100, wop: 10 });
-        }).to.throw('Cannot set property wop');
-
-        expect(() => {
-            inst = new Parent({ parent: root, dip: 42, herp: 10 });
-        }).to.throw('No such property "herp" in class Parent');
-    });
-
-    it('should handle shadowed and internal props correctly', async() => {
-        const root = makeRoot();
-
-        class Parent extends Configurable.mixin(Bindable) {
-            static configurable = {
-                $props: {
+                props: {
                     dip: 3, // unique to this instance
                     dop: 2,
 
                     wop: props => {
                         return props.dop * 100;
-                    }
-                },
-
-                props: {
+                    },
                     foo: props => {
                         return props.wop * props.dip;
                     }
@@ -527,14 +472,11 @@ describe('Bindable', () => {
 
         class Foo extends Configurable.mixin(Bindable) {
             static configurable = {
-                $props: {
+                props: {
                     dop: 9,
                     wip: 10,  // unique to this instance
 
-                    wop: props => props.dop * props.wip
-                },
-
-                props: {
+                    wop: props => props.dop * props.wip,
                     foo: props => props.wop * 5
                 }
             }
@@ -545,20 +487,20 @@ describe('Bindable', () => {
         let getProps = o => ['dip','dop','wip','wop','foo'].map(n => o.props[n]);
 
         expect(getProps(parent)).to.equal([3, 2, undefined, 200, 600]);
-        expect(getProps(inst)).to.equal([undefined, 9, 10, 90, 450]);
+        expect(getProps(inst)).to.equal([3, 9, 10, 90, 450]);
 
         expect(() => {
-            inst.props.dip = 0;  // parent internal prop (cannot set)
+            inst.props.wop = 0;
         }).to.throw();
 
         inst.props.dop = 7;
 
         expect(getProps(parent)).to.equal([3, 2, undefined, 200, 600]);
-        expect(getProps(inst)).to.equal([undefined, 7, 10, 70, 350]);
+        expect(getProps(inst)).to.equal([3, 7, 10, 70, 350]);
 
-        parent.dop = 5;  // internal props are exposed on object
+        parent.props.dop = 5;
 
         expect(getProps(parent)).to.equal([3, 5, undefined, 500, 1500]);
-        expect(getProps(inst)).to.equal([undefined, 7, 10, 70, 350]);
+        expect(getProps(inst)).to.equal([3, 7, 10, 70, 350]);
     });
 });

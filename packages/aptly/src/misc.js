@@ -645,7 +645,7 @@ export const
             array, it, key, m, ret,
             mapIt = (it, k) => {
                 if (fn) {
-                    m = fn(it, key);
+                    m = fn(it, k);
 
                     if (m === SKIP) {
                         return;
@@ -911,6 +911,7 @@ export const
     }
 ;
 
+nop.$nop = true;
 c2h.cache = chain();
 h2c.cache = chain();
 typeOf.cache = chain();

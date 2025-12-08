@@ -164,8 +164,6 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         },
 
         parent: class {
-            value = null;
-
             apply (me, parent) {
                 for (let up = parent; up; up = up.parent) {
                     if (up === me) {
@@ -193,8 +191,6 @@ export const Hierarchical = Base => class Hierarchical extends Base {
         },
 
         ref: class {
-            value = null;
-
             update (me) {
                 me.inherited.nexus?.refs.invalidate();
             }
