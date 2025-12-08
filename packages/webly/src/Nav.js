@@ -16,6 +16,7 @@ export class NavbarTab extends Component {
     }
 }
 
+NavbarTab.initClass();
 
 /**
  * A navigation bar component.
@@ -27,6 +28,10 @@ export class Navbar extends Component {
 
     static configurable = {
         itemRenderTarget: 'navStart',
+
+        bind: {
+            tabs: 'navTabs'
+        },
 
         cls: {
             navbar: 1
@@ -44,19 +49,51 @@ export class Navbar extends Component {
 
         burgerized: null,
 
-        menu: null
+        menu: null,
+
+        tabs: class extends ItemsConfig {
+            getItemDefaults (instance) {
+                return {
+                    type: NavbarTab,
+                    parent: instance
+                };
+            }
+        },
+
+        props: {
+            navTabs () {
+                let items = this.parent?.getItems(),
+                    tabs = null,
+                    it, tab;
+
+                if (items) {
+                    for (it of items) {
+                        tab = it.tab;
+
+                        if (tab) {
+                            if (typeof tab === 'string') {
+                                tab = {
+                                    html: tab
+                                };
+                            }
+
+                            (tabs ??= {})[`${it.ref}Tab`] = tab;
+                        }
+                    }
+                }
+
+                return tabs;
+            }
+        }
     };
 
     getItems (docked) {
         let items = super.getItems(docked),
-            tabs;
+            tabs = !docked && this.tabs;
 
-        if (!docked) {
-            tabs = this.props.tabs;
-
-            if (tabs) {
-                items = Component.sortItems([...tabs, ...items]);
-            }
+        if (tabs) {
+            tabs = values(tabs);
+            items = Component.sortItems([...tabs, ...items]);
         }
 
         return items;
@@ -94,6 +131,7 @@ export class Navbar extends Component {
                         }
                     }
                 },
+
                 body: {
                     id: `${id}-body`,
                     class: {
@@ -141,49 +179,6 @@ export class Nav extends Panel {
                         parent: instance
                     }
                 });
-            }
-        },
-
-        items: class {
-            update (instance, value) {
-                let tabs = null,
-                    it, ref, tab;
-
-                if (value) {
-                    for (ref in value) {
-                        it = value[ref];
-                        tab = it.tab;
-
-                        if (tab) {
-                            if (typeof tab === 'string') {
-                                tab = {
-                                    html: tab
-                                };
-                            }
-
-                            (tabs ??= {})[`${ref}Tab`] = tab;
-                        }
-                    }
-                }
-
-                instance.tabs = tabs;
-            }
-        },
-
-        props: {
-            tabs: null
-        },
-
-        tabs: class extends ItemsConfig {
-            getItemDefaults (instance) {
-                return {
-                    type: NavbarTab,
-                    parent: instance
-                };
-            }
-
-            update (instance, value) {
-                instance.props.tabs = value && values(value);
             }
         }
     };

@@ -1,4 +1,4 @@
-import { Dom, Component, Nav, Viewport } from '@appiphany/webly';
+import { Dom, Component, Nav, Viewport, Card } from '@appiphany/webly';
 
 
 window.Dom = Dom;
@@ -14,6 +14,7 @@ Dom.onReady(() => {
                 type: Nav,
                 cls: 'woot',
                 flex: '1 1 auto',
+                layout: Card,
 
                 // bar: {
                 //     items: {
@@ -34,7 +35,6 @@ Dom.onReady(() => {
                         cls: 'herp',
                         docked: 'top',
                         html: 'Top Woot!!!',
-                        tab: 'Herp',
                         element: {
                             style: { color: 'yellow' }
                         }
@@ -44,10 +44,6 @@ Dom.onReady(() => {
                         cls: 'woot',
                         docked: 'left',
                         html: 'Left herp!',
-                        tab: {
-                            html: 'Woot',
-                            renderTarget: 'navEnd'
-                        },
                         element: {
                             style: 'color: lime; fontSize: 2em',
                         },
@@ -57,11 +53,16 @@ Dom.onReady(() => {
                     },
 
                     zap: {
+                        tab: 'Zap',
                         html: 'Body zap',
                     },
 
                     zip: {
                         html: 'Body zip',
+                        tab: {
+                            html: 'Zip',
+                            renderTarget: 'navEnd'
+                        }
                     }
                 }
             }

@@ -45,7 +45,7 @@ export class Factory extends Configurable {
             // originalConfig = config,
             ret, type;
 
-        if (typeof config === 'string') {
+        if (typeof config === 'string' || isClass(config)) {
             type = config;
             config = {};
         }

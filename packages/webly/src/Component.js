@@ -1,5 +1,5 @@
-import { chain, panik, Widget, Signal, isObject, clone, merge,
-         EMPTY_ARRAY, EMPTY_OBJECT, values, Config, Configurable }
+import { chain, panik, Widget, Signal, isObject, clone, merge, values, Config,
+         EMPTY_ARRAY, EMPTY_OBJECT }
     from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 import { Dom, LayoutConfig } from '@appiphany/webly';
@@ -257,9 +257,10 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     compose () {
-        let spec = this.render(),
-            items = this.getItems(),
-            { itemRenderTarget } = this,
+        let me = this,
+            spec = me.render(),
+            items = me.getItems(),
+            { itemRenderTarget } = me,
             it, refs, renderTarget, children;
 
         if (items) {
@@ -287,9 +288,7 @@ export class Component extends Widget.mixin(Factoryable) {
     initialize() {
         super.initialize();
 
-        if (!this.#dom) {
-            this.recompose();
-        }
+        !this.#dom && this.recompose();
     }
 
     render () {
@@ -323,19 +322,20 @@ export class Component extends Widget.mixin(Factoryable) {
             tag, html, aria, role, style
         };
 
-        layout.decorateElement('root', spec);
+        layout?.decorateElement('root', spec);
         parent?.layout?.decorateChild(this, spec);
 
         return spec;
     }
 
     #getRenderPlan () {
-        let renderTo = !this.destroyed && this.renderTo,
-            renderToUsed = this.#renderToUsed,
+        let me = this,
+            renderTo = !me.destroyed && me.renderTo,
+            renderToUsed = me.#renderToUsed,
             mode;
 
         if (renderTo) {
-            this.#renderToUsed = renderToUsed = true;
+            me.#renderToUsed = renderToUsed = true;
             [mode, renderTo] = renderTo;
         }
         else if (renderToUsed) {
@@ -395,31 +395,32 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     #recomposeNow () {
-        this.recompose();
+        let me = this;
 
-        if (this.#watcherNotified) {
-            this.#watcherNotified = false;
-            this.#renderWatcher?.watch();
+        me.recompose();
+
+        if (me.#watcherNotified) {
+            me.#watcherNotified = false;
+            me.#renderWatcher?.watch();
         }
     }
 
     recomposeSoon () {
-        let recomposer = this.#recomposer ??= () => this.#recomposeNow();
-
         // console.log(`invalidated ${this.id}`);
-        this.scheduler.add(recomposer);
+        this.scheduler.add(this.#recomposer ??= () => this.#recomposeNow());
     }
 
     #unrender () {
-        let watcher = this.#renderWatcher;
+        let me = this,
+            watcher = me.#renderWatcher;
 
         if (watcher) {
-            watcher.unwatch(this.#composer);
-            this.#renderWatcher = this.#composer = null;
+            watcher.unwatch(me.#composer);
+            me.#renderWatcher = me.#composer = null;
         }
 
-        this.#dom?.destroy();
-        this.#dom = null;
+        me.#dom?.destroy();
+        me.#dom = null;
     }
 }
 

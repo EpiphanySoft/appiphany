@@ -22,6 +22,8 @@ export class Container extends Component {
     static type = 'container';
 
     static configurable = {
+        activeItem: null,
+
         itemRenderTarget: 'body',
 
         layout: {

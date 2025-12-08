@@ -18,10 +18,11 @@ export class Layout extends Widget.mixin(Factoryable) {
          * @config {Object}
          * The classes that apply to the owner's element tree.
          */
-        classes: {
-            // body: {},
-            // root: {}
-        },
+        classes: null,
+        //  = {
+        //      body: {},
+        //      root: {}
+        //  },
 
         /**
          * @config {Object}
@@ -30,10 +31,11 @@ export class Layout extends Widget.mixin(Factoryable) {
          * uses the parent's `itemRenderTarget`, then the key used to identify the child's classes
          * in this object is 'default'.
          */
-        childClasses: {
-            // 'docked-top': {},
-            // default: {}
-        }
+        childClasses: null
+        //  = {
+        //      'docked-top': {},
+        //      default: {}
+        //  }
     };
 
     static identifierPrefix () {
@@ -51,7 +53,7 @@ export class Layout extends Widget.mixin(Factoryable) {
             rt = (renderTarget && renderTarget !== itemRenderTarget) ? renderTarget : 'default',
             key = docked ? `docked-${docked}` : rt;
 
-        me.addClasses(spec, me.childClasses[key]);
+        me.addClasses(spec, me.childClasses?.[key]);
 
         return spec;
     }
@@ -61,7 +63,7 @@ export class Layout extends Widget.mixin(Factoryable) {
             [`x-layout-${this.type}`]: 1
         });
 
-        this.addClasses(spec, this.classes[ref]);
+        this.addClasses(spec, this.classes?.[ref]);
 
         return spec;
     }
@@ -71,6 +73,7 @@ Layout.initClass();
 
 
 //------------------------------------------------------------------------------------------------
+// Box, HBox, VBox
 
 export class Box extends Layout {
     static type = 'box';
@@ -138,9 +141,24 @@ VBox.initClass();
 
 //------------------------------------------------------------------------------------------------
 
-export class LayoutConfig extends Config {
-    value = 'auto';
+export class Card extends Layout {
+    static type = 'card';
 
+    static configurable = {
+        childClasses: {
+            default: {
+                'x-card-item': 1
+            }
+        }
+    };
+}
+
+Card.initClass();
+
+
+//------------------------------------------------------------------------------------------------
+
+export class LayoutConfig extends Config {
     apply (instance, value, was) {
         if (typeof value === 'string') {
             value = { type: value };
