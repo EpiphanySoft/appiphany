@@ -294,15 +294,16 @@ export class Component extends Widget.mixin(Factoryable) {
 
     render () {
         let me = this,
-            { cls, docked, html, flex, layout, width, height } = me,
-            { aria, role, style, tag } = me.element;
+            { cls, docked, html, flex, layout, width, height, parent } = me,
+            { aria, role, style, tag } = me.element,
+            spec;
 
         aria ??= EMPTY_OBJECT;
-        cls = clone(cls);
+        cls = cls ? clone(cls) : {};
         style = clone(style);
 
         if (docked) {
-            (cls ??= {})[`x-docked-${docked}`] = 1;
+            cls[`x-docked-${docked}`] = 1;
         }
 
         if (flex != null) {
@@ -317,10 +318,15 @@ export class Component extends Widget.mixin(Factoryable) {
             (style ??= {}).height = height;
         }
 
-        return layout.decorateElement('root', {
+        spec = {
             class: cls,
             tag, html, aria, role, style
-        });
+        };
+
+        layout.decorateElement('root', spec);
+        parent?.layout?.decorateChild(this, spec);
+
+        return spec;
     }
 
     #getRenderPlan () {

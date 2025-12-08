@@ -14,9 +14,25 @@ export class Layout extends Widget.mixin(Factoryable) {
     };
 
     static configurable = {
+        /**
+         * @config {Object}
+         * The classes that apply to the owner's element tree.
+         */
         classes: {
             // body: {},
             // root: {}
+        },
+
+        /**
+         * @config {Object}
+         * The classes that apply to the owner's children. The applicable classes for a child are
+         * determined by the child's `docked` config as well as its `renderTarget`. If the child
+         * uses the parent's `itemRenderTarget`, then the key used to identify the child's classes
+         * in this object is 'default'.
+         */
+        childClasses: {
+            // 'docked-top': {},
+            // default: {}
         }
     };
 
@@ -26,6 +42,18 @@ export class Layout extends Widget.mixin(Factoryable) {
 
     addClasses (spec, classes) {
         classes && applyMissing(spec.class ??= {}, classes);
+    }
+
+    decorateChild (child, spec) {
+        let me = this,
+            { docked, renderTarget } = child,
+            itemRenderTarget = me.parent?.itemRenderTarget,
+            rt = (renderTarget && renderTarget !== itemRenderTarget) ? renderTarget : 'default',
+            key = docked ? `docked-${docked}` : rt;
+
+        me.addClasses(spec, me.childClasses[key]);
+
+        return spec;
     }
 
     decorateElement (ref, spec) {
@@ -74,6 +102,12 @@ export class Box extends Layout {
             },
             root: {
                 'x-layout-vbox': 1
+            }
+        },
+
+        childClasses: {
+            default: {
+                'x-box-item': 1
             }
         }
     };
