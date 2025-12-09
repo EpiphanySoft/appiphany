@@ -33,40 +33,39 @@ Dom.onReady(() => {
                 items: {
                     herp: {
                         cls: 'herp',
-                        docked: 'top',
-                        html: 'Top Woot!!!',
+                        docked: 'bottom',
+                        html: 'Bottom Woot!!!',
                         element: {
                             style: { color: 'yellow' }
-                        }
-                    },
-
-                    woot: {
-                        cls: 'woot',
-                        docked: 'left',
-                        html: 'Left herp!',
-                        element: {
-                            style: 'color: lime; fontSize: 2em',
-                        },
-                        bind: {
-                            html: p => `Left ${p.theme?.toUpperCase()}`
                         }
                     },
 
                     zap: {
                         tab: 'Zap',
                         html: 'Body zap',
+                        element: {
+                            style: { backgroundColor: '#111' }
+                        }
                     },
 
                     zop: {
                         tab: 'Zop',
                         html: 'Body zop',
+                        element: {
+                            style: { backgroundColor: '#222' }
+                        }
                     },
 
                     zip: {
-                        html: 'Body zip',
+                        bind: {
+                            html: p => `Body Zip ${p.theme?.toUpperCase()}`
+                        },
+                        element: {
+                            style: { backgroundColor: '#333' }
+                        },
                         tab: {
-                            html: 'Zip',
-                            renderTarget: 'navEnd'
+                            renderTarget: 'navEnd',
+                            html: 'Zip'
                         }
                     }
                 }
