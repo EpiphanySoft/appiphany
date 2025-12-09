@@ -57,6 +57,11 @@ Dom.onReady(() => {
                         html: 'Body zap',
                     },
 
+                    zop: {
+                        tab: 'Zop',
+                        html: 'Body zop',
+                    },
+
                     zip: {
                         html: 'Body zip',
                         tab: {

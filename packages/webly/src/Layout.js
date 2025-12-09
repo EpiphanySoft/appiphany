@@ -21,6 +21,7 @@ export class Layout extends Widget.mixin(Factoryable) {
         classes: null,
         //  = {
         //      body: {},
+        //      default: {},
         //      root: {}
         //  },
 
@@ -47,13 +48,9 @@ export class Layout extends Widget.mixin(Factoryable) {
     }
 
     decorateChild (child, spec) {
-        let me = this,
-            { docked, renderTarget } = child,
-            itemRenderTarget = me.parent?.itemRenderTarget,
-            rt = (renderTarget && renderTarget !== itemRenderTarget) ? renderTarget : 'default',
-            key = docked ? `docked-${docked}` : rt;
+        let key = child.childDomain;
 
-        me.decorateChildWith(child, spec, key, me.childClasses?.[key]);
+        this.decorateChildWith(child, spec, key, this.childClasses?.[key]);
 
         return spec;
     }
@@ -63,11 +60,17 @@ export class Layout extends Widget.mixin(Factoryable) {
     }
 
     decorateElement (ref, spec) {
-        (ref === 'root') && this.addClasses(spec, {
-            [`x-layout-${this.type}`]: 1
+        let me = this;
+
+        if (ref === me.parent?.itemRenderTarget) {
+            ref = 'default';
+        }
+
+        (ref === 'root') && me.addClasses(spec, {
+            [`x-layout-${me.type}`]: 1
         });
 
-        this.addClasses(spec, this.classes?.[ref]);
+        me.addClasses(spec, me.classes?.[ref]);
 
         return spec;
     }
@@ -95,7 +98,7 @@ export class Box extends Layout {
         },
 
         classesH: {
-            body: {
+            default: {
                 'x-box-h': 1
             },
             root: {
@@ -104,7 +107,7 @@ export class Box extends Layout {
         },
 
         classesV: {
-            body: {
+            default: {
                 'x-box-v': 1
             },
             root: {
@@ -149,9 +152,27 @@ export class Card extends Layout {
     static type = 'card';
 
     static configurable = {
+        classes: {
+            default: {
+                'x-card-item-container': 1
+            }
+        },
+
         childClasses: {
             default: {
                 'x-card-item': 1
+            }
+        },
+
+        activeClasses: {
+            0: {
+                'x-card-item-active': 1
+            },
+            1: {
+                'x-card-item-after-active': 1
+            },
+            '-1': {
+                'x-card-item-before-active': 1
             }
         }
     };
@@ -160,10 +181,16 @@ export class Card extends Layout {
         super.decorateChildWith(child, spec, key, classes);
 
         if (key === 'default') {
-            let { index } = child;
+            let me = this,
+                { index } = child,
+                { parent } = me,
+                activeIndex = parent?.activeIndex;
 
-            if (index != null) {
-                // console.log(`${child.id}.index = ${index}`);
+            if (index != null && activeIndex != null) {
+                // console.log(`${child.id}.index = ${index} / activeIndex = ${activeIndex} (was ${parent.activeIndexWas})`);
+
+                me.addClasses(spec, me.activeClasses?.[Math.sign(index - activeIndex)]);
+                me.addClasses(spec, { 'x-card-item-was-active': index === paren?.activeIndexWas });
             }
         }
 

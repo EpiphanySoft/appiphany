@@ -22,9 +22,47 @@ export class Container extends Component {
     static type = 'container';
 
     static configurable = {
-        activeItem: null,
+        activeIndex: class {
+            apply (instance, value, was) {
+                let items = instance.getItems(),
+                    it = items[value];
+
+                if (it && it !== instance.activeItem) {
+                    instance.$config.activeIndex = value;
+                    instance.activeItem = it;
+                    instance.activeIndexWas = was;
+                }
+            }
+        },
+
+        activeItem: class {
+            apply (instance, value) {
+                let items = instance.getItems(),
+                    index = 0,
+                    it;
+
+                for (it of items) {
+                    if (it === value || it.ref === value) {
+                        instance.$config.activeItem = it;
+                        instance.activeIndex = index;
+
+                        break;
+                    }
+
+                    ++index;
+                }
+            }
+        },
 
         itemRenderTarget: 'body',
+
+        items: class {
+            update (instance, value, was) {
+                if (!was && !instance.activeItem) {
+                    instance.activeIndex = 0;
+                }
+            }
+        },
 
         layout: {
             type: 'auto'

@@ -413,13 +413,23 @@ export const Hierarchical = Base => class Hierarchical extends Base.mixin(Delaya
     _reindexChildren () {
         // this has to be delayed because it will create an invalidation loop between the
         // parent/child compose methods
-        let index = 0,
-            child;
+        let counter = 0,
+            child, domain, domains, index;
 
         for (child = this._firstChild; child; child = child.nextSib) {
             if (child.$meta.configs.index) {
-                // console.log(`reindexing child ${child.id}: ${index}`);
-                child.index = index++;
+                domain = child.childDomain;
+
+                if (!domain) {
+                    index = counter++;
+                }
+                else {
+                    index = (domains ??= {})[domain] || 0;
+                    domains[domain] = index + 1;
+                }
+
+                // console.log(`reindexing ${this.id} child ${child.id}: ${index}`);
+                child.index = index;
             }
         }
     }

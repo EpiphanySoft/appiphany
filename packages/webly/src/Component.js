@@ -245,6 +245,22 @@ export class Component extends Widget.mixin(Factoryable) {
         super.destruct();
     }
 
+    get childDomain () {
+        let me = this,
+            { docked } = me,
+            ret = 'default',
+            rt;
+
+        if (docked) {
+            ret = `docked-${docked}`;
+        }
+        else if ((rt = me.renderTarget) && rt !== me.parent?.itemRenderTarget) {
+            ret = rt;
+        }
+
+        return ret;
+    }
+
     get dom () {
         return this.#dom;
     }

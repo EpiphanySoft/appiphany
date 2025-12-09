@@ -40,3 +40,31 @@ body.x-viewport {
     overflow: hidden;
     position: relative;
 }
+
+.x-card-item-container {
+    //
+}
+
+.x-card-item {
+    flex: 1 1 auto;
+    transition: translate 2s ease-in;
+}
+
+.x-card-item:not(.x-card-item-active) {
+    position: absolute;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+}
+
+.x-card-item:not(.x-card-item-active, .x-card-item-was-active) {
+    opacity: 0;
+}
+
+.x-card-item-after-active {
+    translate: 100%;
+}
+
+.x-card-item-before-active {
+    translate: -100%;
+}
