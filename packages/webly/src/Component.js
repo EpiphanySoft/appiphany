@@ -220,6 +220,8 @@ export class Component extends Widget.mixin(Factoryable) {
         }
     };
 
+    static hierarchicalType = `component`;
+
     static shardable = {
         render (a, b) {
             return merge(a, b);

@@ -7,11 +7,35 @@ export class NavbarTab extends Component {
 
     static configurable = {
         cls: {
-            'navbar-item': 1
+            'navbar-item': 1,
+            'is-tab': 1
         },
 
         element: {
             tag: 'a'
+        },
+
+        item: null
+    }
+
+    get nav () {
+        return this.up('nav');
+    }
+
+    onClickTab () {
+        this.nav.activeItem = this.item;
+    }
+
+    render () {
+        let { item } = this;
+
+        return {
+            class: {
+                'is-active': item === this.nav?.activeItem
+            },
+            on: {
+                click: 'onClickTab'
+            }
         }
     }
 }
@@ -77,7 +101,10 @@ export class Navbar extends Component {
                                 };
                             }
 
-                            (tabs ??= {})[`${it.ref}Tab`] = tab;
+                            (tabs ??= {})[`${it.ref}Tab`] = {
+                                ...tab,
+                                item: it
+                            };
                         }
                     }
                 }

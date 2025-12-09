@@ -24,10 +24,10 @@ export class Container extends Component {
     static configurable = {
         activeIndex: class {
             apply (instance, value, was) {
-                let items = instance.getItems(),
-                    it = items[value];
+                if (value !== was) {
+                    let items = instance.getItems(),
+                        it = items[value];
 
-                if (it && it !== instance.activeItem) {
                     instance.$config.activeIndex = value;
                     instance.activeItem = it;
                     instance.activeIndexWas = was;

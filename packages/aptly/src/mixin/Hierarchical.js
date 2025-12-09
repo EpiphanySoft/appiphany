@@ -9,28 +9,20 @@ const
     }),
     createInheritable = p => chainProto(chainProto(p?.inheritable || root)),
     typeMatcher = type => {
-        type = type || '';
+        let t = typeof type,
+            matcher;
 
-        let t = typeof type;
-
-        if (t === 'string') {
-            if (type === '*') {
-                type = '';
-            }
-
-            // ex, search for 'component' or 'button' matches hierarchicalType='component:button'
-            return item => item.hierarchicalType.includes(type)
+        if (t === 'string' && type !== '*') {
+            matcher = item => item.is[type] || item.hierarchicalType === type
+        }
+        else if (t === 'function') {
+            matcher = type;
+        }
+        else if (type instanceof RegExp) {
+            matcher = item => type.test(item.hierarchicalType) || type.test(item.type);
         }
 
-        if (t === 'function') {
-            return type;
-        }
-
-        if (type instanceof RegExp) {
-            return item => type.test(item.hierarchicalType);
-        }
-
-        return _ => true;
+        return matcher || (_ => true);
     };
 
 class Refs {
