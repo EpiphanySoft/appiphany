@@ -190,7 +190,7 @@ export class Card extends Layout {
                 // console.log(`${child.id}.index = ${index} / activeIndex = ${activeIndex} (was ${parent.activeIndexWas})`);
 
                 me.addClasses(spec, me.activeClasses?.[Math.sign(index - activeIndex)]);
-                me.addClasses(spec, { 'x-card-item-was-active': index === paren?.activeIndexWas });
+                me.addClasses(spec, { 'x-card-item-was-active': index === parent.activeIndexWas });
             }
         }
 

@@ -47,7 +47,7 @@ body.x-viewport {
 
 .x-card-item {
     flex: 1 1 auto;
-    transition: translate 2s ease-in;
+    transition: translate 0.2s ease-in;
 }
 
 .x-card-item:not(.x-card-item-active) {
