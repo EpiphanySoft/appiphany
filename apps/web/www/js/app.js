@@ -8,6 +8,7 @@ window.Viewport = Viewport;
 Dom.onReady(() => {
     window.v = Component.create({
         type: 'viewport',
+        stateProvider: { type: 'storage', storage: localStorage },
 
         items: {
             foo: {
@@ -57,9 +58,7 @@ Dom.onReady(() => {
                     },
 
                     zip: {
-                        bind: {
-                            html: p => `Body Zip ${p.theme?.toUpperCase()}`
-                        },
+                        html: p => `Body Zip ${p.theme?.toUpperCase()}`,
                         element: {
                             style: { backgroundColor: '#333' }
                         },

@@ -33,14 +33,32 @@ describe('Configurable', () => {
             };
         }
 
+        class Bar extends Foo {
+            static configurable = {
+                herp: class {
+                    herp = true;
+                }
+            };
+        }
+
         let a = [1, 2, 3];
-        let foo = new Foo({ herp: a });
+        let inst = new Foo({ herp: a });
+        let inst2 = new Bar({ herp: a });
 
-        expect(foo.herp).to.equal(a);
+        expect(inst.herp).to.equal(a);
+        expect(inst2.herp).to.equal(a);
 
-        foo.herp = a.slice();
+        inst.herp = a.slice();
+        inst2.herp = a.slice();
 
-        expect(foo.herp).to.be(a);
+        expect(inst.herp).to.be(a);
+        expect(inst2.herp).to.be(a);
+
+        expect(inst.$meta.configs.herp.array).to.be(true);
+        expect(inst2.$meta.configs.herp.array).to.be(true);
+
+        expect(inst.$meta.configs.herp.herp).to.be(undefined);
+        expect(inst2.$meta.configs.herp.herp).to.be(true);
     });
 
     it('handles flags', () => {

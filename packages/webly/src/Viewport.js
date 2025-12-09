@@ -27,8 +27,6 @@ export class Viewport extends Component {
             theme: true
         },
 
-        stateProvider: { type: 'storage', storage: localStorage },
-
         themes: ['light', 'dark'],
 
         renderTo: ['adopt', document.body]

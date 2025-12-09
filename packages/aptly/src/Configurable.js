@@ -168,10 +168,13 @@ export class Config {
     static cache = new Map();
 
     static create (name) {
-        let cfg = new this();  // this likely won't call Config.constructor()
+        let cfg = new this();  // won't call any super constructor()
 
-        cfg.accessor = Accessor.get(name);
-        cfg.name = name;
+        if (!cfg.accessor) {
+            cfg.accessor = Accessor.get(name);
+            cfg.autoBind = !name.endsWith('Fn');
+            cfg.name = name;
+        }
 
         return cfg;
     }
@@ -372,7 +375,7 @@ export class Configurable extends Declarable {
 
                 if (val && isClass(val)) {
                     if (!(val.prototype instanceof Config)) {
-                        base = classConfigs[name]?.constructor || Config.get(name).constructor;
+                        base = classConfigs[name]?.constructor || Config;
 
                         Object.setPrototypeOf(val, base);
                         Object.setPrototypeOf(val.prototype, base.prototype);
@@ -383,20 +386,27 @@ export class Configurable extends Declarable {
                     classConfigs[name] = config = val.create(name);
                     proto = val.prototype;
 
-                    if (hasOwn(config, 'value')) {
-                        // value = 'herp' on class def
-                        val = config.value;
-                        delete config.value;
-                    }
-                    else {
-                        val = null;
-                    }
+                    // Copy instance variables to the prototype chain since they won't be
+                    // added by any derived constructors. The constructor for config classes
+                    // is created before we change the class prototype and so all it has its
+                    // own instance variables.
+                    Object.assign(proto, config);
 
                     if (hasOwn(config, 'nullify')) {
                         meta.nullify[name] = config.nullify;
                     }
 
-                    applyTo(proto, config);
+                    if (hasOwn(config, 'value')) {
+                        // value = 'herp' on class def
+                        val = config.value;
+                    }
+                    else {
+                        if (name in configValues) {
+                            continue;
+                        }
+
+                        val = null;
+                    }
                 }
                 else if (!(config = classConfigs[name])) {
                     classConfigs[name] = config = Config.get(name);
@@ -536,7 +546,7 @@ export class Configurable extends Declarable {
             classConfigs = meta.configs,
             configData = me[configDataSym] ??= new Map(),
             { configuring } = me,
-            firstTime = !me.instanceConfig,
+            firstTime = me.constructing,
             ignoreNull = firstTime,
             active, cfg, modified, name, phase, val;
 

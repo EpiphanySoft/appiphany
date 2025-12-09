@@ -1,4 +1,4 @@
-import { Destroyable, Scheduler, Signal, panik, chain, applyTo } from '@appiphany/aptly';
+import { Destroyable, Scheduler, Signal, panik, chain, applyTo, isClass } from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
@@ -384,7 +384,6 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         super.destruct();
     }
 
-
     get bindings () {
         return this._bindings ??= new Bindings(this);
     }
@@ -402,6 +401,37 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         else {
             delete inheritable.$scheduler;
         }
+    }
+
+    configure (config) {
+        let me = this,
+            { initialConfig } = me,
+            classConfigs,
+            bind, name, val;
+
+        if (config && initialConfig && me.constructing && !('bind' in initialConfig)) {
+            classConfigs = me.$meta.configs;
+            bind = config.bind;
+
+            if (bind) {
+                bind = chain(bind);
+            }
+
+            for (name in config) {
+                val = config[name];
+
+                if (typeof val === 'function' && !isClass(val) && classConfigs[name]?.autoBind) {
+                    (bind ??= {})[name] = val;
+                    delete config[name];
+                }
+            }
+
+            if (bind) {
+                config.bind = bind;
+            }
+        }
+
+        return super.configure(config);
     }
 
     //----------------------------------------------------------------------------------------
