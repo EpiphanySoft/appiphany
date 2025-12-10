@@ -164,6 +164,9 @@ export class Component extends Widget.mixin(Factoryable) {
 
         // General
 
+        floating: null,
+        floatRoot: null,
+
         /**
          * Set by the parent to a number (0, 1, 2, ...) indicating the index of this component
          * with respect to its siblings.
@@ -320,7 +323,7 @@ export class Component extends Widget.mixin(Factoryable) {
 
     render () {
         let me = this,
-            { cls, docked, html, flex, layout, width, height, parent } = me,
+            { cls, docked, html, flex, floating, floatRoot, layout, width, height, parent } = me,
             { aria, role, style, tag } = me.element,
             spec;
 
@@ -348,6 +351,16 @@ export class Component extends Widget.mixin(Factoryable) {
             class: cls,
             tag, html, aria, role, style
         };
+
+        if (floating || floatRoot) {
+            spec.children = {
+                floaters: {
+                    class: {
+                        'x-floaters': true
+                    }
+                }
+            };
+        }
 
         layout?.decorateElement('root', spec);
         parent?.layout?.decorateChild(this, spec);

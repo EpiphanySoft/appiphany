@@ -6,6 +6,22 @@ body.x-viewport {
     width: 100%;
 }
 
+.x-floaters {
+    position: fixed;
+    display: flex;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+    /* contain: strict; */
+
+.x-floaters > .x-component {
+    position: absolute;
+    pointer-events: all;
+    z-index: 2;
+}
+
 .x-component {
     overflow: hidden;
 }
@@ -41,6 +57,8 @@ body.x-viewport {
     position: relative;
 }
 
+/* ---------------------------------------------------------------------------- */
+
 .x-card-item-container {
     //
 }
@@ -67,4 +85,14 @@ body.x-viewport {
 
 .x-card-item-before-active {
     translate: -100%;
+}
+
+/* ---------------------------------------------------------------------------- */
+
+.main.title {
+    padding: 8px 12px;
+}
+
+.navbar-menu {
+    padding: 0 8px;
 }

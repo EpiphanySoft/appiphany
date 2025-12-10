@@ -1,13 +1,14 @@
-import { Component, LayoutConfig } from '@appiphany/webly';
+import { Container } from '@appiphany/webly';
 
 
-export class Viewport extends Component {
+export class Viewport extends Container {
     static type = 'viewport';
 
     static configurable = {
         nexus: 'viewport',
 
         layout: 'vbox',
+        floatRoot: true,
 
         props: {
             theme: 'light'
@@ -38,6 +39,11 @@ export class Viewport extends Component {
         return {
             class: {
                 [`x-layout-${layout?.type}`]: !!layout
+            },
+            children: {
+                floaters: {
+                    '<': 'body'
+                }
             }
         };
     }

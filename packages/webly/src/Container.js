@@ -78,9 +78,18 @@ export class Container extends Component {
     render () {
         let me = this,
             body = me.renderBody(),
-            items = me.getItems(true);
+            items = me.getItems(true),
+            cls;
 
-        if (items.length) {
+        if (!items.length) {
+            cls = {
+                'x-box-v': 1
+            };
+            body = {
+                body
+            };
+        }
+        else {
             let docked, item, ref, f, flow, // = 'h', 'v'
                 bodyIndex = 0,
                 counter = 0,
@@ -127,9 +136,11 @@ export class Container extends Component {
             }
 
             body = toObject(flow ? wrap(bwrap) : bwrap);
+            cls = {};
         }
 
         return {
+            class: cls,
             children: body
         };
     }
@@ -140,7 +151,8 @@ export class Container extends Component {
         return layout.decorateElement('body', {
             id: `${id}-body`,
             class: {
-                'x-body': 1
+                'x-body': 1,
+                'x-box-body': 1
             }
         });
     }

@@ -168,7 +168,8 @@ export class Dom {
                 }
              */
             let obj = specs,
-                key, val;
+                refs = {},
+                anchors, key, to, val;
 
             specs = [];
 
@@ -176,10 +177,24 @@ export class Dom {
                 val = obj[key];
 
                 if (val) {
-                    val = clone(val);
+                    refs[key] = val = clone(val);
                     val.ref = key;
 
+                    if ((to = val['>'] || val['<'])) {
+                        ((anchors ??= {})[to] ??= []).push(val);
+                    }
+
                     specs.push(val);
+                }
+            }
+
+            if (anchors) {
+                for (key in anchors) {
+                    to = refs[key];
+
+                    for (val of anchors[key]) {
+                        //
+                    }
                 }
             }
         }
