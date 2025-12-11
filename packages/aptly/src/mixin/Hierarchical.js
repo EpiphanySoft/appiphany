@@ -194,7 +194,7 @@ export const Hierarchical = Base => class Hierarchical extends Base.mixin(Delaya
         _reindexChildren: 'sched'
     };
 
-    static hierarchicalType = 'base';
+    static hierarchicalType = 'node';
 
     static proto = {
         [insertingSym]: false,

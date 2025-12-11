@@ -30,7 +30,7 @@ export class Viewport extends Container {
 
         themes: ['light', 'dark'],
 
-        renderTo: ['adopt', document.body]
+        renderTo: ['adopt', globalThis.document?.body]
     };
 
     render () {
@@ -42,7 +42,10 @@ export class Viewport extends Container {
             },
             children: {
                 floaters: {
-                    '<': 'body'
+                    '>': '^body',
+                    data: {
+                        float: 'root'
+                    }
                 }
             }
         };

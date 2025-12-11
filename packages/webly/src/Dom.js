@@ -147,7 +147,7 @@ export class Dom {
         return ret || EMPTY_OBJECT;
     }
 
-    static canonicalizeSpecs (specs) {
+    static canonicalizeSpecs (specs, topoKey = '>') {
         if (isObject(specs)) {
             /*
              TODO
@@ -160,16 +160,16 @@ export class Dom {
                     },
                     foo: { ... },
                     c: {
-                        '<': 'foo'
+                        '>': '^foo'
                     },
                     d: {
-                        '<': 'foo'
+                        '>': '^foo'
                     }
                 }
              */
             let obj = specs,
                 refs = {},
-                anchors, key, to, val;
+                key, to, topo, val;
 
             specs = [];
 
@@ -179,23 +179,36 @@ export class Dom {
                 if (val) {
                     refs[key] = val = clone(val);
                     val.ref = key;
+                    to = val[topoKey];
 
-                    if ((to = val['>'] || val['<'])) {
-                        ((anchors ??= {})[to] ??= []).push(val);
+                    if (to) {
+                        topo ??= {};
+                        delete val[topoKey];
+
+                        if (to[0] !== '^') {
+                            (topo[to] ??= []).push(key);  // key is predecessor of foo
+                        }
+                        else {
+                            (topo[key] ??= []).push(to.slice(1));  // foo is predecessor of key
+                        }
                     }
 
                     specs.push(val);
                 }
             }
 
-            if (anchors) {
-                for (key in anchors) {
-                    to = refs[key];
+            if (topo) {
+                to = [];
 
-                    for (val of anchors[key]) {
-                        //
+                specs.forEach(function add (sp) {
+                    if (sp && refs[sp.ref]) {
+                        delete refs[sp.ref];  // break circular dependencies => infinite recursion
+                        topo[sp.ref]?.forEach(ref => add(refs[ref]));
+                        to.push(sp);
                     }
-                }
+                });
+
+                specs = to;
             }
         }
 
@@ -235,7 +248,7 @@ export class Dom {
             return null;
         }
 
-        return el[Dom.key] ??= new Dom(el);
+        return new Dom(el);
     }
 
     static getBody (el) {
@@ -336,13 +349,17 @@ export class Dom {
     #ownerListeners = null;
 
     constructor (el, owner) {
+        let me = this;
+
         owner = owner || null;
 
-        this.el = el || null;
-        this.adopted = !!(owner && el);
-        this.owner = owner;
-        this.refs = owner && chain();
-        this.root = owner && this;
+        el && !el[Dom.key] && (el[Dom.key] = me);
+
+        me.el = el || null;
+        me.adopted = !!(owner && el);
+        me.owner = owner;
+        me.refs = owner && chain();
+        me.root = owner && me;
     }
 
     get id () {

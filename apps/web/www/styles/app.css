@@ -1,5 +1,9 @@
 @import "bulma/bulma.css";
 
+html {
+    overflow: auto;
+}
+
 body.x-viewport {
     margin: 0;
     height: 100%;
