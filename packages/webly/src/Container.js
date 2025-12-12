@@ -1,4 +1,4 @@
-import { merge } from '@appiphany/aptly';
+import { EMPTY_ARRAY, merge } from '@appiphany/aptly';
 import { Component } from '@appiphany/webly';
 
 const
@@ -75,68 +75,19 @@ export class Container extends Component {
         }
     };
 
-    render () {
+    render (first) {
         let me = this,
-            body = me.renderBody(),
-            items = me.getItems(true),
-            cls;
+            body = me.renderBody(first),
+            cls = {},
+            items;
 
-        if (!items.length) {
-            cls = {
-                'x-box-v': 1
-            };
-            body = {
-                body
-            };
+        if (first || !(items = me.getItems({ docked: true })).length) {
+            cls['x-box-v'] = 1;
+            body = { body };
         }
         else {
-            let docked, item, ref, f, flow, // = 'h', 'v'
-                bodyIndex = 0,
-                counter = 0,
-                bwrap = [
-                    ['body', body]
-                ],
-                mark = b => {
-                    b[bodyIndex][1].class['x-box-body'] = 1;
-                    return b;
-                },
-                wrap = b => [
-                    [`bodyWrap${++counter}`, {
-                        class: {
-                            'x-body-wrap': 1,
-                            [`x-box-${flow}`]: 1
-                        },
-                        children: toObject(mark(b))
-                    }]
-                ];
-
             items.reverse();
-
-            for (item of items) {
-                ref = item.ref;
-                docked = item.docked;
-                f = FLOWS[docked];
-
-                if (!flow) {
-                    flow = f;
-                }
-                else if (flow !== f) {
-                    bwrap = wrap(bwrap);
-                    flow = f;
-                    bodyIndex = 0;
-                }
-
-                if (docked === DOCKS[flow]) {
-                    bwrap.unshift([ref, item.dom]);
-                    ++bodyIndex;
-                }
-                else {
-                    bwrap.push([ref, item.dom]);
-                }
-            }
-
-            body = toObject(flow ? wrap(bwrap) : bwrap);
-            cls = {};
+            body = me.renderDocked(body, items);
         }
 
         return {
@@ -155,6 +106,53 @@ export class Container extends Component {
                 'x-box-body': 1
             }
         });
+    }
+
+    renderDocked (body, items) {
+        let docked, item, ref, f, flow, // = 'h', 'v'
+            bodyIndex = 0,
+            counter = 0,
+            bwrap = [
+                ['body', body]
+            ],
+            mark = b => {
+                b[bodyIndex][1].class['x-box-body'] = 1;
+                return b;
+            },
+            wrap = b => [
+                [`bodyWrap${++counter}`, {
+                    class: {
+                        'x-body-wrap': 1,
+                        [`x-box-${flow}`]: 1
+                    },
+                    children: toObject(mark(b))
+                }]
+            ];
+
+        for (item of items) {
+            ref = item.ref;
+            docked = item.docked;
+            f = FLOWS[docked];
+
+            if (!flow) {
+                flow = f;
+            }
+            else if (flow !== f) {
+                bwrap = wrap(bwrap);
+                flow = f;
+                bodyIndex = 0;
+            }
+
+            if (docked === DOCKS[flow]) {
+                bwrap.unshift([ref, item.dom]);
+                ++bodyIndex;
+            }
+            else {
+                bwrap.push([ref, item.dom]);
+            }
+        }
+
+        return toObject(flow ? wrap(bwrap) : bwrap);
     }
 }
 

@@ -114,9 +114,9 @@ export class Navbar extends Component {
         }
     };
 
-    getItems (docked) {
-        let items = super.getItems(docked),
-            tabs = !docked && this.tabs;
+    getItems (kind) {
+        let items = super.getItems(kind),
+            tabs = (!kind || kind.inner) && this.tabs;
 
         if (tabs) {
             tabs = values(tabs);
@@ -210,11 +210,11 @@ export class Nav extends Panel {
         }
     };
 
-    getItems (docked) {
-        let items = super.getItems(docked),
+    getItems (kind) {
+        let items = super.getItems(kind),
             { bar } = this;
 
-        if (bar && (docked === true || docked === bar.docked)) {
+        if (bar && (kind?.docked === true || kind?.docked === bar.docked)) {
             items.unshift(bar);
         }
 

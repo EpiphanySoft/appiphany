@@ -1,9 +1,7 @@
 import { Dom, Component, Nav, Viewport, Card } from '@appiphany/webly';
 
 
-window.Dom = Dom;
-window.Component = Component;
-window.Viewport = Viewport;
+window.xx = { Dom, Component, Viewport };
 
 Dom.onReady(() => {
     window.v = Component.create({
@@ -39,6 +37,11 @@ Dom.onReady(() => {
                         element: {
                             style: { color: 'yellow' }
                         }
+                    },
+
+                    floaty: {
+                        html: 'Floaty McFloatFace',
+                        floating: true
                     },
 
                     zap: {

@@ -6,6 +6,9 @@ import { Dom, LayoutConfig } from '@appiphany/webly';
 
 
 const
+    INNER_ITEMS = {
+        inner: true
+    },
     MODE_MAP = {
         append: 'parent',
         before: 'before',
@@ -42,6 +45,8 @@ const
 
 
 export class ItemsConfig extends Config {
+    phase = 'init';
+
     apply (instance, newItems, was) {
         //  newItems = {
         //      foo: { type: 'component' },
@@ -129,6 +134,10 @@ export class Component extends Widget.mixin(Factoryable) {
     static type = 'component';
     static factory = {
         defaultType: 'component'
+    };
+
+    static proto = {
+        _renderCount: 0
     };
 
     static configurable = {
@@ -231,6 +240,10 @@ export class Component extends Widget.mixin(Factoryable) {
         }
     };
 
+    static itemFilter (kind) {
+        return kind || INNER_ITEMS;
+    }
+
     static sortItems (items) {
         items?.sort(orderSortFn);
 
@@ -252,12 +265,15 @@ export class Component extends Widget.mixin(Factoryable) {
 
     get childDomain () {
         let me = this,
-            { docked } = me,
+            { docked, floating } = me,
             ret = 'default',
             rt;
 
         if (docked) {
             ret = `docked-${docked}`;
+        }
+        else if (floating) {
+            ret = 'float';
         }
         else if ((rt = me.renderTarget) && rt !== me.parent?.itemRenderTarget) {
             ret = rt;
@@ -267,19 +283,38 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     get dom () {
-        return this.#dom;
+        let me = this,
+            dom = me.#dom,
+            element, mode, renderTo;
+
+        if (!dom && !me.destroyed) {
+            ({ element, renderTo } = me);
+
+            if (renderTo) {
+                [mode, renderTo] = renderTo;
+            }
+
+            dom = new Dom(mode === 'adopt' ? renderTo : null, me);
+            dom.update(element);
+
+            me.#dom = dom;
+        }
+
+        return dom;
     }
 
     get el () {
-        return this.#dom?.el;
+        return this.dom?.el;
     }
 
-    getItems (docked) {
-        let items = values(this.items || EMPTY_OBJECT);
+    getItems (kind) {
+        let items = values(this.items || EMPTY_OBJECT),
+            f = Component.itemFilter(kind);
 
-        if (docked !== '*') {
-            items = items.filter(
-                (docked === true) ? i => i.docked : (docked ? i => i.docked === docked : i => !i.docked));
+        if (items.length) {
+            items = items.filter(i =>
+                i.docked ? (f.docked === true || f.docked === i.docked)
+                         : i.floating ? f.floating : f.inner);
         }
 
         return Component.sortItems(items);
@@ -287,13 +322,12 @@ export class Component extends Widget.mixin(Factoryable) {
 
     compose () {
         let me = this,
-            spec = me.render(),
-            items = me.getItems(),
-            { itemRenderTarget } = me,
-            it, ref, refs, renderTarget, children;
+            first = !me._renderCount++,
+            spec = me.render(first),
+            it, itemRenderTarget, items, ref, refs, renderTarget, children;
 
-        if (items) {
-            itemRenderTarget ??= 'root';
+        if (!first && (items = me.getItems()).length) {
+            itemRenderTarget = me.itemRenderTarget || 'root';
             refs = gatherRefs({}, 'root', spec);
 
             for (it of items) {
@@ -316,14 +350,14 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     initialize() {
-        super.initialize();
+        this.recompose();
 
-        !this.#dom && this.recompose();
+        super.initialize();
     }
 
     render () {
         let me = this,
-            { cls, docked, html, flex, floating, floatRoot, layout, width, height, parent } = me,
+            { cls, docked, html, flex, floatRoot, id, layout, width, height, parent } = me,
             { aria, role, style, tag } = me.element,
             spec;
 
@@ -348,13 +382,14 @@ export class Component extends Widget.mixin(Factoryable) {
         }
 
         spec = {
+            id,
             class: cls,
             tag, html, aria, role, style
         };
 
-        if (floating || floatRoot) {
+        if (floatRoot) {
             spec.children = {
-                floaters: {
+                floatRoot: {
                     class: {
                         'x-floaters': true
                     }
@@ -370,16 +405,25 @@ export class Component extends Widget.mixin(Factoryable) {
 
     #getRenderPlan () {
         let me = this,
-            renderTo = !me.destroyed && me.renderTo,
+            { floating, renderTo } = me,
             renderToUsed = me.#renderToUsed,
             mode;
 
-        if (renderTo) {
-            me.#renderToUsed = renderToUsed = true;
-            [mode, renderTo] = renderTo;
+        if (me.destroyed) {
+            renderTo = null;
         }
-        else if (renderToUsed) {
-            renderTo = Dom.limbo;
+        else {
+            if (floating) {
+                debugger;
+            }
+
+            if (renderTo) {
+                me.#renderToUsed = renderToUsed = true;
+                [mode, renderTo] = renderTo;
+            }
+            else if (renderToUsed) {
+                renderTo = Dom.limbo;
+            }
         }
 
         return [renderToUsed, mode || 'append', renderTo];
@@ -394,6 +438,15 @@ export class Component extends Widget.mixin(Factoryable) {
             watcher = me.#renderWatcher,
             spec;
 
+        console.log(`recompose ${this.id}`);
+
+        if (dom.adopted !== adopt) {
+            panik('Cannot change between adopted and rendered element');
+        }
+        else if (adopt && dom.el !== renderTo) {
+            panik('Cannot change adopted element');
+        }
+
         full && composer.invalidate();
 
         spec = composer.get();
@@ -402,20 +455,8 @@ export class Component extends Widget.mixin(Factoryable) {
             me.#unrender();
         }
         else {
-            spec.id = id;
-
             if (!adopt && renderToUsed) {
                 spec[MODE_MAP[mode]] = renderTo;
-            }
-
-            if (!dom) {
-                me.#dom = dom = new Dom(adopt ? renderTo : null, me);
-            }
-            else if (dom.adopted !== adopt) {
-                panik('Cannot change between adopted and rendered element');
-            }
-            else if (adopt && dom.el !== renderTo) {
-                panik('Cannot change adopted element');
             }
 
             dom.update(spec);
@@ -430,6 +471,9 @@ export class Component extends Widget.mixin(Factoryable) {
 
                 // me.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
                 dom.el.classList.add(...(me.$meta.css ??= me.$meta.types.map(t => `x-${t}`)));
+
+                console.log(`needs recompose ${this.id}`);
+                composer.invalidate();
             }
         }
     }

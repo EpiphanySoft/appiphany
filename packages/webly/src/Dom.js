@@ -248,7 +248,7 @@ export class Dom {
             return null;
         }
 
-        return new Dom(el);
+        return el.$dom || new Dom(el);
     }
 
     static getBody (el) {
@@ -455,12 +455,17 @@ export class Dom {
 
         tag = tag || 'div';
 
-        context = context || {
-            owner: me.owner,
-            refs: me.refs,
-            parent: me,
-            root: me
-        };
+        if (!context) {
+            let oldRefs = me.refs;
+
+            context = {
+                oldRefs,
+                owner: me.owner,
+                parent: me,
+                refs: me.refs = chain(),
+                root: me
+            };
+        }
 
         if (!was) {
             was = {};
@@ -652,33 +657,50 @@ export class Dom {
     }
 
     _updateSubTree (specs, context) {
-        let parent = this.el,
+        let me = this,
+            parent = me.el,
             doc = parent.ownerDocument,
-            children = [],
-            { owner, root } = context,
-            add, childEl, dom, isText, nodeType, old, ref, spec, specEl;
+            { oldRefs, owner, refs, root } = context,
+            { ELEMENT, TEXT } = Dom,
+            kids = [],
+            pull = t => {
+                let i = 0;
+
+                for (let d of kids) {
+                    if (d.el.nodeType === t) {
+                        kids.splice(i, 1);
+
+                        return d;
+                    }
+
+                    ++i;
+                }
+            },
+            tailEl = null,
+            add, childEl, dom, nodeType, old, ref, spec, specEl;
+
+        if (context.parent !== me) {
+            context = { ...context, parent: me };
+        }
 
         for (childEl of parent.childNodes) {
             nodeType = childEl.nodeType;
 
-            if (nodeType === Dom.TEXT || nodeType === Dom.ELEMENT) {
+            if (nodeType === ELEMENT || nodeType === TEXT) {
                 if ((dom = Dom.get(childEl))?.owner === owner) {
-                    children.push(dom);
+                    kids.push(dom);
+                    tailEl = childEl.nextSibling;
                 }
             }
         }
 
-        children.reverse();  // so pop goes left-to-right
-
         for (spec of specs) {
-            dom = children.pop() || null;
-            childEl = dom?.el;
-            isText = childEl?.nodeType === Dom.TEXT;
-
             if (typeof spec === 'string') {
-                if (childEl && isText) {
+                dom = pull(TEXT);
+
+                if (dom) {
                     if (dom.spec !== spec) {
-                        childEl.nodeValue = dom.spec = spec;
+                        dom.el.nodeValue = dom.spec = spec;
                     }
                 }
                 else {
@@ -688,30 +710,39 @@ export class Dom {
                     dom.root = root;
                     dom.spec = spec;
 
-                    parent.insertBefore(add, childEl);
-                    childEl && children.push(childEl);
+                    parent.insertBefore(add, kids[0]?.el || tailEl);
                 }
+
+                continue;
+            }
+
+            //-----------------------------------
+            ref = spec.ref;
+            old = oldRefs[ref];
+            specEl = Dom.getEl(spec);
+
+            if (specEl) {
+                if (old === spec) {
+                    delete oldRefs[ref];  // preserve the Dom instance
+                }
+
+                remove(kids, specEl);
+                parent.insertBefore(specEl, kids[0]?.el || tailEl);
+            }
+            else if (old) {
+                delete oldRefs[ref];  // preserve the Dom instance
+                remove(kids, old);
+
+                parent.insertBefore(old, kids[0]?.el || tailEl);
+                old.update(spec, context);
             }
             else {
-                specEl = Dom.getEl(spec);
+                // TODO
 
-                if (specEl) {
-                    remove(children, specEl);
+                dom = pull(ELEMENT);
+                childEl = dom?.el;
 
-                    if (childEl !== specEl) {
-                        parent.insertBefore(specEl, childEl);
-                        childEl && children.push(childEl);
-                    }
-
-                    continue;
-                }
-
-                if (isText) {
-                    childEl && children.push(childEl);
-                    childEl = dom = null;
-                }
-                // context.refs is the new refs, where owner.refs is the previous refs
-                else if ((ref = spec.ref) && (old = owner?.refs?.[ref]) && old !== dom) {
+                if (ref && old && old !== dom) {
                     childEl && children.push(childEl);
 
                     childEl = old.el;

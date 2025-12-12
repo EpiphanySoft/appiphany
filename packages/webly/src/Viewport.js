@@ -41,7 +41,7 @@ export class Viewport extends Container {
                 [`x-layout-${layout?.type}`]: !!layout
             },
             children: {
-                floaters: {
+                floatRoot: {
                     '>': '^body',
                     data: {
                         float: 'root'
