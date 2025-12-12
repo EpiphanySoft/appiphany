@@ -130,7 +130,7 @@ export class Container extends Component {
             ];
 
         for (item of items) {
-            ref = item.ref;
+            ref = item.ref || item.id;
             docked = item.docked;
             f = FLOWS[docked];
 

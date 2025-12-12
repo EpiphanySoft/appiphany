@@ -295,7 +295,7 @@ export class Component extends Widget.mixin(Factoryable) {
             }
 
             dom = new Dom(mode === 'adopt' ? renderTo : null, me);
-            dom.update(element);
+            dom.sync(element);
 
             me.#dom = dom;
         }
@@ -459,7 +459,7 @@ export class Component extends Widget.mixin(Factoryable) {
                 spec[MODE_MAP[mode]] = renderTo;
             }
 
-            dom.update(spec);
+            dom.sync(spec);
 
             if (!watcher) {
                 me.#renderWatcher = watcher = Signal.watch(() => {

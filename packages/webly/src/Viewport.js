@@ -1,4 +1,4 @@
-import { Container } from '@appiphany/webly';
+import { Container, Dom } from '@appiphany/webly';
 
 
 export class Viewport extends Container {

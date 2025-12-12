@@ -76,6 +76,48 @@ export class Style {
 ].forEach(name => Style.grok(name, 'px'));
 
 
+
+//================================================================================================
+
+class SyncContext {
+    constructor (root) {
+        let me = this;
+
+        me.outer = me.reuse = null;
+
+        me.oldRefs = root.refs;
+        me.parent = root;
+        me.root = root;
+        me.refs = root.refs = chain();
+    }
+
+    cleanup () {
+        let oldRefs = !this.outer && this.oldRefs,
+            ref;
+
+        if (oldRefs) {
+            for (ref in oldRefs) {
+                debugger;
+            }
+        }
+    }
+
+    reused (dom) {
+        for (let c = this; c; c = c.outer) {
+            remove(c.reuse, dom);
+        }
+    }
+
+    spawn (dom) {
+        let ret = chain(this);
+
+        ret.outer = this;
+        ret.parent = dom;
+
+        return ret;
+    }
+}
+
 //================================================================================================
 
 export class Dom {
@@ -422,7 +464,7 @@ export class Dom {
     }
 
     setClasses (classes) {
-        this._updateCls(classes, {});
+        this._syncCls(classes, {});
     }
 
     setStyles (styles) {
@@ -442,7 +484,7 @@ export class Dom {
      *      href: '',
      *  }
      */
-    update (spec, context) {
+    sync (spec, context) {
         let me = this,
             { el, spec: was } = me,
             { after, before, children, parent, tag, html, text, data, ref, style,
@@ -455,17 +497,7 @@ export class Dom {
 
         tag = tag || 'div';
 
-        if (!context) {
-            let oldRefs = me.refs;
-
-            context = {
-                oldRefs,
-                owner: me.owner,
-                parent: me,
-                refs: me.refs = chain(),
-                root: me
-            };
-        }
+        context = context ? context.spawn(me) : new SyncContext(me);
 
         if (!was) {
             was = {};
@@ -506,20 +538,20 @@ export class Dom {
             }
         }
 
-        me._updateAttrs(spec, was);
-        me._updateAttrs(spec.aria || EMPTY_OBJECT, was.aria || EMPTY_OBJECT, 'aria-');
-        me._updateCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
-        me._updateData(data, was.data);
-        me._updateStyle(style, was.style);
+        me._syncAttrs(spec, was);
+        me._syncAttrs(spec.aria || EMPTY_OBJECT, was.aria || EMPTY_OBJECT, 'aria-');
+        me._syncCls(Dom.canonicalizeClasses(cls), Dom.canonicalizeClasses(was.class));
+        me._syncData(data, was.data);
+        me._syncStyle(style, was.style);
 
         if (text != null) {
             if (text !== was.text) {
-                me._updateText(text);
+                me._syncText(text);
             }
         }
         else if (html != null) {
             if (html !== was.html) {
-                me._updateHtml(html);
+                me._syncHtml(html);
             }
         }
         else if (children) {
@@ -534,7 +566,7 @@ export class Dom {
                 context = { ...context, parent: me };
             }
 
-            me._updateSubTree(Dom.canonicalizeSpecs(children), context);
+            me._syncSubTree(Dom.canonicalizeSpecs(children), context);
         }
 
         if (!isEqual(listeners, was.on)) {
@@ -544,9 +576,11 @@ export class Dom {
 
         me.ref  = ref;
         me.spec = spec;
+
+        context.cleanup();
     }
 
-    _updateAttrs (attrs, was, prefix = '') {
+    _syncAttrs (attrs, was, prefix = '') {
         let { el } = this,
             name, val;
 
@@ -574,7 +608,7 @@ export class Dom {
         }
     }
 
-    _updateCls (classes, was) {
+    _syncCls (classes, was) {
         let { el } = this,
             classList = Array.from(el.classList),
             cls;
@@ -600,15 +634,15 @@ export class Dom {
         cls && el.setAttribute('class', cls);
     }
 
-    _updateHtml (html) {
+    _syncHtml (html) {
         this.el.innerHTML = html;
     }
 
-    _updateText (text) {
+    _syncText (text) {
         this.el.textContent = text;
     }
 
-    _updateData (data, was) {
+    _syncData (data, was) {
         let { el } = this,
             key, name, value;
 
@@ -635,7 +669,7 @@ export class Dom {
         }
     }
 
-    _updateStyle (style, was) {
+    _syncStyle (style, was) {
         let delta, key;
 
         style = Style.parse(style);
@@ -656,19 +690,20 @@ export class Dom {
         delta && Style.applyTo(this.el, delta);
     }
 
-    _updateSubTree (specs, context) {
+    _syncSubTree (specs, context) {
         let me = this,
             parent = me.el,
             doc = parent.ownerDocument,
-            { oldRefs, owner, refs, root } = context,
+            { oldRefs, refs, root } = context,
+            { owner } = root,
             { ELEMENT, TEXT } = Dom,
-            kids = [],
+            children = [],
             pull = t => {
                 let i = 0;
 
-                for (let d of kids) {
+                for (let d of children) {
                     if (d.el.nodeType === t) {
-                        kids.splice(i, 1);
+                        children.splice(i, 1);
 
                         return d;
                     }
@@ -677,6 +712,7 @@ export class Dom {
                 }
             },
             tailEl = null,
+            tail = _ => children[0]?.el || tailEl,
             add, childEl, dom, nodeType, old, ref, spec, specEl;
 
         if (context.parent !== me) {
@@ -688,11 +724,13 @@ export class Dom {
 
             if (nodeType === ELEMENT || nodeType === TEXT) {
                 if ((dom = Dom.get(childEl))?.owner === owner) {
-                    kids.push(dom);
+                    children.push(dom);
                     tailEl = childEl.nextSibling;
                 }
             }
         }
+
+        context.reuse = children;
 
         for (spec of specs) {
             if (typeof spec === 'string') {
@@ -710,7 +748,7 @@ export class Dom {
                     dom.root = root;
                     dom.spec = spec;
 
-                    parent.insertBefore(add, kids[0]?.el || tailEl);
+                    parent.insertBefore(add, tail());
                 }
 
                 continue;
@@ -722,47 +760,28 @@ export class Dom {
             specEl = Dom.getEl(spec);
 
             if (specEl) {
-                if (old === spec) {
+                dom = Dom.get(specEl);
+
+                if (old === dom) {
                     delete oldRefs[ref];  // preserve the Dom instance
                 }
 
-                remove(kids, specEl);
-                parent.insertBefore(specEl, kids[0]?.el || tailEl);
+                context.reused(dom);
+                spec = null;
             }
-            else if (old) {
+            else if ((dom = old)) {
                 delete oldRefs[ref];  // preserve the Dom instance
-                remove(kids, old);
-
-                parent.insertBefore(old, kids[0]?.el || tailEl);
-                old.update(spec, context);
+                context.reused(dom);
             }
-            else {
-                // TODO
-
-                dom = pull(ELEMENT);
-                childEl = dom?.el;
-
-                if (ref && old && old !== dom) {
-                    childEl && children.push(childEl);
-
-                    childEl = old.el;
-                    dom = old;
-                    remove(children, childEl);
-                }
-
-                if (dom) {
-                    dom.update(spec, context);
-                }
-                else {
-                    dom = new Dom();
-                    dom.owner = owner;
-                    dom.root = root;
-
-                    dom.update(spec, context);
-
-                    parent.insertBefore(dom.el, childEl);
-                }
+            // don't reuse elements to create a ref el:
+            else if (ref || !(dom = pull(ELEMENT))) {
+                dom = new Dom();
+                dom.owner = owner;
+                dom.root = root;
             }
+
+            spec && dom.sync(spec, context);
+            parent.insertBefore(dom.el, tail());
         }
 
         while ((dom = children.pop())) {
@@ -770,5 +789,3 @@ export class Dom {
         }
     }
 }
-
-globalThis.Dom = Dom;
