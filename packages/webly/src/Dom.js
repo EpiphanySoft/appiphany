@@ -84,10 +84,11 @@ class SyncContext {
 
         me.outer = me.reuse = me.tailEl = null;
 
-        me.oldRefs = me.oldInternalRefs = root.refs;
+        me.oldRefs = root.refs;
         me.parent = root;
         me.root = root;
-        me.refs = me.internalRefs = root.refs = chain();
+        me.refs = root.refs = chain();
+        me.local = { oldRefs: me.oldRefs, refs: me.refs };
     }
 
     before () {
@@ -158,12 +159,12 @@ class SyncContext {
     }
 
     spawn (dom) {
-        let ret = chain(this);
+        let ret = chain(this),
+            { refs } = dom;
 
-        ret.oldInternalRefs = dom.refs || EMPTY_OBJECT;
         ret.outer = this;
         ret.parent = dom;
-        ret.internalRefs = dom.refs = null;
+        ret.local = { oldRefs: refs || EMPTY_OBJECT, refs: dom.refs = null };
 
         return ret;
     }
@@ -171,13 +172,13 @@ class SyncContext {
     track (dom) {
         let me = this,
             { ref } = dom,
-            internal = ref[0] === '_',
+            local = ref[0] === '_',
             // when we track() a Dom object we have already spawn()ed a sub-context for it
             // to track its children, so we need to use the outer context to track the ref
             // of the parent Dom object
             parentContext = me.outer || me,
-            old = internal ? parentContext.oldInternalRefs : me.oldRefs,
-            refs = internal ? parentContext.internalRefs ??= parentContext.parent.refs = chain(): me.refs;
+            old = local ? parentContext.local.oldRefs : me.oldRefs,
+            refs = local ? parentContext.local.refs ??= parentContext.parent.refs = chain(): me.refs;
 
         if (old[ref] === dom) {
             delete old[ref];
@@ -188,7 +189,8 @@ class SyncContext {
 
     unchanged (dom) {
         let me = this,
-            { oldInternalRefs, oldRefs, refs } = me,
+            { oldRefs, refs } = me,
+            { oldRefs: oldLocalRefs } = me.local,
             c, ref;
 
         dom.ref && dom !== me.root && me.track(dom);
@@ -202,9 +204,9 @@ class SyncContext {
             }
         }
 
-        if (oldInternalRefs && oldInternalRefs !== oldRefs) {
-            me.parent.refs = oldInternalRefs;
-            me.oldInternalRefs = null;
+        if (oldLocalRefs && oldLocalRefs !== oldRefs) {
+            me.parent.refs = oldLocalRefs;
+            me.local.oldRefs = null;
         }
     }
 }
@@ -587,7 +589,6 @@ export class Dom {
             was = {};
         }
         else if (isEqual(spec, was)) {
-            // console.log(`sync: no change ${spec.ref}`);
             context.unchanged(me);
             return;
         }
@@ -802,7 +803,7 @@ export class Dom {
 
             //-----------------------------------
             ref = spec.ref;
-            oldRefs = (ref?.[0] === '_') ? context.oldInternalRefs : context.oldRefs;
+            oldRefs = ((ref?.[0] === '_') ? context.local : context).oldRefs;
             old = oldRefs[ref];
             specEl = Dom.getEl(spec);
 
