@@ -11,7 +11,8 @@ export class Viewport extends Container {
         floatRoot: true,
 
         props: {
-            theme: 'light'
+            theme: 'light',
+            darkMode: p => p.theme === 'dark'
         },
 
         effects: {

@@ -84,6 +84,11 @@
     fastq "^1.17.1"
     glob "^11.0.0"
 
+"@fortawesome/fontawesome-free@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.yarnpkg.com/@fortawesome/fontawesome-free/-/fontawesome-free-7.1.0.tgz#8eb76278515341720aa74485266f8be121089529"
+  integrity sha512-+WxNld5ZCJHvPQCr/GnzCTVREyStrAJjisUPtUxG5ngDA8TMlPnKp6dddlTpai4+1GNmltAeuk1hJEkBohwZYA==
+
 "@isaacs/balanced-match@^4.0.1":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@isaacs/balanced-match/-/balanced-match-4.0.1.tgz#3081dadbc3460661b751e7591d7faea5df39dd29"

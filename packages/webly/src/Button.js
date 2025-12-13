@@ -21,6 +21,7 @@ export class Button extends Component {
         text: null,
 
         fullwidth: null,
+        icon: null,
         inverted: null,
         level: null,  // info, success, warning, danger, primary, link, ghost, text
         loading: null,
@@ -31,31 +32,48 @@ export class Button extends Component {
     };
 
     render () {
-        let { fullwidth, level, loading, inverted, outlined, props, rounded, selected, size, text }
+        let { fullwidth, level, loading, icon, inverted, outlined, props, rounded, selected, size, text }
                 = this,
-            { theme } = props,
-            ret = {
-                class: {
-                    'is-fullwidth' : !!fullwidth,
-                    'is-inverted'  : !!inverted,
-                    'is-loading'   : !!loading,
-                    'is-outlined'  : !!outlined,
-                    'is-rounded'   : !!rounded,
-                    'is-selected'  : !!selected,
-                    [`is-${level}`]: !!level,
-                    [`is-${size}`] : !!size,
-                    [`is-${theme}`]: true,
+            { theme } = props;
+
+        return {
+            class: {
+                'is-fullwidth' : !!fullwidth,
+                'is-inverted'  : !!inverted,
+                'is-loading'   : !!loading,
+                'is-outlined'  : !!outlined,
+                'is-rounded'   : !!rounded,
+                'is-selected'  : !!selected,
+                [`is-${level}`]: !!level,
+                [`is-${size}`] : !icon && !!size,
+                [`is-${theme}`]: true,
+            },
+            children: {
+                icon: icon && {
+                    tag: 'span',
+                    class: {
+                        icon: 1,
+                        [`is-${size}`]: !!size
+                    },
+                    children: {
+                        _i: {
+                            tag: 'i',
+                            class: {
+                                fas: icon.startsWith('fa-'),
+                                ...Object.fromEntries(icon.split(' ').map(c => [c, 1]))
+                            }
+                        }
+                    }
                 },
-                on: {
-                    click: 'onClick'
+                text: text && {
+                    tag: 'span',
+                    text
                 }
-            };
-
-        if (text) {
-            ret.html = xss(text);
-        }
-
-        return ret;
+            },
+            on: {
+                click: 'onClick'
+            }
+        };
     }
 
     onClick (e) {

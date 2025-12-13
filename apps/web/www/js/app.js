@@ -34,37 +34,39 @@ Dom.onReady(() => {
                         cls: 'herp',
                         docked: 'bottom',
                         html: 'Bottom Woot!!!',
-                        element: {
-                            style: { color: 'yellow' }
-                        }
+                        style: { backgroundColor: '#111', color: 'yellow' }
                     },
 
                     floaty: {
-                        html: 'Floaty McFloatFace',
-                        floating: true
+                        type: 'button',
+                        icon: p => p.darkMode ? 'fa-solid fa-lightbulb' : 'fa-regular fa-moon',
+                        floating: true,
+                        top: 6,
+                        right: 10,
+                        on: {
+                            click: ev => {
+                                let p = ev.sender.props;
+
+                                p.theme = p.darkMode ? 'light' : 'dark';
+                            }
+                        }
                     },
 
                     zap: {
                         tab: 'Zap',
                         html: 'Body zap',
-                        element: {
-                            style: { backgroundColor: '#111' }
-                        }
+                        style: p => ({ backgroundColor: p.darkMode ? '#111' : '#eee' })
                     },
 
                     zop: {
                         tab: 'Zop',
                         html: 'Body zop',
-                        element: {
-                            style: { backgroundColor: '#222' }
-                        }
+                        style: p => ({ backgroundColor: p.darkMode ? '#222' : '#ddd' })
                     },
 
                     zip: {
                         html: p => `Body Zip ${p.theme?.toUpperCase()}`,
-                        element: {
-                            style: { backgroundColor: '#333' }
-                        },
+                        style: p => ({ backgroundColor: p.darkMode ? '#333' : '#e8e8e8' }),
                         tab: {
                             renderTarget: 'navEnd',
                             html: 'Zip'

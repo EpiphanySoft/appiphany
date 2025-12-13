@@ -1,3 +1,6 @@
+@import "/fa/css/fontawesome.css";
+@import "/fa/css/solid.css";
+@import "/fa/css/regular.css";
 @import "bulma/bulma.css";
 
 html {
@@ -17,13 +20,23 @@ body.x-viewport {
     align-items: center;
     justify-content: center;
     z-index: 1;
-}
     /* contain: strict; */
+    width: 100%;
+    height: 100%;
+}
 
 .x-floaters > .x-component {
     position: absolute;
     pointer-events: all;
     z-index: 2;
+}
+
+.x-floaters > .x-component:not(.x-pos-h) {
+    left: 0;
+}
+
+.x-floaters > .x-component:not(.x-pos-v) {
+    top: 0;
 }
 
 .x-component {

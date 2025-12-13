@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "bulma": "^1.0.4"
   }
 }

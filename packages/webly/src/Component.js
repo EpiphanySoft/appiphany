@@ -14,6 +14,7 @@ const
         before: 'before',
         after: 'after'
     },
+    findFloatRoot = p => p.floatRoot,
     ignoredComposeConfigs = { props: 1, renderTarget: 1 },
     orderSortFn = (a, b) => a.order - b.order,
     gatherRefs = (refs, ref, spec) => {
@@ -148,11 +149,16 @@ export class Component extends Widget.mixin(Factoryable) {
         html: null,
         width: null,
         height: null,
+        style: null,
+
+        bottom: null,
+        left: null,
+        right: null,
+        top: null,
 
         element: {
-            aria: null,
-            style: null,
             tag: 'div'
+            // aria: {}
         },
 
         // Parent-affecting
@@ -285,10 +291,13 @@ export class Component extends Widget.mixin(Factoryable) {
     get dom () {
         let me = this,
             dom = me.#dom,
-            element, mode, renderTo;
+            element, mode, renderTo, style;
 
         if (!dom && !me.destroyed) {
-            ({ element, renderTo } = me);
+            ({ element, renderTo, style } = me);
+
+            element = clone(element);
+            element.style = clone(style);
 
             if (renderTo) {
                 [mode, renderTo] = renderTo;
@@ -357,13 +366,37 @@ export class Component extends Widget.mixin(Factoryable) {
 
     render () {
         let me = this,
-            { cls, docked, html, flex, floatRoot, id, layout, width, height, parent } = me,
-            { aria, role, style, tag } = me.element,
-            spec;
+            { cls, docked, html, flex, floatRoot, id, layout, width, height, parent,
+              bottom, left, right, style, top } = me,
+            spec = clone(me.element),
+            posH, posV;
 
-        aria ??= EMPTY_OBJECT;
         cls = cls ? clone(cls) : {};
         style = clone(style);
+
+        if (top != null) {
+            posV = true;
+            (style ??= {}).top = top;
+        }
+
+        if (bottom != null) {
+            posV = true;
+            (style ??= {}).bottom = bottom;
+        }
+
+        if (left != null) {
+            posH = true;
+            (style ??= {}).left = left;
+        }
+
+        if (right != null) {
+            posH = true;
+            (style ??= {}).right = right;
+        }
+
+        cls['x-pos'] = posH || posV;
+        cls['x-pos-h'] = posH;
+        cls['x-pos-v'] = posV;
 
         if (docked) {
             cls[`x-docked-${docked}`] = 1;
@@ -381,11 +414,10 @@ export class Component extends Widget.mixin(Factoryable) {
             (style ??= {}).height = height;
         }
 
-        spec = {
-            id,
-            class: cls,
-            tag, html, aria, role, style
-        };
+        spec.id = id;
+        spec.class = cls;
+        html && (spec.html = html);
+        style && (spec.style = style);
 
         if (floatRoot) {
             spec.children = {
@@ -413,13 +445,15 @@ export class Component extends Widget.mixin(Factoryable) {
             renderTo = null;
         }
         else {
-            if (floating) {
-                debugger;
-            }
-
-            if (renderTo) {
+            if (floating || renderTo) {
                 me.#renderToUsed = renderToUsed = true;
-                [mode, renderTo] = renderTo;
+
+                if (floating) {
+                    renderTo = me.up(findFloatRoot).dom.refs.floatRoot;
+                }
+                else {
+                    [mode, renderTo] = renderTo;
+                }
             }
             else if (renderToUsed) {
                 renderTo = Dom.limbo;

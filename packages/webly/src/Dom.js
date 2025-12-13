@@ -6,6 +6,8 @@ import { Event } from '@appiphany/webly';
 
 const
     TRBL = ['Top', 'Right', 'Bottom', 'Left'],
+    ELEMENT = 1,
+    TEXT = 3,
     c2d = s => `data-${c2h(s)}`,
     cartesianJoin = (a, b) => a.map(x => b.map(y => decapitalize(`${x}${y}`))).flat(),
     colonRe = /\s*:\s*/g,
@@ -149,7 +151,7 @@ class SyncContext {
         for (childEl of me.parent.el.childNodes) {
             nodeType = childEl.nodeType;
 
-            if (nodeType === Dom.ELEMENT || nodeType === Dom.TEXT) {
+            if (nodeType === ELEMENT || nodeType === TEXT) {
                 if ((dom = Dom.get(childEl))?.owner === owner) {
                     !dom.ref && (me.reuse ??= []).push(dom);
                     me.tailEl = childEl.nextSibling;
@@ -214,8 +216,8 @@ class SyncContext {
 //================================================================================================
 
 export class Dom {
-    static ELEMENT = 1;
-    static TEXT = 3;
+    static ELEMENT = ELEMENT;
+    static TEXT = TEXT;
 
     // static key = Symbol('dom');
     static key = '$dom';
@@ -774,7 +776,6 @@ export class Dom {
             doc = me.el.ownerDocument,
             { root } = context,
             { owner } = root,
-            { ELEMENT, TEXT } = Dom,
             add, dom, old, oldRefs, ref, spec, specEl;
 
         context.scan();

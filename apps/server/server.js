@@ -36,6 +36,8 @@ const mount = paths => {
 
 mount({
     '/': '../web/www',
+    '/fa/css': '../../node_modules/@fortawesome/fontawesome-free/css',
+    '/fa/webfonts': '../../node_modules/@fortawesome/fontawesome-free/webfonts',
     '/aptly/import': '../../packages/aptly/import',
     '/aptly/src': '../../packages/aptly/src',
     '/webly/import': '../../packages/webly/import',
