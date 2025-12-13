@@ -438,7 +438,7 @@ export class Component extends Widget.mixin(Factoryable) {
             watcher = me.#renderWatcher,
             spec;
 
-        console.log(`recompose ${this.id}`);
+        // console.log(`recompose ${this.id}`);
 
         if (dom.adopted !== adopt) {
             panik('Cannot change between adopted and rendered element');
@@ -472,8 +472,10 @@ export class Component extends Widget.mixin(Factoryable) {
                 // me.$meta.types.forEach(t => dom.el.classList.add(`x-${t}`));
                 dom.el.classList.add(...(me.$meta.css ??= me.$meta.types.map(t => `x-${t}`)));
 
-                console.log(`needs recompose ${this.id}`);
-                composer.invalidate();
+                if (me.peekConfig('items')) {
+                    // console.log(`needs recompose ${this.id}`);
+                    composer.invalidate();
+                }
             }
         }
     }

@@ -1,11 +1,10 @@
 import { c2h, chain, className, clone, decapitalize, decimalRe, h2c, isEqual,
-         isObject, remove }
+         isObject, remove, EMPTY_OBJECT }
     from '@appiphany/aptly';
 
 import { Event } from '@appiphany/webly';
 
 const
-    EMPTY_OBJECT = chain(),
     TRBL = ['Top', 'Right', 'Bottom', 'Left'],
     c2d = s => `data-${c2h(s)}`,
     cartesianJoin = (a, b) => a.map(x => b.map(y => decapitalize(`${x}${y}`))).flat(),
@@ -83,21 +82,54 @@ class SyncContext {
     constructor (root) {
         let me = this;
 
-        me.outer = me.reuse = null;
+        me.outer = me.reuse = me.tailEl = null;
 
-        me.oldRefs = root.refs;
+        me.oldRefs = me.oldInternalRefs = root.refs;
         me.parent = root;
         me.root = root;
-        me.refs = root.refs = chain();
+        me.refs = me.internalRefs = root.refs = chain();
+    }
+
+    before () {
+        return this.reuse?.[0]?.el || this.tailEl;
     }
 
     cleanup () {
-        let oldRefs = !this.outer && this.oldRefs,
-            ref;
+        let me = this,
+            { oldRefs, reuse } = me,
+            dom, ref;
 
-        if (oldRefs) {
+        if (me.outer) {
+            while ((dom = reuse?.pop())) {
+                // if the dom has a ref attr, it will be cleaned up as part of oldRefs
+                // at the end of the sync
+                !dom.ref && dom.destroy();
+            }
+        }
+        else if (oldRefs) {
             for (ref in oldRefs) {
                 debugger;
+            }
+        }
+    }
+
+    placeElement (dom) {
+        this.parent.el.insertBefore(dom.el, this.before());
+    }
+
+    pull (t) {
+        let children = this.reuse,
+            i = 0;
+
+        if (!children) {
+            for (let d of children) {
+                if (d.el.nodeType === t) {
+                    children.splice(i, 1);
+
+                    return d;
+                }
+
+                ++i;
             }
         }
     }
@@ -108,13 +140,72 @@ class SyncContext {
         }
     }
 
+    scan () {
+        let me = this,
+            { owner } = me.root,
+            childEl, dom, nodeType;
+
+        for (childEl of me.parent.el.childNodes) {
+            nodeType = childEl.nodeType;
+
+            if (nodeType === Dom.ELEMENT || nodeType === Dom.TEXT) {
+                if ((dom = Dom.get(childEl))?.owner === owner) {
+                    !dom.ref && (me.reuse ??= []).push(dom);
+                    me.tailEl = childEl.nextSibling;
+                }
+            }
+        }
+    }
+
     spawn (dom) {
         let ret = chain(this);
 
+        ret.oldInternalRefs = dom.refs || EMPTY_OBJECT;
         ret.outer = this;
         ret.parent = dom;
+        ret.internalRefs = dom.refs = null;
 
         return ret;
+    }
+
+    track (dom) {
+        let me = this,
+            { ref } = dom,
+            internal = ref[0] === '_',
+            // when we track() a Dom object we have already spawn()ed a sub-context for it
+            // to track its children, so we need to use the outer context to track the ref
+            // of the parent Dom object
+            parentContext = me.outer || me,
+            old = internal ? parentContext.oldInternalRefs : me.oldRefs,
+            refs = internal ? parentContext.internalRefs ??= parentContext.parent.refs = chain(): me.refs;
+
+        if (old[ref] === dom) {
+            delete old[ref];
+        }
+
+        refs[ref] = dom;
+    }
+
+    unchanged (dom) {
+        let me = this,
+            { oldInternalRefs, oldRefs, refs } = me,
+            c, ref;
+
+        dom.ref && dom !== me.root && me.track(dom);
+
+        for (ref in oldRefs) {
+            c = oldRefs[ref];
+
+            if (c !== dom && dom.el.contains(c.el)) {
+                delete oldRefs[ref];
+                refs[ref] = c;
+            }
+        }
+
+        if (oldInternalRefs && oldInternalRefs !== oldRefs) {
+            me.parent.refs = oldInternalRefs;
+            me.oldInternalRefs = null;
+        }
     }
 }
 
@@ -413,11 +504,13 @@ export class Dom {
     }
 
     destroy () {
-        !this.adopted && this.el?.remove();
-        this.el = null;
+        let me = this;
 
-        this.#ownerListeners?.();
-        this.#ownerListeners = null;
+        !me.adopted && me.el?.remove();
+        me.el = null;
+
+        me.#ownerListeners?.();
+        me.#ownerListeners = null;
     }
 
     create (tag) {
@@ -486,8 +579,20 @@ export class Dom {
      */
     sync (spec, context) {
         let me = this,
-            { el, spec: was } = me,
-            { after, before, children, parent, tag, html, text, data, ref, style,
+            { el, spec: was } = me;
+
+        context = context ? context.spawn(me) : new SyncContext(me);
+
+        if (!was) {
+            was = {};
+        }
+        else if (isEqual(spec, was)) {
+            // console.log(`sync: no change ${spec.ref}`);
+            context.unchanged(me);
+            return;
+        }
+
+        let { after, before, children, parent, tag, html, text, data, ref, style,
               on: listeners, class: cls } = (spec ??= {});
 
         // unwrap any Dom instances
@@ -497,14 +602,8 @@ export class Dom {
 
         tag = tag || 'div';
 
-        context = context ? context.spawn(me) : new SyncContext(me);
-
-        if (!was) {
-            was = {};
-        }
-        else if (isEqual(spec, was)) {
-            return;
-        }
+        me.ref  = ref;
+        me.spec = spec;
 
         if (!el) {
             me.create(tag);
@@ -529,14 +628,7 @@ export class Dom {
             parent.appendChild(el);
         }
 
-        if (ref) {
-            if (ref[0] === '_' && context.parent) {
-                (context.parent.refs ??= chain())[ref] = me;
-            }
-            else {
-                context?.refs && (context.refs[ref] = me);
-            }
-        }
+        ref && context.track(me);
 
         me._syncAttrs(spec, was);
         me._syncAttrs(spec.aria || EMPTY_OBJECT, was.aria || EMPTY_OBJECT, 'aria-');
@@ -555,27 +647,13 @@ export class Dom {
             }
         }
         else if (children) {
-            if (spec.refs && context.refs !== me.refs) {
-                context = {
-                    ...context,
-                    parent: me,
-                    refs: me.refs ??= chain()
-                };
-            }
-            else if (context.parent !== me) {
-                context = { ...context, parent: me };
-            }
-
-            me._syncSubTree(Dom.canonicalizeSpecs(children), context);
+            me._syncTree(Dom.canonicalizeSpecs(children), context);
         }
 
         if (!isEqual(listeners, was.on)) {
             me.#ownerListeners?.();
             me.#ownerListeners = listeners ? me.on(listeners) : null;
         }
-
-        me.ref  = ref;
-        me.spec = spec;
 
         context.cleanup();
     }
@@ -690,51 +768,19 @@ export class Dom {
         delta && Style.applyTo(this.el, delta);
     }
 
-    _syncSubTree (specs, context) {
+    _syncTree (specs, context) {
         let me = this,
-            parent = me.el,
-            doc = parent.ownerDocument,
-            { oldRefs, refs, root } = context,
+            doc = me.el.ownerDocument,
+            { root } = context,
             { owner } = root,
             { ELEMENT, TEXT } = Dom,
-            children = [],
-            pull = t => {
-                let i = 0;
+            add, dom, old, oldRefs, ref, spec, specEl;
 
-                for (let d of children) {
-                    if (d.el.nodeType === t) {
-                        children.splice(i, 1);
-
-                        return d;
-                    }
-
-                    ++i;
-                }
-            },
-            tailEl = null,
-            tail = _ => children[0]?.el || tailEl,
-            add, childEl, dom, nodeType, old, ref, spec, specEl;
-
-        if (context.parent !== me) {
-            context = { ...context, parent: me };
-        }
-
-        for (childEl of parent.childNodes) {
-            nodeType = childEl.nodeType;
-
-            if (nodeType === ELEMENT || nodeType === TEXT) {
-                if ((dom = Dom.get(childEl))?.owner === owner) {
-                    children.push(dom);
-                    tailEl = childEl.nextSibling;
-                }
-            }
-        }
-
-        context.reuse = children;
+        context.scan();
 
         for (spec of specs) {
             if (typeof spec === 'string') {
-                dom = pull(TEXT);
+                dom = context.pull(TEXT);
 
                 if (dom) {
                     if (dom.spec !== spec) {
@@ -748,7 +794,7 @@ export class Dom {
                     dom.root = root;
                     dom.spec = spec;
 
-                    parent.insertBefore(add, tail());
+                    context.placeElement(add);
                 }
 
                 continue;
@@ -756,6 +802,7 @@ export class Dom {
 
             //-----------------------------------
             ref = spec.ref;
+            oldRefs = (ref?.[0] === '_') ? context.oldInternalRefs : context.oldRefs;
             old = oldRefs[ref];
             specEl = Dom.getEl(spec);
 
@@ -769,23 +816,21 @@ export class Dom {
                 context.reused(dom);
                 spec = null;
             }
+            // spec is a child spec object (not an Element or Dom instance)
             else if ((dom = old)) {
                 delete oldRefs[ref];  // preserve the Dom instance
                 context.reused(dom);
             }
             // don't reuse elements to create a ref el:
-            else if (ref || !(dom = pull(ELEMENT))) {
+            else if (ref || !(dom = context.pull(ELEMENT))) {
                 dom = new Dom();
                 dom.owner = owner;
                 dom.root = root;
             }
 
             spec && dom.sync(spec, context);
-            parent.insertBefore(dom.el, tail());
-        }
 
-        while ((dom = children.pop())) {
-            dom.destroy();
+            context.placeElement(dom);
         }
     }
 }

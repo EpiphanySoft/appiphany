@@ -67,7 +67,6 @@ export class Navbar extends Component {
         },
 
         burger: class {
-            value = null;
             default = true;
         },
 
@@ -80,6 +79,13 @@ export class Navbar extends Component {
                 return {
                     type: NavbarTab,
                     parent: instance
+                };
+            }
+
+            update (instance, tabs) {
+                instance.items = {
+                    ...instance.items,
+                    ...tabs
                 };
             }
         },
@@ -114,17 +120,17 @@ export class Navbar extends Component {
         }
     };
 
-    getItems (kind) {
-        let items = super.getItems(kind),
-            tabs = (!kind || kind.inner) && this.tabs;
-
-        if (tabs) {
-            tabs = values(tabs);
-            items = Component.sortItems([...tabs, ...items]);
-        }
-
-        return items;
-    }
+    // getItems (kind) {
+    //     let items = super.getItems(kind),
+    //         tabs = (!kind || kind.inner) && this.tabs;
+    //
+    //     if (tabs) {
+    //         tabs = values(tabs);
+    //         items = Component.sortItems([...tabs, ...items]);
+    //     }
+    //
+    //     return items;
+    // }
 
     onClickBurger (e) {
         this.burgerized = !this.burgerized;
@@ -207,19 +213,17 @@ export class Nav extends Panel {
                     }
                 });
             }
+
+            update (instance, bar) {
+                instance.items = {
+                    navbar: bar,
+                    ...instance.items
+                };
+
+                bar.recompose(true);
+            }
         }
     };
-
-    getItems (kind) {
-        let items = super.getItems(kind),
-            { bar } = this;
-
-        if (bar && (kind?.docked === true || kind?.docked === bar.docked)) {
-            items.unshift(bar);
-        }
-
-        return items;
-    }
 }
 
 Nav.initClass();

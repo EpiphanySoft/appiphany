@@ -676,7 +676,7 @@ export class Configurable extends Declarable {
     }
 
     peekConfig (name) {
-        let data = this.configuring?.data;
+        let data = this[configDataSym];
 
         return data?.has(name) ? data.get(name) : this.$config[name];
     }
