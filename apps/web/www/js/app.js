@@ -39,7 +39,7 @@ Dom.onReady(() => {
 
                     floaty: {
                         type: 'button',
-                        icon: p => p.darkMode ? 'fa-solid fa-lightbulb' : 'fa-regular fa-moon',
+                        icon: p => p.dark ? 'fa-solid fa-lightbulb' : 'fa-regular fa-moon',
                         floating: true,
                         top: 6,
                         right: 10,
@@ -47,7 +47,7 @@ Dom.onReady(() => {
                             click: ev => {
                                 let p = ev.sender.props;
 
-                                p.theme = p.darkMode ? 'light' : 'dark';
+                                p.theme = p.dark ? 'light' : 'dark';
                             }
                         }
                     },
@@ -55,18 +55,18 @@ Dom.onReady(() => {
                     zap: {
                         tab: 'Zap',
                         html: 'Body zap',
-                        style: p => ({ backgroundColor: p.darkMode ? '#111' : '#eee' })
+                        style: p => ({ backgroundColor: p.dark ? '#111' : '#eee' })
                     },
 
                     zop: {
                         tab: 'Zop',
                         html: 'Body zop',
-                        style: p => ({ backgroundColor: p.darkMode ? '#222' : '#ddd' })
+                        style: p => ({ backgroundColor: p.dark ? '#222' : '#ddd' })
                     },
 
                     zip: {
                         html: p => `Body Zip ${p.theme?.toUpperCase()}`,
-                        style: p => ({ backgroundColor: p.darkMode ? '#333' : '#e8e8e8' }),
+                        style: p => ({ backgroundColor: p.dark ? '#333' : '#e8e8e8' }),
                         tab: {
                             renderTarget: 'navEnd',
                             html: 'Zip'
