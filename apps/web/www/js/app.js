@@ -6,7 +6,7 @@ window.xx = { Dom, Component, Viewport };
 Dom.onReady(() => {
     window.v = Component.create({
         type: 'viewport',
-        stateProvider: { type: 'storage', storage: localStorage },
+        persistenceProvider: { type: 'storage', storage: localStorage },
 
         items: {
             foo: {
@@ -55,7 +55,24 @@ Dom.onReady(() => {
                     zap: {
                         tab: 'Zap',
                         html: 'Body zap',
-                        style: p => ({ backgroundColor: p.dark ? '#111' : '#eee' })
+                        style: p => ({ backgroundColor: p.dark ? '#111' : '#eee' }),
+                        floatRoot: true,
+                        items: {
+                            f1: {
+                                floating: true,
+                                html: 'Floaty',
+                                top: '50%',
+                                left: '50%',
+                                style: { backgroundColor: 'red', color: 'white' }
+                            },
+                            f2: {
+                                floating: true,
+                                html: 'McFloatFace',
+                                top: '51%',
+                                left: '51%',
+                                style: { backgroundColor: 'blue', color: 'white' }
+                            }
+                        }
                     },
 
                     zop: {

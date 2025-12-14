@@ -7,5 +7,5 @@ export * from '../src/PriorityQueue.js';
 export * from '../src/Signal.js';
 export * from '../src/Scheduler.js';
 export * from '../src/Timer.js';
-export * from '../src/StateProvider.js';
+export * from '../src/PersistenceProvider.js';
 export * from '../src/Widget.js';

@@ -1,10 +1,10 @@
 import { chain, Configurable } from '@appiphany/aptly';
-import { Bindable, Eventable, Stateful, Identifiable } from '@appiphany/aptly/mixin';
+import { Bindable, Eventable, Persistable, Identifiable } from '@appiphany/aptly/mixin';
 
 /**
  * A widget is a non-visual object that can participate in the props and object hierarchy.
  */
-export class Widget extends Configurable.mixin(Bindable, Eventable, Stateful, Identifiable) {
+export class Widget extends Configurable.mixin(Bindable, Eventable, Persistable, Identifiable) {
     static className = 'Widget';
 
     // wrap configs in Signals so that we can react to their changes:

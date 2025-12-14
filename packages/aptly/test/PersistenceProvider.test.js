@@ -1,18 +1,18 @@
-import { ChildStateProvider, clone, Configurable, merge, StateProvider } from '@appiphany/aptly';
+import { ChildPersistenceProvider, clone, merge, PersistenceProvider } from '@appiphany/aptly';
 
 import assertly from 'assertly';
 import { createStorage, mockery } from './utils.js';
 
 const { expect } = assertly;
 
-describe('StateProvider', _ => {
-    const creator = type => (config = {}, options = {}) => StateProvider.factory.create(config, merge({
+describe('PersistenceProvider', _ => {
+    const creator = type => (config = {}, options = {}) => PersistenceProvider.factory.create(config, merge({
         defaults: {
             type
         }
     }, options));
 
-    describe('MemoryStateProvider', () => {
+    describe('MemoryPersistenceProvider', () => {
         const create = creator('memory');
 
         it('should work', async () => {
@@ -61,7 +61,7 @@ describe('StateProvider', _ => {
 
     //----------------------------------------------------------------------------------------
 
-    describe('ChildStateProvider', () => {
+    describe('ChildPersistenceProvider', () => {
         const create = creator('child');
 
         it('should basically work', async () => {
@@ -76,7 +76,7 @@ describe('StateProvider', _ => {
             await provider._flush.timer.flushed;
 
             expect(clone(owner)).to.equal({
-                childState: { foo: 42 }
+                childPersist: { foo: 42 }
             });
 
             provider = create({ owner });
@@ -85,7 +85,7 @@ describe('StateProvider', _ => {
             provider.set('foo', 427);
 
             expect(clone(owner)).to.equal({
-                childState: { foo: 42 }
+                childPersist: { foo: 42 }
             });
 
             expect(provider.dirty).to.be(true);
@@ -93,14 +93,14 @@ describe('StateProvider', _ => {
             await provider._flush.timer.flushed;
 
             expect(clone(owner)).to.equal({
-                childState: { foo: 427 }
+                childPersist: { foo: 427 }
             });
         });
     });
 
     //----------------------------------------------------------------------------------------
 
-    describe('StorageStateProvider', () => {
+    describe('StoragePersistenceProvider', () => {
         const create = creator('storage');
 
         it('should basically work', async () => {

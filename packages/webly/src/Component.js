@@ -1,5 +1,7 @@
-import { chain, panik, Widget, Signal, isObject, clone, merge, values, Config,
-         EMPTY_ARRAY, EMPTY_OBJECT }
+import {
+    chain, panik, Widget, Signal, isObject, clone, merge, values, Config,
+    EMPTY_ARRAY, EMPTY_OBJECT, remove
+}
     from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 import { Dom, LayoutConfig } from '@appiphany/webly';
@@ -179,8 +181,21 @@ export class Component extends Widget.mixin(Factoryable) {
 
         // General
 
-        floating: null,
+        floaters: null,
         floatRoot: null,
+
+        floating: class {
+            update (instance, floating) {
+                instance.floatParent = floating ? instance.up(findFloatRoot) : null;
+            }
+        },
+
+        floatParent: class {
+            update (instance, floatParent, was) {
+                was?.removeFloater(instance);
+                floatParent?.addFloater(instance);
+            }
+        },
 
         /**
          * Set by the parent to a number (0, 1, 2, ...) indicating the index of this component
@@ -316,6 +331,43 @@ export class Component extends Widget.mixin(Factoryable) {
         return this.dom?.el;
     }
 
+    initialize() {
+        this.recompose();
+
+        super.initialize();
+    }
+
+    addFloater (child) {
+        let { floaters } = this;
+
+        if (!floaters?.includes(child)) {
+            this.floaters = floaters?.concat(child) || [child];
+        }
+    }
+
+    bringToFront () {
+        let me = this,
+            { floatParent } = me,
+            floaters = floatParent?.floaters;
+
+        if (floaters?.includes(me) && floaters.at(-1) !== me) {
+            floaters = floaters.slice();
+            remove(floaters, me);
+            floaters.push(me);
+
+            floatParent.floaters = floaters;
+        }
+    }
+
+    removeFloater (child) {
+        let { floaters } = this,
+            newVal = floaters?.filter(c => c !== child);
+
+        if (floaters && newVal.length !== floaters.length) {
+            this.floaters = newVal;
+        }
+    }
+
     getItems (kind) {
         let items = values(this.items || EMPTY_OBJECT),
             f = Component.itemFilter(kind);
@@ -358,18 +410,12 @@ export class Component extends Widget.mixin(Factoryable) {
         return spec;
     }
 
-    initialize() {
-        this.recompose();
-
-        super.initialize();
-    }
-
     render () {
         let me = this,
             { cls, docked, html, flex, floatRoot, id, layout, width, height, parent,
               bottom, left, right, style, top } = me,
             spec = clone(me.element),
-            posH, posV;
+            children, posH, posV;
 
         cls = cls ? clone(cls) : {};
         style = clone(style);
@@ -414,20 +460,23 @@ export class Component extends Widget.mixin(Factoryable) {
             (style ??= {}).height = height;
         }
 
-        spec.id = id;
-        spec.class = cls;
-        html && (spec.html = html);
-        style && (spec.style = style);
-
-        if (floatRoot) {
-            spec.children = {
-                floatRoot: {
-                    class: {
-                        'x-floaters': true
-                    }
-                }
+        if (html) {
+            (children ??= {}).html = {
+                class: {
+                    'x-html': true
+                },
+                html
             };
         }
+
+        if (floatRoot) {
+            (children ??= {}).floatRoot = me.renderFloaters();
+        }
+
+        spec.id = id;
+        spec.class = cls;
+        style && (spec.style = style);
+        children && (spec.children = children);
 
         layout?.decorateElement('root', spec);
         parent?.layout?.decorateChild(this, spec);
@@ -435,25 +484,38 @@ export class Component extends Widget.mixin(Factoryable) {
         return spec;
     }
 
+    renderFloaters () {
+        return {
+            class: {
+                'x-floaters': true
+            },
+            children: this.floaters?.map(c => c.dom)
+        };
+    }
+
     #getRenderPlan () {
         let me = this,
-            { floating, renderTo } = me,
+            // { floating, renderTo } = me,
+            { renderTo } = me,
             renderToUsed = me.#renderToUsed,
+            // floatParent,
             mode;
 
         if (me.destroyed) {
             renderTo = null;
         }
         else {
-            if (floating || renderTo) {
+            // if (floating || renderTo) {
+            if (renderTo) {
                 me.#renderToUsed = renderToUsed = true;
 
-                if (floating) {
-                    renderTo = me.up(findFloatRoot).dom.refs.floatRoot;
-                }
-                else {
+                // if (floating) {
+                //     me.floatParent = floatParent = me.up(findFloatRoot);
+                //     renderTo = floatParent.dom.refs.floatRoot;
+                // }
+                // else {
                     [mode, renderTo] = renderTo;
-                }
+                // }
             }
             else if (renderToUsed) {
                 renderTo = Dom.limbo;

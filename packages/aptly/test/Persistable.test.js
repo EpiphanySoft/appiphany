@@ -1,13 +1,13 @@
-import { ChildStateProvider, Configurable, merge, StateProvider } from '@appiphany/aptly';
-import { Stateful } from '@appiphany/aptly/mixin';
+import { ChildPersistenceProvider, Configurable, merge, PersistenceProvider } from '@appiphany/aptly';
+import { Persistable } from '@appiphany/aptly/mixin';
 
 import assertly from 'assertly';
 import { createStorage } from './utils.js';
 
 const { expect } = assertly;
 
-describe('Stateful', _ => {
-    const creator = type => (config = {}, options = {}) => StateProvider.factory.create(config, merge({
+describe('Persistable', _ => {
+    const creator = type => (config = {}, options = {}) => PersistenceProvider.factory.create(config, merge({
         defaults: {
             type
         }
@@ -16,15 +16,15 @@ describe('Stateful', _ => {
     it('should support nested providers', async () => {
         let log = [];
 
-        class Owner extends Configurable.mixin(Stateful) {
+        class Owner extends Configurable.mixin(Persistable) {
             static configurable = {
-                childState: true,
+                childPersist: true,
                 herp: null,
-                stateful: 'herp'
+                persistable: 'herp'
             }
         }
 
-        class Child extends Configurable.mixin(Stateful) {
+        class Child extends Configurable.mixin(Persistable) {
             static configurable = {
                 props: {
                     abc: 123
@@ -38,7 +38,7 @@ describe('Stateful', _ => {
                     }
                 },
 
-                stateful: {
+                persistable: {
                     abc: true,
                     woot: true
                 }
@@ -48,7 +48,7 @@ describe('Stateful', _ => {
         let storage = createStorage({
             'woot-foo': JSON.stringify({
                 herp: 'foobar',
-                childState: {
+                childPersist: {
                     kiddo: {
                         woot: 427
                     }
@@ -58,21 +58,21 @@ describe('Stateful', _ => {
 
         let provider = creator('storage')({ storage, scope: 'woot-' });
         let owner = Owner.new({
-            stateId: 'foo',
-            stateProvider: provider
+            persistId: 'foo',
+            persistenceProvider: provider
         });
 
         expect(owner.herp).to.equal('foobar');
 
         let child = Child.new({
             parent: owner,
-            stateId: 'kiddo',
+            persistId: 'kiddo',
             woot: 42
         });
 
-        let provider2 = child.stateProvider;
+        let provider2 = child.persistenceProvider;
 
-        expect(provider2).to.be.a(ChildStateProvider);
+        expect(provider2).to.be.a(ChildPersistenceProvider);
 
         expect(child.woot).to.equal(427);
         expect(log).to.equal([
@@ -101,7 +101,7 @@ describe('Stateful', _ => {
         expect(storage.data).to.equal({
             'woot-foo': JSON.stringify({
                 herp: 'barfoo',
-                childState: {
+                childPersist: {
                     kiddo: {
                         abc: 123,
                         woot: 314

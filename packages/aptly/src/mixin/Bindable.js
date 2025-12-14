@@ -294,8 +294,8 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     static className= 'Bindable';
 
     static proto = {
-        $statefulWatcher: null,
-        $onStatefulPropSync: null,
+        $persistWatcher: null,
+        $onPersistPropSync: null,
 
         _bindings: null,
         _signals: null
@@ -379,7 +379,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     destruct () {
         this._bindings?.destroy();
         this.effects?.destroy();
-        this.$statefulWatcher?.unwatch()
+        this.$persistWatcher?.unwatch()
 
         super.destruct();
     }
@@ -465,36 +465,36 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     }
 
     //----------------------------------------------------------------------------------------
-    // Stateful support
+    // Persistable support
 
-    loadStatefulProps (state) {
+    loadPersistableProps (config) {
         let me = this,
             { props } = me,
             signals = me._signals,
             name, sig, value;
 
-        for (name in state) {
+        for (name in config) {
             sig = signals[name];
 
             if (sig) {
-                value = state[name];
-                delete state[name];
+                value = config[name];
+                delete config[name];
 
                 props[name] = value;
             }
         }
     }
 
-    watchStatefulProps (stateful) {
+    watchPersistableProps (persistable) {
         let me = this,
-            watcher = me.$statefulWatcher ??= Signal.watch(() => me._onStatefulWatcherNotify()),
+            watcher = me.$persistWatcher ??= Signal.watch(() => me._onPersistWatcherNotify()),
             add, name, sig, signals;
 
-        if (stateful) {
+        if (persistable) {
             me.getConfig('props');
             signals = me._signals;
 
-            for (name in stateful) {
+            for (name in persistable) {
                 sig = signals[name];
                 sig && (add ??= []).push(sig);
             }
@@ -505,16 +505,18 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
         add && watcher.watch(...add);
     }
 
-    _onStatefulPropChange () {
+    _onPersistPropChange () {
         if (!this.destroyed) {
-            this.$statefulWatcher.watch();
-            this.stateDirty = true;
+            this.$persistWatcher.watch();
+            this.persistDirty = true;
         }
     }
 
-    _onStatefulWatcherNotify () {
-        if (!this.destroyed) {
-            this.scheduler?.add(this.$onStatefulPropSync ??= () => this._onStatefulPropChange());
+    _onPersistWatcherNotify () {
+        let me = this;
+
+        if (!me.destroyed) {
+            me.scheduler?.add(me.$onPersistPropSync ??= () => me._onPersistPropChange());
         }
     }
 }

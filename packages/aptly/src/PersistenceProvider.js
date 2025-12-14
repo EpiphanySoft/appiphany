@@ -2,7 +2,7 @@ import { applyTo, chain, clone, Configurable } from '@appiphany/aptly';
 import { Delayable, Factoryable } from '@appiphany/aptly/mixin';
 
 
-export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
+export class PersistenceProvider extends Configurable.mixin(Delayable, Factoryable) {
     static instance = null;
 
     static abstract = {
@@ -36,7 +36,7 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
 
     #data = chain();
     #dirty = null;
-    #statefulQueue = null;
+    #persistenceQueue = null;
 
     async initialize () {
         super.initialize();
@@ -106,8 +106,8 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
         }
     }
 
-    enqueue (statefulItem) {
-        (this.#statefulQueue ??= new Map()).set(statefulItem.stateId, statefulItem);
+    enqueue (persistableItem) {
+        (this.#persistenceQueue ??= new Map()).set(persistableItem.persistId, persistableItem);
         this._flush();
     }
 
@@ -115,17 +115,17 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
 
     _flush () {
         let me = this,
-            statefulQueue = me.#statefulQueue,
-            statefulItem, stateId;
+            persistenceQueue = me.#persistenceQueue,
+            persistableItem, persistId;
 
-        me.#statefulQueue = null;
+        me.#persistenceQueue = null;
 
-        if (statefulQueue) {
-            for (statefulItem of statefulQueue.values()) {
-                stateId = statefulItem.stateId;
+        if (persistenceQueue) {
+            for (persistableItem of persistenceQueue.values()) {
+                persistId = persistableItem.persistId;
 
-                if (stateId) {
-                    me.set(stateId, statefulItem.getState());
+                if (persistId) {
+                    me.set(persistId, persistableItem.getPersist());
                 }
             }
         }
@@ -159,7 +159,7 @@ export class StateProvider extends Configurable.mixin(Delayable, Factoryable) {
 }
 
 
-export class MemoryStateProvider extends StateProvider {
+export class MemoryPersistenceProvider extends PersistenceProvider {
     static type = 'memory';
 
     _loadData (_) {
@@ -171,10 +171,10 @@ export class MemoryStateProvider extends StateProvider {
     }
 }
 
-StateProvider.instance = new MemoryStateProvider();
+PersistenceProvider.instance = new MemoryPersistenceProvider();
 
 
-export class ChildStateProvider extends StateProvider {
+export class ChildPersistenceProvider extends PersistenceProvider {
     static monolithic = true;
 
     static type = 'child';
@@ -184,23 +184,23 @@ export class ChildStateProvider extends StateProvider {
 
         owner: null,
 
-        stateId: 'childState'
+        persistId: 'childPersist'
     };
 
     _loadData (data) {
-        applyTo(data, clone(this.owner[this.stateId]));
+        applyTo(data, clone(this.owner[this.persistId]));
     }
 
     _saveData (dirtyData) {
-        this.owner[this.stateId] = dirtyData;
+        this.owner[this.persistId] = dirtyData;
         this.clearDirty(dirtyData);
     }
 }
 
-ChildStateProvider.initClass();
+ChildPersistenceProvider.initClass();
 
 
-export class StorageStateProvider extends StateProvider {
+export class StoragePersistenceProvider extends PersistenceProvider {
     static type = 'storage';
 
     static configurable = {
@@ -208,7 +208,7 @@ export class StorageStateProvider extends StateProvider {
 
         /**
          * @config {String}
-         * The prefix to use for state keys.
+         * The prefix to use for persistence keys.
          */
         scope: class {
             default = '';
@@ -268,4 +268,4 @@ export class StorageStateProvider extends StateProvider {
     }
 }
 
-StorageStateProvider.initClass();
+StoragePersistenceProvider.initClass();

@@ -25,7 +25,7 @@ export class Viewport extends Container {
             }
         },
 
-        stateful: {
+        persistable: {
             theme: true
         },
 
