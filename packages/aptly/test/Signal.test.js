@@ -158,7 +158,7 @@ describe('Signal', () => {
         v1.set(427);
         expect(f1.get()).to.be(4270);
         expect(logged()).to.equal([
-            // no 'notified 1' because we didn't call w.watch() to clear watcher state
+            // no 'notified 1' because we didn't call w.watch() to resume the watcher
             'get f = 4270'
         ]);
 

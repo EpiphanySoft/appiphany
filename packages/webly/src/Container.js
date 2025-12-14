@@ -97,15 +97,21 @@ export class Container extends Component {
     }
 
     renderBody () {
-        let { id, layout } = this;
+        let { id, html, layout } = this,
+            body = {
+                id: `${id}-body`,
+                class: {
+                    'x-body': 1,
+                    'x-box-body': 1
+                }
+            };
 
-        return layout.decorateElement('body', {
-            id: `${id}-body`,
-            class: {
-                'x-body': 1,
-                'x-box-body': 1
-            }
-        });
+        if (html) {
+            html = this.renderHtml(html, 'body');
+            html && merge(body, html);
+        }
+
+        return layout.decorateElement('body', body);
     }
 
     renderDocked (body, items) {
@@ -153,6 +159,10 @@ export class Container extends Component {
         }
 
         return toObject(flow ? wrap(bwrap) : bwrap);
+    }
+
+    renderHtml (html, ref) {
+        return (ref === 'body') && super.renderHtml(html, ref);
     }
 }
 

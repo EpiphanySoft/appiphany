@@ -23,7 +23,7 @@ body.x-viewport {
     pointer-events: none;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    z-index: 123456;
     /* contain: strict; */
 }
 
@@ -31,14 +31,14 @@ body.x-viewport {
 .x-floaters > .x-component {
     position: absolute;
     pointer-events: all;
-    z-index: 2;
+    z-index: 0;
 }
 
-.x-floaters > .x-component:not(.x-pos-h) {
+.x-floaters > .x-component:not(.x-pos-h, .x-centered) {
     left: 0;
 }
 
-.x-floaters > .x-component:not(.x-pos-v) {
+.x-floaters > .x-component:not(.x-pos-v, .x-centered) {
     top: 0;
 }
 
@@ -77,19 +77,30 @@ body.x-viewport {
     position: relative;
 }
 
+.x-centered {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
 .x-mask {
-    background-color: orange;
-    opacity: 0.3;
+    background-color: #111;
+    opacity: 0.5;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
 }
 
+.theme-light .x-mask {
+    background-color: #999;
+}
+
 /* ---------------------------------------------------------------------------- */
 
-.x-card-item-container {
-    //
+.x-body.x-card-item-container {
+    padding: 0;
 }
 
 .x-card-item {

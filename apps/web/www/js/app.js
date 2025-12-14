@@ -1,4 +1,4 @@
-import { Dom, Component, Nav, Viewport, Card } from '@appiphany/webly';
+import { Dom, Component, Nav, Panel, Viewport, Card } from '@appiphany/webly';
 
 
 window.xx = { Dom, Component, Viewport };
@@ -56,22 +56,40 @@ Dom.onReady(() => {
                         tab: 'Zap',
                         html: 'Body zap',
                         style: p => ({ backgroundColor: p.dark ? '#111' : '#eee' }),
-                        floatRoot: true,
+                        // floatRoot: true,
                         items: {
-                            f1: {
-                                floating: true,
-                                html: 'Floaty',
-                                top: '50%',
-                                left: '50%',
-                                style: { backgroundColor: 'red', color: 'white' }
-                            },
-                            f2: {
-                                floating: true,
-                                html: 'McFloatFace',
-                                top: '51%',
-                                left: '51%',
-                                modal: true,
-                                style: { backgroundColor: 'blue', color: 'white' }
+                            // f1: {
+                            //     html: 'Floaty',
+                            //     floating: true,
+                            //     top: '50%',
+                            //     left: '50%',
+                            //     style: { backgroundColor: 'red', color: 'white' }
+                            // },
+                            // f2: {
+                            //     floating: true,
+                            //     html: 'McFloatFace',
+                            //     top: '51%',
+                            //     left: '51%',
+                            //     modal: true,
+                            //     style: { backgroundColor: 'blue', color: 'white' }
+                            // }
+                            c1: {
+                                type: 'panel',
+                                title: 'Panel title',
+                                html:
+                                    'Lorem ipsum leo risus, porta ac consectetur ac, vestibulum at eros. Donec ' +
+                                    'id elit non mi porta gravida at eget metus. Cum sociis natoque penatibus ' +
+                                    'et magnis dis parturient montes, nascetur ridiculus mus. Cras mattis ' +
+                                    'consectetur purus sit amet fermentum.',
+                                icon: 'fa-solid fa-circle-info',
+                                // floating: true,
+                                // top: '50%',
+                                // left: '50%',
+                                centered: true,
+                                buttons: {
+                                    cancel: 'Cancel',
+                                    save: 'Save'
+                                }
                             }
                         }
                     },

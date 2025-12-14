@@ -213,7 +213,7 @@ class Dispatcher {
         if (handlers?.[FIRING_SYM]) {
             me.handlers = handlers = handlers.slice();
             handlers[FIRING_SYM] = 0;
-            handlers[SORTED_SYM] = was[SORTED_SYM];  // copy current sorted state
+            handlers[SORTED_SYM] = was[SORTED_SYM];  // copy sortedness
         }
 
         return handlers;

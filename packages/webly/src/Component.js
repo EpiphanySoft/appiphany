@@ -153,6 +153,7 @@ export class Component extends Widget.mixin(Factoryable) {
         height: null,
         style: null,
 
+        centered: null,
         bottom: null,
         left: null,
         right: null,
@@ -413,7 +414,7 @@ export class Component extends Widget.mixin(Factoryable) {
 
     render () {
         let me = this,
-            { cls, docked, html, flex, floatRoot, id, layout, width, height, parent,
+            { cls, centered, docked, html, flex, floatRoot, id, layout, width, height, parent,
               bottom, left, right, style, top } = me,
             spec = clone(me.element),
             children, posH, posV;
@@ -441,6 +442,7 @@ export class Component extends Widget.mixin(Factoryable) {
             (style ??= {}).right = right;
         }
 
+        cls['x-centered'] = centered;
         cls['x-pos'] = posH || posV;
         cls['x-pos-h'] = posH;
         cls['x-pos-v'] = posV;
@@ -461,15 +463,6 @@ export class Component extends Widget.mixin(Factoryable) {
             (style ??= {}).height = height;
         }
 
-        if (html) {
-            (children ??= {}).html = {
-                class: {
-                    'x-html': true
-                },
-                html
-            };
-        }
-
         if (floatRoot) {
             (children ??= {}).floatRoot = me.renderFloaters();
         }
@@ -479,10 +472,29 @@ export class Component extends Widget.mixin(Factoryable) {
         style && (spec.style = style);
         children && (spec.children = children);
 
+        if (html) {
+            html = me.renderHtml(html, 'root');
+            html && merge(spec, html);
+        }
+
         layout?.decorateElement('root', spec);
         parent?.layout?.decorateChild(this, spec);
 
         return spec;
+    }
+
+    renderHtml (html) {
+        return {
+            children: {
+                html: {
+                    html,
+                    class: {
+                        content: true, // bulma
+                        'x-html': true
+                    }
+                }
+            }
+        };
     }
 
     renderFloaters () {
