@@ -70,6 +70,7 @@ Dom.onReady(() => {
                                 html: 'McFloatFace',
                                 top: '51%',
                                 left: '51%',
+                                modal: true,
                                 style: { backgroundColor: 'blue', color: 'white' }
                             }
                         }

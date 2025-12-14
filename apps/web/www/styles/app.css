@@ -27,6 +27,7 @@ body.x-viewport {
     /* contain: strict; */
 }
 
+.x-floaters > .x-mask,
 .x-floaters > .x-component {
     position: absolute;
     pointer-events: all;
@@ -74,6 +75,15 @@ body.x-viewport {
     flex: 1 1 auto;
     overflow: hidden;
     position: relative;
+}
+
+.x-mask {
+    background-color: orange;
+    opacity: 0.3;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 /* ---------------------------------------------------------------------------- */

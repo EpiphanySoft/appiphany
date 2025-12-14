@@ -183,6 +183,7 @@ export class Component extends Widget.mixin(Factoryable) {
 
         floaters: null,
         floatRoot: null,
+        modal: null,
 
         floating: class {
             update (instance, floating) {
@@ -485,11 +486,30 @@ export class Component extends Widget.mixin(Factoryable) {
     }
 
     renderFloaters () {
+        let children = this.floaters?.map(c => c.dom),
+            i = children?.length,
+            c;
+
+        while (i) {
+            c = children.at(--i);
+
+            if (c.owner.modal) {
+                children.splice(i, 0, {
+                    ref: '_mask',
+                    class: {
+                        'x-mask': true
+                    }
+                });
+
+                break;
+            }
+        }
+
         return {
             class: {
                 'x-floaters': true
             },
-            children: this.floaters?.map(c => c.dom)
+            children
         };
     }
 

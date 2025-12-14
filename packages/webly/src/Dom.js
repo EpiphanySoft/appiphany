@@ -84,7 +84,7 @@ class SyncContext {
     constructor (root) {
         let me = this;
 
-        me.outer = me.reuse = me.tailEl = null;
+        me.outer = me.reuse = me.anchorEl = null;
 
         me.oldRefs = root.refs;
         me.parent = root;
@@ -93,13 +93,10 @@ class SyncContext {
         me.local = { oldRefs: me.oldRefs, refs: me.refs };
     }
 
-    before () {
-        return this.reuse?.[0]?.el || this.tailEl;
-    }
-
     cleanup () {
         let me = this,
             { oldRefs, reuse } = me,
+            { oldRefs: oldLocalRefs } = me.local,
             dom, ref;
 
         if (me.outer) {
@@ -108,23 +105,37 @@ class SyncContext {
                 // at the end of the sync
                 !dom.ref && dom.destroy();
             }
+
+            if (oldLocalRefs) {
+                for (ref in oldLocalRefs) {
+                    dom = oldLocalRefs[ref];
+                    dom.destroy();
+                }
+            }
         }
         else if (oldRefs) {
             for (ref in oldRefs) {
-                debugger;
+                dom = oldLocalRefs[ref];
+                dom.destroy();
             }
         }
     }
 
     placeElement (dom) {
-        this.parent.el.insertBefore(dom.el, this.before());
+        let { anchorEl, parent } = this;
+
+        if (parent.el !== dom.el.parentNode || anchorEl !== dom.el.previousSibling) {
+            parent.el.insertBefore(dom.el, anchorEl?.nextSibling);
+        }
+
+        this.anchorEl = dom.el;
     }
 
     pull (t) {
         let children = this.reuse,
             i = 0;
 
-        if (!children) {
+        if (children) {
             for (let d of children) {
                 if (d.el.nodeType === t) {
                     children.splice(i, 1);
@@ -146,7 +157,7 @@ class SyncContext {
     scan () {
         let me = this,
             { owner } = me.root,
-            childEl, dom, nodeType;
+            childEl, dom, firstChild, nodeType;
 
         for (childEl of me.parent.el.childNodes) {
             nodeType = childEl.nodeType;
@@ -154,16 +165,19 @@ class SyncContext {
             if (nodeType === ELEMENT || nodeType === TEXT) {
                 if ((dom = Dom.get(childEl))?.owner === owner) {
                     !dom.ref && (me.reuse ??= []).push(dom);
-                    me.tailEl = childEl.nextSibling;
+                    firstChild ??= childEl;
                 }
             }
         }
+
+        me.anchorEl = firstChild ? firstChild.previousSibling : null;
     }
 
     spawn (dom) {
         let ret = chain(this),
             { refs } = dom;
 
+        ret.anchorEl = ret.reuse = null;  // hide "inherited" values
         ret.outer = this;
         ret.parent = dom;
         ret.local = { oldRefs: refs || EMPTY_OBJECT, refs: dom.refs = null };
@@ -527,6 +541,16 @@ export class Dom {
         return el;
     }
 
+    find (selector) {
+        return this.el?.querySelector(selector) || null;
+    }
+
+    query (selector) {
+        let r = this.el?.querySelectorAll(selector);
+
+        return r ? Array.from(r) : [];
+    }
+
     on (listener) {
         listener = Event.canonicalizeListener(listener, this.owner);
 
@@ -836,3 +860,6 @@ export class Dom {
         }
     }
 }
+
+globalThis.q = s => Dom.doc.find(s);
+globalThis.qa = s => Dom.doc.query(s);
