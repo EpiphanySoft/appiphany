@@ -1,5 +1,7 @@
-import { c2h, chain, className, clone, decapitalize, decimalRe, h2c, isEqual,
-         isObject, remove, EMPTY_OBJECT }
+import {
+    c2h, chain, className, clone, decapitalize, decimalRe, h2c, isEqual,
+    isObject, remove, EMPTY_OBJECT, isString
+}
     from '@appiphany/aptly';
 
 import { Event } from '@appiphany/webly';
@@ -56,7 +58,7 @@ export class Style {
     }
 
     static parse (style) {
-        return (typeof style === 'string')
+        return isString(style)
             ? Object.fromEntries(style.split(semiRe).map(entry => entry.split(colonRe)))
             : (style || {});
     }
@@ -279,7 +281,7 @@ export class Dom {
     static canonicalizeClasses (classes) {
         let ret = classes;
 
-        if (typeof classes === 'string') {
+        if (isString(classes)) {
             classes = classes.split(' ');
         }
 
@@ -375,7 +377,7 @@ export class Dom {
             return el;
         }
 
-        if (typeof el === 'string') {
+        if (isString(el)) {
             let t = document.getElementById(el);
 
             if (t) {
@@ -805,7 +807,7 @@ export class Dom {
         context.scan();
 
         for (spec of specs) {
-            if (typeof spec === 'string') {
+            if (isString(spec)) {
                 dom = context.pull(TEXT);
 
                 if (dom) {

@@ -1,4 +1,4 @@
-import { Config, applyMissing, merge, Widget } from '@appiphany/aptly';
+import { Config, applyMissing, merge, Widget, isString } from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
 // import {  } from '@appiphany/webly';
 
@@ -66,7 +66,7 @@ export class Layout extends Widget.mixin(Factoryable) {
             ref = 'default';
         }
 
-        (ref === 'root') && me.addClasses(spec, {
+        (ref === 'root' || ref === 'default') && me.addClasses(spec, {
             [`x-layout-${me.type}`]: 1
         });
 
@@ -148,31 +148,31 @@ VBox.initClass();
 
 //------------------------------------------------------------------------------------------------
 
-export class Card extends Layout {
-    static type = 'card';
+export class Deck extends Layout {
+    static type = 'deck';
 
     static configurable = {
         classes: {
             default: {
-                'x-card-item-container': 1
+                'x-deck-item-container': 1
             }
         },
 
         childClasses: {
             default: {
-                'x-card-item': 1
+                'x-deck-item': 1
             }
         },
 
         activeClasses: {
             0: {
-                'x-card-item-active': 1
+                'x-deck-item-active': 1
             },
             1: {
-                'x-card-item-after-active': 1
+                'x-deck-item-after-active': 1
             },
             '-1': {
-                'x-card-item-before-active': 1
+                'x-deck-item-before-active': 1
             }
         }
     };
@@ -190,7 +190,7 @@ export class Card extends Layout {
                 // console.log(`${child.id}.index = ${index} / activeIndex = ${activeIndex} (was ${parent.activeIndexWas})`);
 
                 me.addClasses(spec, me.activeClasses?.[Math.sign(index - activeIndex)]);
-                me.addClasses(spec, { 'x-card-item-was-active': index === parent.activeIndexWas });
+                me.addClasses(spec, { 'x-deck-item-was-active': index === parent.activeIndexWas });
             }
         }
 
@@ -198,14 +198,14 @@ export class Card extends Layout {
     }
 }
 
-Card.initClass();
+Deck.initClass();
 
 
 //------------------------------------------------------------------------------------------------
 
 export class LayoutConfig extends Config {
     apply (instance, value, was) {
-        if (typeof value === 'string') {
+        if (isString(value)) {
             value = { type: value };
         }
 

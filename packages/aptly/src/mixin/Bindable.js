@@ -1,4 +1,4 @@
-import { Destroyable, Scheduler, Signal, panik, chain, applyTo, isClass } from '@appiphany/aptly';
+import { Destroyable, Scheduler, Signal, panik, chain, applyTo, isClass, isFunction } from '@appiphany/aptly';
 import { Hierarchical } from '@appiphany/aptly/mixin';
 
 const
@@ -47,7 +47,7 @@ class Bindings extends Destroyable {
             { props } = owner,
             flow, sig, specialFlow;
 
-        if (typeof prop === 'function') {
+        if (isFunction(prop)) {
             if (was?.calc === prop) {
                 return null;
             }
@@ -212,7 +212,7 @@ class Effects extends Destroyable {
         for (let key in effects) {
             fn = effects[key];
 
-            if (typeof fn === 'function') {
+            if (isFunction(fn)) {
                 uns.push(this.add(key, fn));
             }
             else if (fn == null) {
@@ -420,7 +420,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
             for (name in config) {
                 val = config[name];
 
-                if (typeof val === 'function' && !isClass(val) && classConfigs[name]?.autoBind) {
+                if (isFunction(val) && !isClass(val) && classConfigs[name]?.autoBind) {
                     (bind ??= {})[name] = val;
                     delete config[name];
                 }
@@ -438,7 +438,7 @@ export const Bindable = Base => class Bindable extends Base.mixin(Hierarchical) 
     // props support
 
     declareProp (name, value, props = this.props) {
-        let formula = typeof value === 'function',
+        let formula = isFunction(value),
             opt = { name },
             signals = this._signals ??= chain(),
             sig = formula ? Signal.formula(value.bind(this, props), opt) : Signal.value(value, opt),

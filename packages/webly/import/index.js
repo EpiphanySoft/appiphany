@@ -4,6 +4,7 @@ export * from '../src/Layout.js';
 export * from '../src/Component.js';
 export * from '../src/Button.js';
 export * from '../src/Container.js';
+export * from '../src/Card.js';
 export * from '../src/Panel.js';
 export * from '../src/Nav.js';
 export * from '../src/Viewport.js';

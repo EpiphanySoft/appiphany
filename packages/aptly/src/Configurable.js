@@ -1,18 +1,19 @@
 import {
     clone, chain, isClass, isObject, jsonify, map, merge, panik, SKIP, applyTo, nop,
-    Declarable, remove, Signal
+    Declarable, remove, Signal, isString, isFunction
 }
     from '@appiphany/aptly';
 
 
 const
-    { hasOwn } = Object,
+    { getPrototypeOf, hasOwn } = Object,
     { defineProperty } = Reflect,
     configDataSym = Symbol('configuring'),
     configWatchersSym = Symbol('configWatchers'),
     storageOwnerSym = Symbol('storageOwner'),
     EXPANDO_ANY = applyTo(chain(), { '*': true }),
     EXPANDO_NONE = chain(),
+    isRootClass = cls => isClass(cls) && (getPrototypeOf(cls.prototype) === Object.prototype),
     makeExpando = (expando, parentExpando) => {
         let ret;
 
@@ -300,7 +301,7 @@ class Flags extends Config {
     delimiter = null;
 
     static canonicalize (v, delimiter) {
-        if (typeof v === 'string') {
+        if (isString(v)) {
             v = v.split(delimiter || Flags.wordRe).filter(s => s);
         }
 
@@ -374,13 +375,13 @@ export class Configurable extends Declarable {
             let meta = cls.$meta,
                 classConfigs = meta.configs,
                 configValues = meta.configValues,
-                base, config, name, proto, val;
+                base, config, isCls, name, proto, val;
 
             for (name in configs) {
                 val = configs[name];
 
-                if (val && isClass(val)) {
-                    if (!(val.prototype instanceof Config)) {
+                if (val && ((isCls = isRootClass(val)) || val.prototype instanceof Config)) {
+                    if (isCls) {
                         base = classConfigs[name]?.constructor || Config;
 
                         Object.setPrototypeOf(val, base);
@@ -691,7 +692,7 @@ export class Configurable extends Declarable {
         return map(this.$meta.configs, (v, k) => {
             v = this[k];
 
-            return (v == null || typeof v === 'function') ? SKIP : [k, jsonify(v)];
+            return (v == null || isFunction(v)) ? SKIP : [k, jsonify(v)];
         });
     }
 

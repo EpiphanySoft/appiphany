@@ -1,4 +1,16 @@
-import { Destroyable, Event, applyTo, chain, hasOwn, nop, remove, destroy, panik, derp } from '@appiphany/aptly';
+import {
+    Destroyable,
+    Event,
+    applyTo,
+    chain,
+    hasOwn,
+    nop,
+    remove,
+    destroy,
+    panik,
+    derp,
+    isFunction
+} from '@appiphany/aptly';
 
 const
     { defineProperty } = Reflect,
@@ -269,7 +281,7 @@ class Handler {
     wrap (that, fn) {
         let fire;
 
-        if (typeof fn === 'function') {
+        if (isFunction(fn)) {
             fire = (...args) => fn.apply(that, args);
         }
         else if (that && typeof that === 'object') {

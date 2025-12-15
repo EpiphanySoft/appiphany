@@ -202,7 +202,7 @@ export const
     destroy = (...stuff) => {
         for (let o of stuff) {
             if (o) {
-                if (typeof o?.destroy === 'function') {
+                if (isFunction(o?.destroy)) {
                     o.destroy();
                 }
                 else if (o[Symbol.iterator]) {
@@ -408,7 +408,7 @@ export const
     },
 
     getPropertyValue = (obj, dotPath) => {
-        if (typeof dotPath === 'string') {
+        if (isString(dotPath)) {
             dotPath = dotPath.split('.');
         }
 
@@ -422,7 +422,7 @@ export const
     },
 
     getPropertyValues = (obj, keyPath) => {
-        if (typeof keyPath === 'string') {
+        if (isString(keyPath)) {
             keyPath = keyPath.split(',');
         }
 
@@ -636,7 +636,7 @@ export const
             return input;
         }
 
-        if (typeof fn === 'string') {
+        if (isString(fn)) {
             as = fn;
             fn = null;
         }
@@ -709,7 +709,7 @@ export const
     },
 
     primitivize = v => {
-        if (typeof v === 'string') {
+        if (isString(v)) {
             if (intRe.test(v)) {
                 v = +v;
             }
@@ -865,7 +865,7 @@ export const
         return JSON.stringify(value, replacer, space);
     },
 
-    thenable = o => typeof o?.then === 'function',
+    thenable = o => isFunction(o?.then),
 
     truthyKeys = obj => map(obj, (v, k) => v ? [k, k] : SKIP, 'array'),
 

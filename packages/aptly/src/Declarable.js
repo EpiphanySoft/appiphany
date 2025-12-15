@@ -1,4 +1,4 @@
-import { decapitalize, nop, chain, applyTo, panik, quoteWrap, Destroyable, isObject }
+import { decapitalize, nop, chain, applyTo, panik, quoteWrap, Destroyable, isObject, isFunction }
     from '@appiphany/aptly';
 // import { Logger } from '@/util/Logger';
 
@@ -376,7 +376,7 @@ export class Declarable extends Destroyable {
             for (method in descr) {
                 fn = descr[method].value;
 
-                if (method !== 'constructor' && typeof fn === 'function') {
+                if (method !== 'constructor' && isFunction(fn)) {
                     contract[method] = [fn, intf.name];
                 }
             }

@@ -1,4 +1,4 @@
-import { clone } from '@appiphany/aptly';
+import { clone, isFunction, isString } from '@appiphany/aptly';
 
 export const
     logger = () => {
@@ -57,10 +57,10 @@ export const
             return mocker;
         };
 
-        if (typeof obj === 'function') {
+        if (isFunction(obj)) {
             fn = obj;
         }
-        else if (typeof fn === 'string') {
+        else if (isString(fn)) {
             let name = fn,
                 own = Object.hasOwn(obj, name),
                 originalFn = obj[name];

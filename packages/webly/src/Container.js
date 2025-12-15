@@ -1,4 +1,4 @@
-import { EMPTY_ARRAY, merge } from '@appiphany/aptly';
+import { clone, merge, panik } from '@appiphany/aptly';
 import { Component } from '@appiphany/webly';
 
 const
@@ -78,11 +78,9 @@ export class Container extends Component {
     render (first) {
         let me = this,
             body = me.renderBody(first),
-            cls = {},
             items;
 
         if (first || !(items = me.getItems({ docked: true })).length) {
-            cls['x-box-v'] = 1;
             body = { body };
         }
         else {
@@ -91,7 +89,9 @@ export class Container extends Component {
         }
 
         return {
-            class: cls,
+            class: {
+                'x-box-v': 1
+            },
             children: body
         };
     }

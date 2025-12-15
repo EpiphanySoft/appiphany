@@ -3,6 +3,45 @@ import { Dom, Component, Nav, Panel, Viewport, Card } from '@appiphany/webly';
 
 window.xx = { Dom, Component, Viewport };
 
+function onAdd (ev) {
+    let p = ev.sender.parent,
+        dialog;
+
+    dialog = p.add({
+        type: Card,
+        ref: 'addDlg',
+        title: 'Some Title',
+        floating: true,
+        modal: true,
+        html:
+            'Bacon ipsum dolor amet pancetta doner beef ribs rump tail strip steak boudin ' +
+            'leberkas. Beef ribs frankfurter ham hock pork belly turducken sirloin meatball cow ' +
+            'ball tip leberkas. Capicola kevin tenderloin beef ribs boudin ham hock. Rump ' +
+            'biltong t-bone chuck doner porchetta andouille picanha prosciutto brisket beef ' +
+            'flank short ribs cupim tri-tip. Tongue venison frankfurter, tail meatloaf pig ' +
+            'leberkas ribeye ball tip sirloin kielbasa. Chuck beef ribs rump, short ribs jerky ' +
+            'biltong corned beef meatloaf chicken strip steak salami ham tri-tip. Chicken ' +
+            'prosciutto andouille hamburger short loin.',
+        icon: 'fa-solid fa-close',
+        // floating: true,
+        // top: '50%',
+        // left: '50%',
+        centered: true,
+        buttons: {
+            cancel: 'Cancel',
+            save: 'Save'
+        },
+        on: {
+            button (ev) {
+                debugger
+            },
+            icon (ev) {
+                dialog.destroy();
+            }
+        }
+    });
+}
+
 Dom.onReady(() => {
     window.v = Component.create({
         type: 'viewport',
@@ -13,7 +52,6 @@ Dom.onReady(() => {
                 type: Nav,
                 cls: 'woot',
                 flex: '1 1 auto',
-                layout: Card,
 
                 // bar: {
                 //     items: {
@@ -53,6 +91,7 @@ Dom.onReady(() => {
                     },
 
                     zap: {
+                        type: 'container',
                         tab: 'Zap',
                         html: 'Body zap',
                         style: p => ({ backgroundColor: p.dark ? '#111' : '#eee' }),
@@ -74,29 +113,10 @@ Dom.onReady(() => {
                             //     style: { backgroundColor: 'blue', color: 'white' }
                             // }
                             c1: {
-                                type: 'panel',
-                                title: 'Panel title',
-                                html:
-                                    'Lorem ipsum leo risus, porta ac consectetur ac, vestibulum at eros. Donec ' +
-                                    'id elit non mi porta gravida at eget metus. Cum sociis natoque penatibus ' +
-                                    'et magnis dis parturient montes, nascetur ridiculus mus. Cras mattis ' +
-                                    'consectetur purus sit amet fermentum.',
-                                icon: 'fa-solid fa-circle-info',
-                                // floating: true,
-                                // top: '50%',
-                                // left: '50%',
-                                centered: true,
-                                buttons: {
-                                    cancel: 'Cancel',
-                                    save: 'Save'
-                                },
+                                type: 'button',
+                                text: 'Add',
                                 on: {
-                                    button (ev) {
-                                        debugger
-                                    },
-                                    icon (ev) {
-                                        debugger;
-                                    }
+                                    click: onAdd
                                 }
                             }
                         }

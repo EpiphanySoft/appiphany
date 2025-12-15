@@ -1,5 +1,5 @@
-import { values } from '@appiphany/aptly';
-import { Component, Panel, ItemsConfig } from '@appiphany/webly';
+import { Component, Container, ItemsConfig, Deck } from '@appiphany/webly';
+import { isString } from '@appiphany/aptly';
 
 
 export class NavbarTab extends Component {
@@ -101,7 +101,7 @@ export class Navbar extends Component {
                         tab = it.tab;
 
                         if (tab) {
-                            if (typeof tab === 'string') {
+                            if (isString(tab)) {
                                 tab = {
                                     html: tab
                                 };
@@ -194,7 +194,7 @@ Navbar.initClass();
 /**
  *
  */
-export class Nav extends Panel {
+export class Nav extends Container {
     static type = 'nav';
 
     static configurable = {
@@ -222,7 +222,9 @@ export class Nav extends Panel {
 
                 bar.recompose(true);
             }
-        }
+        },
+
+        layout: Deck
     };
 }
 

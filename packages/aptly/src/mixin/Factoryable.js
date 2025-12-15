@@ -1,4 +1,4 @@
-import { Configurable, applyTo, isClass, isObject, panik } from "@appiphany/aptly";
+import { Configurable, applyTo, isClass, isObject, panik, isString, isFunction } from '@appiphany/aptly';
 
 const
     { defineProperty } = Reflect;
@@ -45,7 +45,7 @@ export class Factory extends Configurable {
             // originalConfig = config,
             ret, type;
 
-        if (typeof config === 'string' || isClass(config)) {
+        if (isString(config) || isClass(config)) {
             type = config;
             config = {};
         }
@@ -98,7 +98,7 @@ export class Factory extends Configurable {
                 delete config[typeKey];
             }
 
-            ret = (typeof type.new === 'function') ? type.new(config) : new type(config);
+            ret = isFunction(type.new) ? type.new(config) : new type(config);
         }
 
         return ret;
@@ -118,7 +118,7 @@ export class Factory extends Configurable {
 
             keys.push(type);
 
-            if (typeof aliases === 'string') {
+            if (isString(aliases)) {
                 keys.push(aliases);
             }
             else if (aliases) {
@@ -162,7 +162,7 @@ export const Factoryable = Base => class Factoryable extends Base {
 
             cls.addIs(value);
 
-            if (typeof aliases === 'string') {
+            if (isString(aliases)) {
                 cls.addIs(aliases);
             }
             else if (aliases) {

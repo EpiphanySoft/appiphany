@@ -1,6 +1,6 @@
 import {
     chain, panik, Widget, Signal, isObject, clone, merge, values, Config,
-    EMPTY_ARRAY, EMPTY_OBJECT, remove
+    EMPTY_ARRAY, EMPTY_OBJECT, remove, isString
 }
     from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
@@ -122,7 +122,7 @@ export class ItemsConfig extends Config {
 
         if (existingByRef) {
             for (ref in existingByRef) {
-                existingByRef[ref].destroy();
+                existingByRef[ref][1].destroy();
                 same = false;
             }
         }
@@ -132,7 +132,8 @@ export class ItemsConfig extends Config {
 
     getItemDefaults (instance) {
         return {
-            parent: instance
+            parent: instance,
+            type: instance.defaultType
         };
     }
 
@@ -190,6 +191,8 @@ export class Component extends Widget.mixin(Factoryable) {
          */
         itemRenderTarget: null,
 
+        defaultType: 'component',
+
         // General
 
         floaters: null,
@@ -203,6 +206,8 @@ export class Component extends Widget.mixin(Factoryable) {
         },
 
         floatParent: class {
+            nullify = true;
+
             update (instance, floatParent, was) {
                 was?.removeFloater(instance);
                 floatParent?.addFloater(instance);
@@ -290,12 +295,6 @@ export class Component extends Widget.mixin(Factoryable) {
     #renderWatcher = null;
     #watcherNotified = false;
 
-    destruct () {
-        this.#unrender();
-
-        super.destruct();
-    }
-
     get childDomain () {
         let me = this,
             { docked, floating } = me,
@@ -347,6 +346,46 @@ export class Component extends Widget.mixin(Factoryable) {
         this.recompose();
 
         super.initialize();
+    }
+
+    destruct () {
+        let me = this,
+            { parent } = me;
+
+        me.#unrender();
+
+        parent?.remove(me);
+
+        super.destruct();
+    }
+
+    add (item) {
+        let me = this,
+            items = clone(me.items) || {},
+            { ref } = item;
+
+        if (!ref) {
+            panik('Item must have a ref property');
+        }
+
+        items[ref] = item;
+
+        me.items = items;
+
+        return me.items[ref];
+    }
+
+    remove (item) {
+        let me = this,
+            items = !me.destroyed && me.items,
+            ref,
+            it = items?.[ref = isString(item) ? item : item.ref];
+
+        if (it && (ref === item || it === item)) {
+            items = clone(items);
+            delete items[ref];
+            me.items = items;
+        }
     }
 
     addFloater (child) {

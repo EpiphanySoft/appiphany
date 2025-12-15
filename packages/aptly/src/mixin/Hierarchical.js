@@ -1,4 +1,4 @@
-import { panik, chain, applyTo } from '@appiphany/aptly';
+import { panik, chain, applyTo, isNumber } from '@appiphany/aptly';
 import { Delayable } from '@appiphany/aptly/mixin';
 
 const
@@ -333,7 +333,7 @@ export const Hierarchical = Base => class Hierarchical extends Base.mixin(Delaya
         let up = this,
             matcher, n;
 
-        if (typeof type === 'number') {
+        if (isNumber(type)) {
             for (n = type; (up = up.parent); --n) {
                 if (!n) {
                     return up;

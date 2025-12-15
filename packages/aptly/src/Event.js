@@ -1,4 +1,4 @@
-import { applyTo, chain, isObject } from '@appiphany/aptly';
+import { applyTo, chain, isFunction, isObject, isString } from '@appiphany/aptly';
 
 const
     canon = chain(),
@@ -25,7 +25,7 @@ export class Event {
             prior = options;
             me.type = prior.type;
         }
-        else if (typeof options === 'string') {
+        else if (isString(options)) {
             me.type = options;
         }
         else {
@@ -35,7 +35,7 @@ export class Event {
         if (isObject(extra)) {
             applyTo(me, extra);
         }
-        else if (typeof extra?.preventDefault === 'function') {
+        else if (isFunction(extra?.preventDefault)) {
             me.browserEvent = extra;
         }
 

@@ -5,8 +5,8 @@ import { isString, map, merge } from '@appiphany/aptly';
 /**
  * A panel component.
  */
-export class Panel extends Container {
-    static type = 'panel';
+export class Card extends Container {
+    static type = 'card';
 
     static configurable = {
         buttons: null,
@@ -27,6 +27,7 @@ export class Panel extends Container {
     render () {
         return {
             class: {
+               'x-box-v': 1,
                card: 1
             },
             children: {
@@ -138,4 +139,4 @@ export class Panel extends Container {
     }
 }
 
-Panel.initClass();
+Card.initClass();

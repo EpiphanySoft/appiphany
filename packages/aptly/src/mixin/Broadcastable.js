@@ -1,4 +1,4 @@
-import { Destroyable, panik } from "@appiphany/aptly";
+import { Destroyable, isString, panik } from '@appiphany/aptly';
 
 
 class Subscription extends Destroyable {
@@ -104,7 +104,7 @@ export const Informable = Base => class Informable extends Base {
     inform(inform) {
         let { type } = inform;
 
-        if (typeof type === 'string') {
+        if (isString(type)) {
             return this[`on_${type}`]?.(inform);
         }
     }
