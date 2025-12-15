@@ -19,6 +19,7 @@ const
     findFloatRoot = p => p.floatRoot,
     ignoredComposeConfigs = { props: 1, renderTarget: 1 },
     orderSortFn = (a, b) => a.order - b.order,
+    fontAwesomeRe = /\bfa-/,
     gatherRefs = (refs, ref, spec) => {
         //  spec = {
         //      children: {
@@ -46,6 +47,15 @@ const
         return refs;
     };
 
+export const
+    iconCls = icon => {
+        icon = Config.Flags.canonicalize(icon);
+
+        return {
+            fas: Object.entries(icon).some(([c, v]) => v && fontAwesomeRe.test(c)),
+            ...icon
+        }
+    };
 
 export class ItemsConfig extends Config {
     phase = 'init';

@@ -1,4 +1,4 @@
-import { Container } from '@appiphany/webly';
+import { Container, Dom, iconCls } from '@appiphany/webly';
 import { map, merge } from '@appiphany/aptly';
 
 
@@ -73,14 +73,12 @@ export class Panel extends Container {
                             class: {
                                 icon: 1
                             },
+                            on: { click: 'onClickIcon' },
                             children: {
                                 _i: {
                                     tag: 'i',
                                     aria: { hidden: true },
-                                    class: {
-                                        fas: icon.startsWith('fa-'),
-                                        ...Object.fromEntries(icon.split(' ').map(c => [c, 1]))
-                                    }
+                                    class: iconCls(icon)
                                 }
                             }
                         }
@@ -121,8 +119,23 @@ export class Panel extends Container {
         return [ref, item];
     }
 
-    onClickFooter (e) {
-        debugger;
+    onClickFooter (ev) {
+        let btn = Dom.get(ev.target.closest('.card-footer-item'));
+
+        btn && this.fire({
+            type: 'button',
+            action: btn.ref,
+            dom: btn
+        }, ev);
+    }
+
+    onClickIcon (ev) {
+        let icon = Dom.get(ev.target.closest('.card-header-icon'));
+
+        this.fire({
+            type: 'icon',
+            dom: icon
+        }, ev);
     }
 }
 

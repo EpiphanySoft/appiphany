@@ -299,14 +299,20 @@ class Flags extends Config {
 
     delimiter = null;
 
-    apply (instance, v, was) {
+    static canonicalize (v, delimiter) {
         if (typeof v === 'string') {
-            v = v.split(this.delimiter || Flags.wordRe).filter(s => s);
+            v = v.split(delimiter || Flags.wordRe).filter(s => s);
         }
 
         if (Array.isArray(v)) {
-            v = Object.fromEntries(v.map(s => s.startsWith('-') ? [s.slice(1), false] : [s, true]));
+            v = Object.fromEntries(v.map(s => (s[0] === '-') ? [s.slice(1), false] : [s, true]));
         }
+
+        return v;
+    }
+
+    apply (instance, v, was) {
+        v = Flags.canonicalize(v, this.delimiter);
 
         if (v && was) {
             let same = true,

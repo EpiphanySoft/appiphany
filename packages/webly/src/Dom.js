@@ -367,6 +367,10 @@ export class Dom {
     }
 
     static get (el) {
+        if (!el) {
+            return null;
+        }
+
         if (el instanceof Dom) {
             return el;
         }
@@ -390,13 +394,9 @@ export class Dom {
                     }
                 }
                 catch (e) {
-                    el = null;
+                    return null;
                 }
             }
-        }
-
-        if (!el) {
-            return null;
         }
 
         return el.$dom || new Dom(el);

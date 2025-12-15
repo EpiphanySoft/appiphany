@@ -89,6 +89,14 @@ Dom.onReady(() => {
                                 buttons: {
                                     cancel: 'Cancel',
                                     save: 'Save'
+                                },
+                                on: {
+                                    button (ev) {
+                                        debugger
+                                    },
+                                    icon (ev) {
+                                        debugger;
+                                    }
                                 }
                             }
                         }

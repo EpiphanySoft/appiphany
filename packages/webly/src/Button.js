@@ -1,5 +1,4 @@
-import { merge, xss } from '@appiphany/aptly';
-import { Component } from '@appiphany/webly';
+import { Component, iconCls } from '@appiphany/webly';
 
 /**
  * A button component.
@@ -58,10 +57,7 @@ export class Button extends Component {
                     children: {
                         _i: {
                             tag: 'i',
-                            class: {
-                                fas: icon.startsWith('fa-'),
-                                ...Object.fromEntries(icon.split(' ').map(c => [c, 1]))
-                            }
+                            class: iconCls(icon)
                         }
                     }
                 },
