@@ -1,5 +1,5 @@
-import { Container, Dom, iconCls } from '@appiphany/webly';
-import { isString, map, merge } from '@appiphany/aptly';
+import { Container, Dom, iconCls, renderIcon } from '@appiphany/webly';
+import { clone, isString, map, merge } from '@appiphany/aptly';
 
 
 /**
@@ -11,7 +11,19 @@ export class Card extends Container {
     static configurable = {
         buttons: null,
         icon: null,
-        title: null
+        title: null,
+
+        buttonDefaults: {
+            '*': {
+                cls: {
+                    'card-footer-item': 1
+                }
+            },
+
+            cancel: {
+                icon: 'fa-cancel'
+            }
+        }
     };
 
     static shardable = {
@@ -107,16 +119,31 @@ export class Card extends Container {
             item = { text: item };
         }
 
-        item = merge({
-            tag: 'a',
-            class: { 'card-footer-item': 1 }
-        }, item);
+        ref = isString(ref) ? ref : `btn${item.text}`;
 
-        if (typeof ref !== 'string') {
-            ref = `btn${item.text}`;
+        let { buttonDefaults } = this,
+            defaults = clone(buttonDefaults['*']),
+            defaults2 = buttonDefaults[ref],
+            it = merge(defaults2 ? merge(defaults, defaults2) : defaults, item),
+            { icon } = it;
+
+        if (isString(icon)) {
+            icon = { cls: icon };
         }
 
-        return [ref, item];
+        it = {
+            tag: 'a',
+            class: it.cls,
+            children: {
+                _icon: renderIcon(icon),
+                _s: {
+                    tag: 'span',
+                    text: it.text
+                }
+            }
+        };
+
+        return [ref, it];
     }
 
     onClickFooter (ev) {

@@ -1,6 +1,6 @@
 import {
     chain, panik, Widget, Signal, isObject, clone, merge, values, Config,
-    EMPTY_ARRAY, EMPTY_OBJECT, remove, isString
+    EMPTY_ARRAY, EMPTY_OBJECT, remove, isString, isEmpty
 }
     from '@appiphany/aptly';
 import { Factoryable } from '@appiphany/aptly/mixin';
@@ -51,9 +51,22 @@ export const
     iconCls = icon => {
         icon = Config.Flags.canonicalize(icon);
 
-        return {
+        return icon && {
             fas: Object.entries(icon).some(([c, v]) => v && fontAwesomeRe.test(c)),
             ...icon
+        }
+    },
+    renderIcon = icon => icon && {
+        tag: 'span',
+        class: {
+            icon: 1,
+            [`is-${icon.size}`]: !!icon.size
+        },
+        children: {
+            _i: {
+                tag: 'i',
+                class: iconCls(icon.cls)
+            }
         }
     };
 
@@ -120,11 +133,8 @@ export class ItemsConfig extends Config {
             ++i;
         }
 
-        if (existingByRef) {
-            for (ref in existingByRef) {
-                existingByRef[ref][1].destroy();
-                same = false;
-            }
+        if (existingByRef && !isEmpty(existingByRef)) {
+            same = false;
         }
 
         return same ? was : items;
